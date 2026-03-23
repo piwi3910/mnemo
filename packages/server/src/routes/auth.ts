@@ -479,6 +479,77 @@ export function createAuthRouter(notesDir: string): Router {
     }
   });
 
+  /**
+   * @swagger
+   * /auth/password:
+   *   put:
+   *     summary: Change password
+   *     tags: [Auth]
+   *     security:
+   *       - bearerAuth: []
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required: [currentPassword, newPassword]
+   *             properties:
+   *               currentPassword:
+   *                 type: string
+   *               newPassword:
+   *                 type: string
+   *                 minLength: 8
+   *                 maxLength: 72
+   *     responses:
+   *       200:
+   *         description: Password changed
+   *       400:
+   *         description: Validation error
+   *       401:
+   *         description: Current password incorrect
+   */
+  router.put("/password", authMiddleware, async (req: Request, res: Response) => {
+    try {
+      const { currentPassword, newPassword } = req.body;
+
+      if (!currentPassword || !newPassword) {
+        res.status(400).json({ error: "Current password and new password are required" });
+        return;
+      }
+      if (newPassword.length < 8 || newPassword.length > 72) {
+        res.status(400).json({ error: "New password must be 8-72 characters" });
+        return;
+      }
+
+      const userRepo = AppDataSource.getRepository(User);
+      const user = await userRepo.findOneBy({ id: req.user!.id });
+      if (!user) {
+        res.status(404).json({ error: "User not found" });
+        return;
+      }
+
+      if (!user.passwordHash) {
+        res.status(400).json({ error: "Account uses OAuth only — set a password via admin or re-register" });
+        return;
+      }
+
+      const valid = await bcrypt.compare(currentPassword, user.passwordHash);
+      if (!valid) {
+        res.status(401).json({ error: "Current password is incorrect" });
+        return;
+      }
+
+      user.passwordHash = await bcrypt.hash(newPassword, 12);
+      await userRepo.save(user);
+
+      res.json({ ok: true });
+    } catch (err) {
+      console.error("Error changing password:", err);
+      res.status(500).json({ error: "Failed to change password" });
+    }
+  });
+
   // --------------- OAuth: Google ---------------
 
   /**

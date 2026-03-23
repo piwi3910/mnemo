@@ -217,6 +217,11 @@ export const authApi = {
       headers: { 'X-Requested-With': 'XMLHttpRequest' },
     }),
   me: () => request<AuthUser>('/auth/me'),
+  changePassword: (currentPassword: string, newPassword: string) =>
+    request<{ ok: boolean }>('/auth/password', {
+      method: 'PUT',
+      body: JSON.stringify({ currentPassword, newPassword }),
+    }),
 };
 
 export const shareApi = {
