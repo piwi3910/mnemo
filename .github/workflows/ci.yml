@@ -34,13 +34,17 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Upload build artifacts
+      - name: Upload client dist
         uses: actions/upload-artifact@v4
         with:
-          name: dist
-          path: |
-            packages/client/dist
-            packages/server/dist
+          name: client-dist
+          path: packages/client/dist
+
+      - name: Upload server dist
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-dist
+          path: packages/server/dist
 
   docker:
     needs: build
@@ -53,11 +57,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Download build artifacts
+      - name: Download client dist
         uses: actions/download-artifact@v4
         with:
-          name: dist
-          path: packages
+          name: client-dist
+          path: packages/client/dist
+
+      - name: Download server dist
+        uses: actions/download-artifact@v4
+        with:
+          name: server-dist
+          path: packages/server/dist
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -101,6 +111,7 @@ jobs:
           username: ${{ secrets.TRUENAS_USER }}
           password: ${{ secrets.TRUENAS_PASSWORD }}
           script: |
+            docker login ghcr.io -u piwi3910 -p ${{ secrets.GITHUB_TOKEN }}
             cd /mnt/Pool0/Docker/mnemo
-            docker compose pull
-            docker compose up -d
+            docker compose -f docker-compose.prod.yml pull
+            docker compose -f docker-compose.prod.yml up -d
