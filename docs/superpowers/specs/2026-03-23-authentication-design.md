@@ -44,6 +44,7 @@
 | userId | UUID | FK → User, CASCADE delete |
 | provider | TEXT | `google` or `github` |
 | providerAccountId | TEXT | Provider's user ID |
+| createdAt | TIMESTAMP | Auto-set |
 
 Unique constraint on `(provider, providerAccountId)`.
 
@@ -53,7 +54,7 @@ Unique constraint on `(provider, providerAccountId)`.
 |--------|------|-------|
 | id | UUID | Primary key |
 | userId | UUID | FK → User, CASCADE delete |
-| tokenHash | TEXT | bcrypt hash of the token |
+| tokenHash | TEXT | SHA-256 hash of the token (not bcrypt — high-entropy random tokens don't need slow hashing) |
 | expiresAt | TIMESTAMP | 30 days from creation |
 | createdAt | TIMESTAMP | Auto-set |
 
@@ -80,13 +81,13 @@ Add row: `registration_mode` = `open` (default). Admin can toggle to `invite-onl
 
 1. `POST /api/auth/register` with `{ email, password, name, inviteCode? }`
 2. If `registration_mode` is `invite-only`, require valid unused non-expired invite code
-3. Validate email format, password length (min 8 chars)
+3. Validate email format, password length (min 8 chars, max 72 chars — bcrypt's limit)
 4. Hash password with bcrypt (12 rounds)
 5. Create User record. If this is the first user in the database, set `role: admin`
 6. If invite code was used, mark it as `usedBy` this user
 7. Generate JWT access token (15min expiry, payload: `{ sub: user.id, email, role }`)
-8. Generate refresh token (random 64-byte hex string), hash it with bcrypt, store in RefreshToken table with 30-day expiry
-9. Set refresh token as httpOnly secure cookie (`mnemo_refresh`)
+8. Generate refresh token (random 64-byte hex string), hash with SHA-256, store in RefreshToken table with 30-day expiry
+9. Set refresh token cookie as `tokenId:rawToken` (where `tokenId` is the RefreshToken row's UUID) in httpOnly secure cookie (`mnemo_refresh`)
 10. Return `{ user: { id, email, name, role, avatarUrl }, accessToken }`
 
 ### Email/Password Login
@@ -107,7 +108,9 @@ Add row: `registration_mode` = `open` (default). Admin can toggle to `invite-onl
 4. Look up AuthProvider where `provider=google` and `providerAccountId=googleId`
    - **Found:** Log in that user (if not disabled)
    - **Not found, email matches existing user:** Create AuthProvider record linking Google to that user, log in
-   - **Completely new user:** If `registration_mode` is `invite-only`, reject (OAuth users need invite code via a separate flow or admin pre-creates their account). If `open`, create User + AuthProvider. First user → admin.
+   - **Completely new user:** If `registration_mode` is `invite-only`, redirect to `{APP_URL}/login?error=invite-required` (user must provide invite code on the frontend first, which is passed via the OAuth `state` parameter — see below). If `open`, create User + AuthProvider. First user → admin.
+
+**OAuth with invite codes:** When registration is invite-only, the frontend collects the invite code before initiating OAuth. The code is passed as the `state` parameter in the OAuth redirect URL. In the callback, the server validates the invite code from `state` before creating the user. This avoids a second round-trip.
 5. Generate tokens, set cookie, redirect to `{APP_URL}/?auth=success`
 
 ### OAuth Flow (GitHub)
@@ -121,10 +124,11 @@ Same as Google but:
 ### Token Refresh
 
 1. `POST /api/auth/refresh`
-2. Read `mnemo_refresh` cookie
-3. Find all non-expired RefreshToken records for the user and check if any match the cookie value (bcrypt compare)
-4. If valid: generate new access token, optionally rotate refresh token (delete old, create new)
-5. If invalid/expired: return 401, clear cookie
+2. Read `mnemo_refresh` cookie, parse as `tokenId:rawToken`
+3. Look up RefreshToken by `tokenId` (single DB query). If not found or expired, return 401 and clear cookie
+4. SHA-256 hash `rawToken` and compare to stored `tokenHash`. If mismatch, return 401 and clear cookie
+5. If valid: generate new access token. Rotate refresh token (delete old row, create new one, set new cookie)
+6. Return `{ accessToken, user: { id, email, name, role, avatarUrl } }`
 
 ### Logout
 
@@ -165,8 +169,10 @@ Applied to all existing routes in `index.ts`:
 // Before route registration
 app.use('/api/notes', authMiddleware, createNotesRouter(NOTES_DIR));
 app.use('/api/search', authMiddleware, createSearchRouter());
-// ... etc for all /api/* routes except /api/auth/*
+// ... etc for all /api/* routes except /api/auth/*, /api/health, /api/docs*
 ```
+
+**Unauthenticated routes:** `/api/auth/*`, `/api/health`, `/api/docs`, `/api/docs.json`
 
 Admin middleware (for `/api/admin/*`):
 ```ts
@@ -178,6 +184,52 @@ function adminMiddleware(req, res, next) {
 
 ---
 
+## CORS & CSRF Protection
+
+**CORS:** Replace `app.use(cors())` with explicit config:
+```ts
+app.use(cors({
+  origin: process.env.APP_URL || 'http://localhost:5173',
+  credentials: true,
+}));
+```
+Client-side: all fetch calls must include `credentials: 'include'` to send cookies.
+
+**CSRF:** Require `X-Requested-With: XMLHttpRequest` header on all state-changing endpoints (POST, PUT, DELETE). Browsers block custom headers in cross-origin simple requests, preventing CSRF attacks. The auth middleware checks this header. The client's `api.ts` fetch wrapper adds it to all requests.
+
+---
+
+## Token Revocation on User Disable/Role Change
+
+When an admin disables a user or changes their role via `PUT /api/admin/users/:id`:
+1. Delete all RefreshToken records for that user (immediate refresh token invalidation)
+2. Accept that existing access tokens remain valid for up to 15 minutes (acceptable trade-off for simplicity)
+
+This ensures disabled users are locked out within 15 minutes at most, and immediately cannot refresh.
+
+---
+
+## Settings Protection
+
+The existing generic `/api/settings` endpoint allows any authenticated user to read/write arbitrary key-value pairs. The `registration_mode` key must be protected:
+
+- Add a deny-list of admin-only keys in the generic settings PUT handler: `['registration_mode']`
+- These keys can only be modified via `/api/admin/settings/registration`
+- The generic GET endpoint can still read them (no sensitive data)
+
+---
+
+## Public Config Endpoint
+
+`GET /api/auth/config` — unauthenticated, returns:
+```json
+{ "registrationMode": "open" | "invite-only" }
+```
+
+Used by the login page to know whether to show the invite code field and whether OAuth signup is available.
+
+---
+
 ## Admin API
 
 All endpoints require `authMiddleware` + `adminMiddleware`.
@@ -186,7 +238,7 @@ All endpoints require `authMiddleware` + `adminMiddleware`.
 |--------|------|-------------|
 | GET | `/api/admin/users` | List all users |
 | PUT | `/api/admin/users/:id` | Update user (disabled, role) |
-| DELETE | `/api/admin/users/:id` | Delete user and all their data |
+| DELETE | `/api/admin/users/:id` | Delete user and auth-related records (User, AuthProvider, RefreshToken). Note data cleanup deferred to sub-project 2 |
 | POST | `/api/admin/invites` | Create invite code (optional expiresAt) |
 | GET | `/api/admin/invites` | List all invite codes |
 | DELETE | `/api/admin/invites/:id` | Revoke/delete invite |
@@ -233,7 +285,7 @@ All endpoints require `authMiddleware` + `adminMiddleware`.
 
 ## Server Dependencies
 
-- `bcrypt` — password hashing + refresh token hashing
+- `bcrypt` — password hashing only (refresh tokens use SHA-256 via built-in `crypto`)
 - `jsonwebtoken` — JWT signing/verification
 - `passport` — OAuth framework
 - `passport-google-oauth20` — Google strategy
