@@ -5,7 +5,7 @@ export function createBacklinksRouter(): Router {
   const router = Router();
 
   // GET /api/backlinks/:path(*) — Get notes that link TO this note
-  router.get("/:path(*)", async (req: Request, res: Response) => {
+  router.get("/:path(.*)", async (req: Request, res: Response) => {
     try {
       const notePath = decodeURIComponent(req.params.path as string);
       if (!notePath) {
