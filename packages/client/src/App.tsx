@@ -453,10 +453,10 @@ export default function App() {
                 <p className="text-sm text-gray-500 dark:text-gray-400">
                   Select a note from the sidebar or create a new one
                 </p>
-                <div className="mt-4 text-xs text-gray-400 dark:text-gray-500 space-y-1">
-                  <p><kbd className="kbd">Ctrl+P</kbd> Quick switcher</p>
-                  <p><kbd className="kbd">Ctrl+N</kbd> New note</p>
-                  <p><kbd className="kbd">Ctrl+B</kbd> Toggle sidebar</p>
+                <div className="mt-4 text-xs text-gray-400 dark:text-gray-500 inline-grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-left">
+                  <kbd className="kbd">Ctrl+P</kbd> <span>Quick switcher</span>
+                  <kbd className="kbd">Ctrl+N</kbd> <span>New note</span>
+                  <kbd className="kbd">Ctrl+B</kbd> <span>Toggle sidebar</span>
                 </div>
               </div>
             </div>
