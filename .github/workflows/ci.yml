@@ -103,6 +103,9 @@ jobs:
     needs: docker
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    environment:
+      GHCR_USER: piwi3910
+      GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Deploy to TrueNAS
         uses: appleboy/ssh-action@v1.0.3
@@ -110,8 +113,9 @@ jobs:
           host: ${{ secrets.TRUENAS_HOST }}
           username: ${{ secrets.TRUENAS_USER }}
           password: ${{ secrets.TRUENAS_PASSWORD }}
+          envs: GHCR_USER, GHCR_TOKEN
           script: |
-            docker login ghcr.io -u piwi3910 -p ${{ secrets.GITHUB_TOKEN }}
+            echo $GHCR_TOKEN | docker login ghcr.io -u $GHCR_USER --password-stdin
             cd /mnt/Pool0/Docker/mnemo
             docker compose -f docker-compose.prod.yml pull
             docker compose -f docker-compose.prod.yml up -d
