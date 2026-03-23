@@ -58,7 +58,7 @@ export function BacklinksPanel({ notePath, onNoteSelect }: BacklinksPanelProps) 
                 <li key={link.path}>
                   <button
                     onClick={() => onNoteSelect(link.path)}
-                    className="text-sm text-blue-500 dark:text-blue-400 hover:underline truncate block w-full text-left py-0.5"
+                    className="text-sm text-violet-500 dark:text-violet-400 hover:underline truncate block w-full text-left py-0.5"
                     title={link.path}
                   >
                     {link.title}

@@ -134,14 +134,14 @@ export function GraphView({ graphData, loading, activeNotePath, mode, onNoteSele
         ctx.beginPath();
         ctx.arc(node.x, node.y, radius, 0, 2 * Math.PI);
         ctx.fillStyle = isActive
-          ? '#2563eb'
+          ? '#6d28d9'
           : isHovered
-            ? '#3b82f6'
-            : isDark ? '#60a5fa' : '#3b82f6';
+            ? '#7c3aed'
+            : isDark ? '#a78bfa' : '#7c3aed';
         ctx.fill();
 
         if (isHovered || isActive) {
-          ctx.strokeStyle = isDark ? '#93c5fd' : '#2563eb';
+          ctx.strokeStyle = isDark ? '#c4b5fd' : '#6d28d9';
           ctx.lineWidth = 2;
           ctx.stroke();
         }
@@ -274,7 +274,7 @@ export function GraphView({ graphData, loading, activeNotePath, mode, onNoteSele
     <div className="flex-1 relative">
       {loading && (
         <div className="absolute inset-0 flex items-center justify-center">
-          <Loader2 size={20} className="animate-spin text-blue-500" />
+          <Loader2 size={20} className="animate-spin text-violet-500" />
         </div>
       )}
       {graphData && graphData.nodes.length === 0 && (

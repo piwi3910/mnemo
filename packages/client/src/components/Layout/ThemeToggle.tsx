@@ -92,12 +92,12 @@ export function ThemeToggle({ theme, setTheme }: ThemeToggleProps) {
               key={opt.value}
               onClick={() => handleSelect(opt.value)}
               className={`w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors hover:bg-gray-100 dark:hover:bg-gray-700 ${
-                theme === opt.value ? 'text-blue-600 dark:text-blue-400 font-semibold' : 'text-gray-900 dark:text-gray-100'
+                theme === opt.value ? 'text-violet-600 dark:text-violet-400 font-semibold' : 'text-gray-900 dark:text-gray-100'
               }`}
             >
               {opt.icon}
               {opt.label}
-              {theme === opt.value && <span className="ml-auto text-blue-500">✓</span>}
+              {theme === opt.value && <span className="ml-auto text-violet-500">✓</span>}
             </button>
           ))}
         </div>,

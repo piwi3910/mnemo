@@ -239,11 +239,8 @@ export default function App() {
           >
             <PanelLeft size={18} />
           </button>
-          <div className="flex items-center gap-2 ml-1">
-            <div className="w-6 h-6 rounded bg-blue-500 flex items-center justify-center">
-              <span className="text-white font-bold text-xs">M</span>
-            </div>
-            <span className="font-semibold text-sm hidden sm:inline">Mnemo</span>
+          <div className="flex items-center ml-1">
+            <img src="/logo.png" alt="Mnemo" className="h-7" />
           </div>
         </div>
 
@@ -255,7 +252,7 @@ export default function App() {
           {notes.activeNote && (
             <button
               onClick={() => setEditing(!editing)}
-              className={`btn-ghost p-2 ${editing ? 'text-blue-500' : ''}`}
+              className={`btn-ghost p-2 ${editing ? 'text-violet-500' : ''}`}
               aria-label={editing ? 'Done editing' : 'Edit note'}
               title={editing ? 'Done editing (Ctrl+E)' : 'Edit note (Ctrl+E)'}
             >
@@ -434,8 +431,8 @@ export default function App() {
           ) : (
             <div className="flex-1 flex items-center justify-center">
               <div className="text-center p-8">
-                <div className="w-16 h-16 rounded-2xl bg-blue-500/10 flex items-center justify-center mx-auto mb-4">
-                  <BookOpen size={28} className="text-blue-500" />
+                <div className="w-16 h-16 rounded-2xl bg-violet-500/10 flex items-center justify-center mx-auto mb-4">
+                  <BookOpen size={28} className="text-violet-500" />
                 </div>
                 <h2 className="text-lg font-semibold mb-1">No note selected</h2>
                 <p className="text-sm text-gray-500 dark:text-gray-400">

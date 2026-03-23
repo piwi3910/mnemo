@@ -73,7 +73,7 @@ export function TemplatePicker({ onSelect, onClose, noteTitle }: TemplatePickerP
                   onClick={() => handleSelect(t.name)}
                   className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
                 >
-                  <FileText size={15} className="text-blue-500" />
+                  <FileText size={15} className="text-violet-500" />
                   {t.name}
                 </button>
               ))}

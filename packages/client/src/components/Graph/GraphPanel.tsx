@@ -28,7 +28,7 @@ export function GraphPanel({ graphData, loading, activeNotePath, onNoteSelect }:
             onClick={() => setMode('local')}
             className={`px-2 py-0.5 text-xs rounded transition-colors ${
               effectiveMode === 'local'
-                ? 'bg-blue-500/15 text-blue-500 font-medium'
+                ? 'bg-violet-500/15 text-violet-500 font-medium'
                 : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
             }`}
           >
@@ -38,7 +38,7 @@ export function GraphPanel({ graphData, loading, activeNotePath, onNoteSelect }:
             onClick={() => setMode('full')}
             className={`px-2 py-0.5 text-xs rounded transition-colors ${
               effectiveMode === 'full'
-                ? 'bg-blue-500/15 text-blue-500 font-medium'
+                ? 'bg-violet-500/15 text-violet-500 font-medium'
                 : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
             }`}
           >

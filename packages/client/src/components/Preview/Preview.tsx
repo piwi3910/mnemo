@@ -170,7 +170,7 @@ function DataviewBlock({ query, onLinkClick }: { query: string; onLinkClick: (na
           {results.map(r => (
             <tr key={r.path}>
               <td className="border px-3 py-2 text-sm">
-                <button onClick={() => onLinkClick(r.title)} className="text-blue-500 hover:underline">{r.title}</button>
+                <button onClick={() => onLinkClick(r.title)} className="text-violet-500 hover:underline">{r.title}</button>
               </td>
               <td className="border px-3 py-2 text-sm text-gray-500">{r.path}</td>
               <td className="border px-3 py-2 text-sm text-gray-500">{r.tags.map(t => `#${t}`).join(', ')}</td>
@@ -185,7 +185,7 @@ function DataviewBlock({ query, onLinkClick }: { query: string; onLinkClick: (na
     <ul className="list-disc pl-6 mb-4">
       {results.map(r => (
         <li key={r.path} className="mb-1">
-          <button onClick={() => onLinkClick(r.title)} className="text-blue-500 hover:underline text-sm">{r.title}</button>
+          <button onClick={() => onLinkClick(r.title)} className="text-violet-500 hover:underline text-sm">{r.title}</button>
           <span className="text-xs text-gray-400 ml-2">{r.path}</span>
         </li>
       ))}

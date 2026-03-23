@@ -67,13 +67,13 @@ export function TagPane({ onNoteSelect }: TagPaneProps) {
                 onClick={() => handleTagClick(tag)}
                 className={`inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-xs transition-colors ${
                   selectedTag === tag
-                    ? 'bg-blue-500 text-white'
+                    ? 'bg-violet-500 text-white'
                     : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
                 }`}
               >
                 <Hash size={10} />
                 {tag}
-                <span className={`ml-0.5 ${selectedTag === tag ? 'text-blue-100' : 'text-gray-400 dark:text-gray-500'}`}>
+                <span className={`ml-0.5 ${selectedTag === tag ? 'text-violet-100' : 'text-gray-400 dark:text-gray-500'}`}>
                   {count}
                 </span>
               </button>
@@ -101,7 +101,7 @@ export function TagPane({ onNoteSelect }: TagPaneProps) {
                     <li key={note.notePath}>
                       <button
                         onClick={() => onNoteSelect(note.notePath)}
-                        className="text-xs text-blue-500 dark:text-blue-400 hover:underline truncate block w-full text-left py-0.5"
+                        className="text-xs text-violet-500 dark:text-violet-400 hover:underline truncate block w-full text-left py-0.5"
                       >
                         {note.title}
                       </button>

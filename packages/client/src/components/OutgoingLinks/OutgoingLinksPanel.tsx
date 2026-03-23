@@ -100,7 +100,7 @@ export function OutgoingLinksPanel({ content, allNotes, onNoteSelect, onCreateNo
                 {link.exists ? (
                   <button
                     onClick={() => link.path && onNoteSelect(link.path)}
-                    className="text-sm text-blue-500 dark:text-blue-400 hover:underline truncate text-left py-0.5"
+                    className="text-sm text-violet-500 dark:text-violet-400 hover:underline truncate text-left py-0.5"
                     title={link.path || link.name}
                   >
                     {link.name}

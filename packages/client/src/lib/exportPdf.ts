@@ -25,8 +25,8 @@ export async function exportNoteToPdf(title: string, contentHtml: string): Promi
       .pdf-content code { background: #f3f4f6; padding: 2px 6px; border-radius: 4px; font-size: 13px; font-family: 'JetBrains Mono', monospace; }
       .pdf-content pre { background: #f3f4f6; padding: 16px; border-radius: 8px; margin: 0 0 12px; overflow-x: auto; }
       .pdf-content pre code { background: transparent; padding: 0; }
-      .pdf-content blockquote { border-left: 3px solid #3b82f6; padding-left: 16px; margin: 12px 0; color: #6b7280; font-style: italic; }
-      .pdf-content a { color: #3b82f6; text-decoration: none; }
+      .pdf-content blockquote { border-left: 3px solid #7c3aed; padding-left: 16px; margin: 12px 0; color: #6b7280; font-style: italic; }
+      .pdf-content a { color: #7c3aed; text-decoration: none; }
       .pdf-content table { width: 100%; border-collapse: collapse; margin: 0 0 12px; }
       .pdf-content th, .pdf-content td { border: 1px solid #e5e7eb; padding: 8px 12px; text-align: left; }
       .pdf-content th { background: #f9fafb; font-weight: 600; }

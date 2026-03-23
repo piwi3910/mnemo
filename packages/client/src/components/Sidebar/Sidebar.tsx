@@ -157,7 +157,7 @@ export function Sidebar({
         <div
           className={`group flex items-center gap-1 px-2 py-1 cursor-pointer text-sm rounded-md mx-1 transition-colors duration-100
             ${isActive
-              ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 font-medium'
+              ? 'bg-violet-500/10 text-violet-600 dark:text-violet-400 font-medium'
               : 'text-gray-700 dark:text-gray-300 hover:bg-gray-200/60 dark:hover:bg-gray-700/40'
             }`}
           style={{ paddingLeft: `${depth * 16 + 8}px` }}
@@ -174,7 +174,7 @@ export function Sidebar({
                 className={`flex-shrink-0 text-gray-400 transition-transform duration-150 ${isExpanded ? 'rotate-90' : ''}`}
               />
               {isExpanded ? (
-                <FolderOpen size={15} className="flex-shrink-0 text-blue-500/70" />
+                <FolderOpen size={15} className="flex-shrink-0 text-violet-500/70" />
               ) : (
                 <Folder size={15} className="flex-shrink-0 text-gray-400 dark:text-gray-500" />
               )}
@@ -182,7 +182,7 @@ export function Sidebar({
           ) : (
             <>
               <span className="w-3.5" />
-              <FileText size={15} className={`flex-shrink-0 ${isActive ? 'text-blue-500' : 'text-gray-400 dark:text-gray-500'}`} />
+              <FileText size={15} className={`flex-shrink-0 ${isActive ? 'text-violet-500' : 'text-gray-400 dark:text-gray-500'}`} />
             </>
           )}
           {isRenaming ? (
@@ -195,7 +195,7 @@ export function Sidebar({
                 if (e.key === 'Enter') handleRename();
                 if (e.key === 'Escape') setRenaming(null);
               }}
-              className="flex-1 bg-white dark:bg-gray-800 border rounded px-1.5 py-0.5 text-sm outline-none focus:ring-1 focus:ring-blue-500"
+              className="flex-1 bg-white dark:bg-gray-800 border rounded px-1.5 py-0.5 text-sm outline-none focus:ring-1 focus:ring-violet-500"
               onClick={(e) => e.stopPropagation()}
             />
           ) : (
@@ -242,7 +242,7 @@ export function Sidebar({
                     if (e.key === 'Escape') setCreating(null);
                   }}
                   placeholder={creating.type === 'file' ? 'Note name...' : 'Folder name...'}
-                  className="flex-1 bg-white dark:bg-gray-800 border rounded px-1.5 py-0.5 text-sm outline-none focus:ring-1 focus:ring-blue-500"
+                  className="flex-1 bg-white dark:bg-gray-800 border rounded px-1.5 py-0.5 text-sm outline-none focus:ring-1 focus:ring-violet-500"
                 />
               </div>
             )}
@@ -309,7 +309,7 @@ export function Sidebar({
                 key={`starred-${node.path}`}
                 className={`group flex items-center gap-1 px-2 py-1 cursor-pointer text-sm rounded-md mx-1 transition-colors duration-100
                   ${node.path === activeNotePath
-                    ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 font-medium'
+                    ? 'bg-violet-500/10 text-violet-600 dark:text-violet-400 font-medium'
                     : 'text-gray-700 dark:text-gray-300 hover:bg-gray-200/60 dark:hover:bg-gray-700/40'
                   }`}
                 style={{ paddingLeft: '8px' }}
@@ -338,7 +338,7 @@ export function Sidebar({
                 if (e.key === 'Escape') setCreating(null);
               }}
               placeholder={creating.type === 'file' ? 'Note name...' : 'Folder name...'}
-              className="flex-1 bg-white dark:bg-gray-800 border rounded px-1.5 py-0.5 text-sm outline-none focus:ring-1 focus:ring-blue-500"
+              className="flex-1 bg-white dark:bg-gray-800 border rounded px-1.5 py-0.5 text-sm outline-none focus:ring-1 focus:ring-violet-500"
             />
           </div>
         )}

@@ -9,7 +9,7 @@ interface StatusBarProps {
 function getModeColor(mode: string): string {
   if (mode.includes('INSERT')) return 'text-green-500';
   if (mode.includes('VISUAL')) return 'text-orange-500';
-  return 'text-blue-500';
+  return 'text-violet-500';
 }
 
 export function StatusBar({ notePath, vimMode, line, col, wordCount }: StatusBarProps) {
