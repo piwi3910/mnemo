@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 
 interface ShortcutActions {
   toggleSidebar: () => void;
-  toggleOutline: () => void;
+  toggleEdit: () => void;
   openQuickSwitcher: () => void;
   focusSearch: () => void;
   createNote: () => void;
@@ -22,9 +22,10 @@ export function useKeyboardShortcuts(actions: ShortcutActions) {
       } else if (e.ctrlKey && e.key === 'b') {
         e.preventDefault();
         actions.toggleSidebar();
-      } else if (e.ctrlKey && e.key === 'o') {
+      } else if (e.ctrlKey && e.key === 'e' && !target.closest('.cm-editor')) {
+        // Guard: skip when focus is inside CodeMirror (Ctrl+E = cursor to line end)
         e.preventDefault();
-        actions.toggleOutline();
+        actions.toggleEdit();
       } else if (e.ctrlKey && e.key === 'p') {
         e.preventDefault();
         actions.openQuickSwitcher();
