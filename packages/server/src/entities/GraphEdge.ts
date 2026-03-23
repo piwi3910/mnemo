@@ -5,17 +5,17 @@ export class GraphEdge {
   @PrimaryGeneratedColumn("uuid")
   id: string;
 
-  @Column()
+  @Column("text")
   fromPath: string;
 
-  @Column()
+  @Column("text")
   toPath: string;
 
   @Index()
-  @Column()
+  @Column("text")
   fromNoteId: string;
 
   @Index()
-  @Column()
+  @Column("text")
   toNoteId: string;
 }

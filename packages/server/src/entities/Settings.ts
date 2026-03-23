@@ -2,9 +2,9 @@ import { Entity, PrimaryColumn, Column } from "typeorm";
 
 @Entity()
 export class Settings {
-  @PrimaryColumn()
+  @PrimaryColumn("text")
   key: string;
 
-  @Column()
+  @Column("text")
   value: string;
 }

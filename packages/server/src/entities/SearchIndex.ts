@@ -2,7 +2,7 @@ import { Entity, PrimaryColumn, Column } from "typeorm";
 
 @Entity()
 export class SearchIndex {
-  @PrimaryColumn()
+  @PrimaryColumn("text")
   notePath: string;
 
   @Column("text")
@@ -14,6 +14,6 @@ export class SearchIndex {
   @Column("simple-array")
   tags: string[];
 
-  @Column()
+  @Column("timestamp")
   modifiedAt: Date;
 }
