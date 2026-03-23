@@ -141,24 +141,43 @@ export function GraphView({ graphData, loading, activeNotePath, mode, onNoteSele
         const isHovered = hoveredNodeRef.current === node;
         const isActive = node.path === activeNotePath;
         const isStarred = starredPaths?.has(node.path) ?? false;
-        const radius = isActive ? 10 : isStarred ? 8 : isHovered ? 8 : 6;
+        const radius = isActive ? 10 : isHovered ? 8 : 6;
 
-        // Node circle
-        ctx.beginPath();
-        ctx.arc(node.x, node.y, radius, 0, 2 * Math.PI);
-        ctx.fillStyle = isActive
-          ? '#25D366'
-          : isStarred
-            ? '#eab308'
+        if (isStarred && !isActive) {
+          // Draw star shape for starred nodes
+          const r = isHovered ? 9 : 7;
+          const innerR = r * 0.4;
+          ctx.beginPath();
+          for (let i = 0; i < 10; i++) {
+            const angle = (Math.PI / 2) + (i * Math.PI / 5);
+            const dist = i % 2 === 0 ? r : innerR;
+            const px = node.x + Math.cos(angle) * dist;
+            const py = node.y - Math.sin(angle) * dist;
+            if (i === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+          }
+          ctx.closePath();
+          ctx.fillStyle = '#eab308';
+          ctx.fill();
+          ctx.strokeStyle = '#ca8a04';
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        } else {
+          // Normal circle node
+          ctx.beginPath();
+          ctx.arc(node.x, node.y, radius, 0, 2 * Math.PI);
+          ctx.fillStyle = isActive
+            ? '#25D366'
             : isHovered
               ? '#7c3aed'
               : isDark ? '#a78bfa' : '#7c3aed';
-        ctx.fill();
+          ctx.fill();
 
-        if (isHovered || isActive || isStarred) {
-          ctx.strokeStyle = isActive ? '#128C7E' : isStarred ? '#ca8a04' : isDark ? '#c4b5fd' : '#6d28d9';
-          ctx.lineWidth = 2;
-          ctx.stroke();
+          if (isHovered || isActive) {
+            ctx.strokeStyle = isActive ? '#128C7E' : isDark ? '#c4b5fd' : '#6d28d9';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+          }
         }
 
         // Label
