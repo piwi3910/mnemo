@@ -7,6 +7,8 @@ import { InviteCode } from "../entities/InviteCode";
 import { Settings } from "../entities/Settings";
 import { SearchIndex } from "../entities/SearchIndex";
 import { GraphEdge } from "../entities/GraphEdge";
+import { NoteShare } from "../entities/NoteShare";
+import { AccessRequest } from "../entities/AccessRequest";
 import { deleteAllUserRefreshTokens } from "../services/tokenService";
 
 /**
@@ -449,6 +451,12 @@ export function createAdminRouter(): Router {
       await AppDataSource.getRepository(SearchIndex).delete({ userId });
       await AppDataSource.getRepository(GraphEdge).delete({ userId });
       await AppDataSource.getRepository(Settings).delete({ userId });
+
+      // Clean up NoteShare and AccessRequest rows
+      await AppDataSource.getRepository(NoteShare).delete({ ownerUserId: userId });
+      await AppDataSource.getRepository(NoteShare).delete({ sharedWithUserId: userId });
+      await AppDataSource.getRepository(AccessRequest).delete({ requesterUserId: userId });
+      await AppDataSource.getRepository(AccessRequest).delete({ ownerUserId: userId });
 
       res.json({ ok: true });
     } catch (err) {

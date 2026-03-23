@@ -2,6 +2,8 @@ import * as fs from "fs/promises";
 import * as path from "path";
 import { indexNote, removeFromIndex, renameInIndex, extractTitle } from "./searchService";
 import { updateGraphCache, removeFromGraph, renameInGraph } from "./graphService";
+import { AppDataSource } from "../data-source";
+import { NoteShare } from "../entities/NoteShare";
 
 export interface FileTreeNode {
   name: string;
@@ -135,6 +137,10 @@ export async function deleteNote(notesDir: string, notePath: string, userId: str
     removeFromIndex(notePath, userId),
     removeFromGraph(notePath, userId),
   ]);
+
+  // Clean up NoteShare rows for this exact file
+  const shareRepo = AppDataSource.getRepository(NoteShare);
+  await shareRepo.delete({ ownerUserId: userId, path: notePath, isFolder: false });
 }
 
 /**
@@ -172,6 +178,14 @@ export async function renameNote(
     renameInIndex(oldPath, newPath, userId),
     renameInGraph(oldPath, newPath, userId),
   ]);
+
+  // Update NoteShare rows for this exact file
+  const shareRepo = AppDataSource.getRepository(NoteShare);
+  await shareRepo.createQueryBuilder()
+    .update(NoteShare)
+    .set({ path: newPath })
+    .where("ownerUserId = :userId AND path = :oldPath AND isFolder = false", { userId, oldPath })
+    .execute();
 }
 
 /**

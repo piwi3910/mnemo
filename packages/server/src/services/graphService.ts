@@ -136,8 +136,10 @@ export async function getBacklinks(
 ): Promise<{ path: string; title: string }[]> {
   const repo = AppDataSource.getRepository(GraphEdge);
   const noteId = noteIdFromPath(notePath);
+  const { hasAccess } = await import("../services/shareService");
 
-  const edges = await repo.find({ where: { toNoteId: noteId, userId } });
+  // Find all edges pointing to this note across ALL users
+  const edges = await repo.find({ where: { toNoteId: noteId } });
   if (edges.length === 0) return [];
 
   const { SearchIndex } = await import("../entities/SearchIndex");
@@ -145,9 +147,21 @@ export async function getBacklinks(
 
   const backlinks: { path: string; title: string }[] = [];
   for (const edge of edges) {
-    const note = await searchRepo.findOneBy({ notePath: edge.fromPath, userId });
-    if (note) {
-      backlinks.push({ path: note.notePath, title: note.title });
+    if (edge.userId === userId) {
+      // Own note — always accessible
+      const note = await searchRepo.findOneBy({ notePath: edge.fromPath, userId });
+      if (note) {
+        backlinks.push({ path: note.notePath, title: note.title });
+      }
+    } else {
+      // Another user's note — check if it's shared with the viewer
+      const access = await hasAccess(edge.userId, edge.fromPath, userId);
+      if (access.canRead) {
+        const note = await searchRepo.findOneBy({ notePath: edge.fromPath, userId: edge.userId });
+        if (note) {
+          backlinks.push({ path: note.notePath, title: note.title });
+        }
+      }
     }
   }
 
