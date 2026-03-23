@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { FileNode } from '../../lib/api';
 import { FileText, Folder, FolderOpen, ChevronRight, Plus, FolderPlus, MoreHorizontal, Pencil, Trash2, Calendar, LayoutTemplate, Star } from 'lucide-react';
 import { TagPane } from '../Tags/TagPane';
+import { ResizeHandle } from '../Layout/ResizeHandle';
 
 interface SidebarProps {
   tree: FileNode[];
@@ -40,6 +41,10 @@ export function Sidebar({
   const [renaming, setRenaming] = useState<{ path: string; type: 'file' | 'folder' } | null>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; node: FileNode } | null>(null);
   const [newName, setNewName] = useState('');
+  const [tagPaneHeight, setTagPaneHeight] = useState(180);
+  const handleTagResize = useCallback((delta: number) => {
+    setTagPaneHeight(h => Math.max(60, Math.min(500, h - delta)));
+  }, []);
 
   // Listen for external rename requests (F2 shortcut)
   useEffect(() => {
@@ -345,8 +350,13 @@ export function Sidebar({
         {tree.map((node) => renderNode(node, 0))}
       </div>
 
+      {/* Resize handle between file tree and tags */}
+      <ResizeHandle direction="vertical" onResize={handleTagResize} />
+
       {/* Tag Pane */}
-      <TagPane onNoteSelect={onSelect} />
+      <div className="flex-shrink-0 overflow-hidden" style={{ height: `${tagPaneHeight}px` }}>
+        <TagPane onNoteSelect={onSelect} />
+      </div>
 
       {/* Context menu - portaled to body to escape sidebar's stacking context */}
       {contextMenu && createPortal(
