@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="logos/mnemo_logo_transparent.png" alt="Mnemo" width="400" />
+  <img src="logos/mnemo_banner_dark.png" alt="Mnemo" width="600" style="border-radius: 12px;" />
 </p>
 
 <p align="center">
