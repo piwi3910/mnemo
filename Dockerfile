@@ -13,5 +13,6 @@ COPY --from=builder /app/packages/server/dist ./dist
 COPY --from=builder /app/packages/server/package*.json ./
 COPY --from=builder /app/packages/client/dist ./public
 RUN npm install --production
+ENV PORT=3000
 EXPOSE 3000
 CMD ["node", "dist/index.js"]
