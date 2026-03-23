@@ -1,11 +1,9 @@
 import { Request, Response, NextFunction } from "express";
 import { verifyAccessToken } from "../services/tokenService";
 
-declare global {
-  namespace Express {
-    interface Request {
-      user?: { id: string; email: string; role: string };
-    }
+declare module "express-serve-static-core" {
+  interface Request {
+    user?: { id: string; email: string; role: string };
   }
 }
 

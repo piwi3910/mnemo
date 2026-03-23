@@ -98,6 +98,13 @@ export function createSettingsRouter(): Router {
   router.put("/:key", async (req: Request, res: Response) => {
     try {
       const key = req.params.key as string;
+
+      const ADMIN_ONLY_KEYS = ["registration_mode"];
+      if (ADMIN_ONLY_KEYS.includes(key)) {
+        res.status(403).json({ error: "This setting requires admin access" });
+        return;
+      }
+
       const { value } = req.body as { value?: string };
 
       if (value === undefined) {
