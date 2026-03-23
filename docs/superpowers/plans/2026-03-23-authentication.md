@@ -4,9 +4,15 @@
 
 **Goal:** Add multi-user authentication to Mnemo — email/password + OAuth (Google, GitHub), JWT with refresh tokens, admin role with invite system, and protected API routes.
 
-**Architecture:** Four new TypeORM entities (User, AuthProvider, RefreshToken, InviteCode), auth middleware protecting all existing routes, Passport.js for OAuth, JWT access tokens + SHA-256 hashed refresh tokens in httpOnly cookies, React auth context wrapping the app with login/admin pages.
+**Architecture:** Four new TypeORM entities (User, AuthProvider, RefreshToken, InviteCode), auth middleware protecting all existing routes, OAuth handled via direct strategy callbacks (not `passport.authenticate()` middleware — Express 5 compatibility), JWT access tokens + SHA-256 hashed refresh tokens in httpOnly cookies, React auth context wrapping the app with login/admin pages.
 
-**Tech Stack:** bcrypt, jsonwebtoken, passport, passport-google-oauth20, passport-github2, cookie-parser, React context
+**Tech Stack:** bcrypt, jsonwebtoken, passport-google-oauth20, passport-github2, cookie-parser, React context
+
+**Important notes:**
+- The Vite dev server already proxies `/api` → `localhost:3001` (see `packages/client/vite.config.ts`), so OAuth callbacks via `/api/auth/google/callback` work through the proxy in development.
+- Express 5 has breaking changes with `passport.initialize()` middleware. We use Passport strategy classes directly (calling `strategy._verify` / `strategy.userProfile`) instead of `passport.authenticate()` middleware. This avoids Express 5 incompatibility.
+- CSRF check (`X-Requested-With` header) is applied to protected routes only, NOT to `/api/auth/*` routes (which handle their own security via cookies/tokens).
+- `synchronize: true` in TypeORM auto-creates new tables in development. Production migration should be addressed separately.
 
 **Spec:** `docs/superpowers/specs/2026-03-23-authentication-design.md`
 
@@ -28,8 +34,8 @@
 
 ```bash
 cd /Users/pascal/Development/mnemo/packages/server
-npm install bcrypt jsonwebtoken passport passport-google-oauth20 passport-github2 cookie-parser
-npm install -D @types/bcrypt @types/jsonwebtoken @types/passport @types/passport-google-oauth20 @types/passport-github2 @types/cookie-parser
+npm install bcrypt jsonwebtoken cookie-parser
+npm install -D @types/bcrypt @types/jsonwebtoken @types/cookie-parser
 ```
 
 - [ ] **Step 2: Create User entity**
@@ -398,63 +404,68 @@ git commit -m "feat: add auth routes (register, login, refresh, logout, config, 
 
 ---
 
-## Task 4: OAuth routes (Google + GitHub via Passport)
+## Task 4: OAuth routes (Google + GitHub — direct implementation, no Passport middleware)
 
 **Files:**
-- Create: `packages/server/src/services/passportService.ts`
+- Create: `packages/server/src/services/oauthService.ts`
 - Modify: `packages/server/src/routes/auth.ts`
 
-- [ ] **Step 1: Create Passport service**
+**Important:** We do NOT use `passport.authenticate()` middleware or `passport.initialize()` — these have Express 5 compatibility issues. Instead, we implement OAuth flows directly using `fetch` to exchange authorization codes for tokens and fetch profiles from Google/GitHub APIs.
 
-Create `packages/server/src/services/passportService.ts` — configures Google and GitHub strategies:
+- [ ] **Step 1: Create OAuth service**
+
+Create `packages/server/src/services/oauthService.ts` — handles OAuth token exchange and user resolution:
 
 ```ts
-import passport from "passport";
-import { Strategy as GoogleStrategy } from "passport-google-oauth20";
-import { Strategy as GitHubStrategy } from "passport-github2";
 import { AppDataSource } from "../data-source";
 import { User } from "../entities/User";
 import { AuthProvider } from "../entities/AuthProvider";
 import { Settings } from "../entities/Settings";
 import { InviteCode } from "../entities/InviteCode";
 
-// Shared logic for OAuth callback
-async function handleOAuthUser(
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "";
+const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || "";
+const GITHUB_CLIENT_ID = process.env.GITHUB_CLIENT_ID || "";
+const GITHUB_CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET || "";
+const APP_URL = process.env.APP_URL || "http://localhost:5173";
+
+// Google: build authorization URL
+export function getGoogleAuthUrl(state?: string): string { /* ... */ }
+
+// Google: exchange code for profile { email, name, avatarUrl, providerAccountId }
+export async function exchangeGoogleCode(code: string): Promise<OAuthProfile> { /* ... */ }
+
+// GitHub: build authorization URL
+export function getGitHubAuthUrl(state?: string): string { /* ... */ }
+
+// GitHub: exchange code for profile (fetch /user + /user/emails if needed)
+export async function exchangeGitHubCode(code: string): Promise<OAuthProfile> { /* ... */ }
+
+// Shared: resolve OAuth profile to a User (find existing, link, or create new)
+export async function resolveOAuthUser(
   provider: string,
-  providerAccountId: string,
-  email: string,
-  name: string,
-  avatarUrl: string | null,
+  profile: OAuthProfile,
   inviteCode: string | null,
 ): Promise<User> {
-  // ... look up AuthProvider, link to existing user, or create new user
-  // Respect registration_mode and invite codes
-  // First user becomes admin
-}
-
-export function configurePassport(): void {
-  // Configure Google strategy if env vars present
-  // Configure GitHub strategy if env vars present
-  // Both use handleOAuthUser in their verify callback
+  // 1. Look up AuthProvider by (provider, providerAccountId)
+  // 2. Found → return user (check not disabled)
+  // 3. Not found, email matches existing user → link, return
+  // 4. New user → check registration_mode, validate invite code, create User+AuthProvider
+  // 5. First user → role: admin
 }
 ```
 
-The `handleOAuthUser` function should:
-1. Look up AuthProvider by `(provider, providerAccountId)`
-2. If found → return that user (if not disabled)
-3. If not found, look up User by email → link provider, return user
-4. If completely new → check registration_mode, validate invite code if needed, create User + AuthProvider
-5. First user in DB → `role: admin`
+This avoids all Passport middleware. Uses standard `fetch()` for Google/GitHub API calls.
 
 - [ ] **Step 2: Add OAuth routes to auth.ts**
 
 Add to the existing auth router:
-- `GET /google` — initiates Google OAuth (pass invite code in `state` if provided via query param)
-- `GET /google/callback` — Passport callback, generates tokens, redirects to frontend
-- `GET /github` — initiates GitHub OAuth
-- `GET /github/callback` — Passport callback, generates tokens, redirects to frontend
+- `GET /google` — redirects to Google OAuth consent URL (passes `inviteCode` from query in `state` param)
+- `GET /google/callback` — exchanges `code` query param via `exchangeGoogleCode()`, resolves user via `resolveOAuthUser()`, generates tokens, sets cookie, redirects to `{APP_URL}/?auth=success`
+- `GET /github` — redirects to GitHub OAuth
+- `GET /github/callback` — same flow as Google but using GitHub functions
 
-For GitHub: after authentication, fetch email from GitHub `/user/emails` API if not in profile.
+Error handling: if OAuth fails or invite required, redirect to `{APP_URL}/login?error=...`
 
 - [ ] **Step 3: Verify build**
 
@@ -468,7 +479,7 @@ npm run build
 
 ```bash
 git add -A
-git commit -m "feat: add OAuth routes for Google and GitHub"
+git commit -m "feat: add OAuth routes for Google and GitHub (direct, no Passport)"
 ```
 
 ---
@@ -526,19 +537,9 @@ import cookieParser from "cookie-parser";
 import { authMiddleware, adminMiddleware, csrfCheck } from "./middleware/auth";
 import { createAuthRouter } from "./routes/auth";
 import { createAdminRouter } from "./routes/admin";
-import { configurePassport } from "./services/passportService";
-import passport from "passport";
 ```
 
-2. After `app.use(express.json())`, add:
-```ts
-app.use(cookieParser());
-app.use(csrfCheck);
-configurePassport();
-app.use(passport.initialize());
-```
-
-3. Replace `app.use(cors())` with:
+2. Replace `app.use(cors())` with:
 ```ts
 app.use(cors({
   origin: process.env.APP_URL || "http://localhost:5173",
@@ -546,25 +547,46 @@ app.use(cors({
 }));
 ```
 
-4. Mount auth routes (unauthenticated):
+3. After `app.use(express.json())`, add:
+```ts
+app.use(cookieParser());
+```
+
+4. Mount auth routes FIRST (unauthenticated, NO csrfCheck — auth routes handle their own security):
 ```ts
 app.use("/api/auth", createAuthRouter());
 ```
 
-5. Mount admin routes (auth + admin required):
+5. Apply CSRF check to all REMAINING routes (not auth):
+```ts
+app.use(csrfCheck);
+```
+
+6. Mount admin routes (auth + admin required):
 ```ts
 app.use("/api/admin", authMiddleware, adminMiddleware, createAdminRouter());
 ```
 
-6. Add `authMiddleware` to all existing routes:
+7. Add `authMiddleware` to all existing routes INCLUDING `/api/files`:
 ```ts
 app.use("/api/notes", authMiddleware, createNotesRouter(NOTES_DIR));
 app.use("/api/notes-rename", authMiddleware, createNotesRenameRouter(NOTES_DIR));
 app.use("/api/folders", authMiddleware, createFoldersRouter(NOTES_DIR));
-// ... etc for all existing routes
+app.use("/api/folders-rename", authMiddleware, createFoldersRenameRouter(NOTES_DIR));
+app.use("/api/search", authMiddleware, createSearchRouter());
+app.use("/api/graph", authMiddleware, createGraphRouter());
+app.use("/api/settings", authMiddleware, createSettingsRouter());
+app.use("/api/backlinks", authMiddleware, createBacklinksRouter());
+app.use("/api/tags", authMiddleware, createTagsRouter());
+app.use("/api/daily", authMiddleware, createDailyRouter(NOTES_DIR));
+app.use("/api/templates", authMiddleware, createTemplatesRouter(NOTES_DIR));
+app.use("/api/canvas", authMiddleware, createCanvasRouter(NOTES_DIR));
+// Also protect the inline files route with authMiddleware
 ```
 
-7. Keep `/api/health` and `/api/docs` unauthenticated (no authMiddleware).
+8. Keep `/api/health` and `/api/docs` unauthenticated (mounted BEFORE csrfCheck, or no authMiddleware).
+
+**Middleware order:** `cors → json → cookieParser → auth routes (no csrf) → csrfCheck → all protected routes`
 
 - [ ] **Step 2: Protect registration_mode in settings route**
 
@@ -634,7 +656,29 @@ In `packages/client/src/lib/api.ts`:
 - Add `credentials: 'include'` to all fetch calls
 - Export auth-specific API methods: `authLogin`, `authRegister`, `authRefresh`, `authLogout`, `authMe`, `authConfig`
 
-The approach: the `useAuth` hook provides an `authFetch` wrapper that auto-attaches the token. All existing `api.*` calls should use this wrapper. The simplest way: make `api` a factory that accepts a token getter function, or add a global token setter.
+**Concrete approach:** Add a module-level token variable and setter in `api.ts`:
+```ts
+let _accessToken: string | null = null;
+export function setAccessToken(token: string | null) { _accessToken = token; }
+```
+Then modify the existing `request()` function to:
+- Add `credentials: 'include'` to all fetch calls (for cookies)
+- Add `'X-Requested-With': 'XMLHttpRequest'` header to all requests (CSRF)
+- Add `'Authorization': 'Bearer ' + _accessToken` header when `_accessToken` is set
+
+Also add auth-specific API methods:
+```ts
+export const authApi = {
+  config: () => fetch('/api/auth/config').then(r => r.json()),
+  login: (email: string, password: string) => request<AuthResponse>('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
+  register: (data: RegisterData) => request<AuthResponse>('/auth/register', { method: 'POST', body: JSON.stringify(data) }),
+  refresh: () => fetch('/api/auth/refresh', { method: 'POST', credentials: 'include' }).then(r => r.ok ? r.json() : null),
+  logout: () => fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }),
+  me: () => request<UserData>('/auth/me'),
+};
+```
+
+The `useAuth` hook calls `setAccessToken()` when tokens are obtained/refreshed, and `setAccessToken(null)` on logout.
 
 - [ ] **Step 3: Verify build**
 
@@ -773,7 +817,9 @@ git commit -m "feat: add admin page with user management, invites, and settings"
 
 ## Task 11: Final verification and push
 
-- [ ] **Step 1: Create .env.example**
+- [ ] **Step 1: Ensure .env is gitignored and create .env.example**
+
+Verify `.env` is already in `.gitignore` (it is — line 3). Then create the example file:
 
 Create `/Users/pascal/Development/mnemo/.env.example`:
 ```
