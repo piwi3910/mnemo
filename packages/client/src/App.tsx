@@ -231,14 +231,6 @@ export default function App() {
           >
             <Menu size={18} />
           </button>
-          <button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="btn-ghost p-2 hidden md:flex"
-            aria-label="Toggle sidebar"
-            title="Toggle sidebar (Ctrl+B)"
-          >
-            <PanelLeft size={18} />
-          </button>
           <div className="flex items-center ml-1">
             <img src="/logo.png" alt="Mnemo" className="h-11 w-auto" />
           </div>
@@ -273,17 +265,40 @@ export default function App() {
           />
         )}
 
-        {/* Sidebar */}
+        {/* Sidebar - collapsed bar on desktop when closed, full sidebar when open */}
+        {/* Collapsed bar (desktop only) */}
+        <div className={`hidden ${sidebarOpen ? 'md:hidden' : 'md:flex'} flex-col items-center w-10 flex-shrink-0 border-r bg-gray-50 dark:bg-surface-900 py-2`}>
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="btn-ghost p-2"
+            aria-label="Open sidebar"
+            title="Open sidebar (Ctrl+B)"
+          >
+            <PanelLeft size={18} />
+          </button>
+        </div>
+        {/* Full sidebar */}
         <aside
           className={`
             ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
             md:translate-x-0
-            ${sidebarOpen ? 'md:w-64' : 'md:w-0 md:overflow-hidden'}
+            ${sidebarOpen ? 'md:w-64' : 'md:w-0 md:overflow-hidden md:border-r-0'}
             fixed md:relative inset-y-0 left-0 z-40 md:z-0
             w-72 flex-shrink-0 transition-all duration-200 ease-in-out
             bg-gray-50 dark:bg-surface-900 border-r
           `}
         >
+          {/* Toggle button at top of open sidebar */}
+          <div className="hidden md:flex items-center px-2 py-1.5 border-b">
+            <button
+              onClick={() => setSidebarOpen(false)}
+              className="btn-ghost p-1.5"
+              aria-label="Close sidebar"
+              title="Close sidebar (Ctrl+B)"
+            >
+              <PanelLeft size={16} />
+            </button>
+          </div>
           <Sidebar
             tree={notes.tree}
             activeNotePath={notes.activeNote?.path || null}
