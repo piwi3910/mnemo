@@ -102,6 +102,41 @@ export async function renameInIndex(
   }
 }
 
+/**
+ * Get all tags across all notes with their counts.
+ */
+export async function getAllTags(): Promise<{ tag: string; count: number }[]> {
+  const repo = AppDataSource.getRepository(SearchIndex);
+  const allNotes = await repo.find();
+
+  const tagCounts = new Map<string, number>();
+  for (const note of allNotes) {
+    for (const tag of note.tags) {
+      if (tag) {
+        tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1);
+      }
+    }
+  }
+
+  return Array.from(tagCounts.entries())
+    .map(([tag, count]) => ({ tag, count }))
+    .sort((a, b) => b.count - a.count);
+}
+
+/**
+ * Get all note paths that have a given tag.
+ */
+export async function getNotesByTag(
+  tag: string
+): Promise<{ notePath: string; title: string }[]> {
+  const repo = AppDataSource.getRepository(SearchIndex);
+  const allNotes = await repo.find();
+
+  return allNotes
+    .filter((note) => note.tags.includes(tag))
+    .map((note) => ({ notePath: note.notePath, title: note.title }));
+}
+
 export interface SearchResult {
   notePath: string;
   title: string;

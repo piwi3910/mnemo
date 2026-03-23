@@ -1,12 +1,15 @@
 import { useState, useCallback } from 'react';
 import { useTheme } from './hooks/useTheme';
 import { useNotes } from './hooks/useNotes';
+import { api } from './lib/api';
 import { Sidebar } from './components/Sidebar/Sidebar';
 import { Editor } from './components/Editor/Editor';
 import { Preview } from './components/Preview/Preview';
 import { SearchBar } from './components/Search/SearchBar';
 import { GraphView } from './components/Graph/GraphView';
 import { ThemeToggle } from './components/Layout/ThemeToggle';
+import { BacklinksPanel } from './components/Backlinks/BacklinksPanel';
+import { TemplatePicker } from './components/Templates/TemplatePicker';
 import { PanelLeft, BookOpen, Network, X, Menu } from 'lucide-react';
 
 type ViewMode = 'editor' | 'preview' | 'split';
@@ -18,6 +21,8 @@ export default function App() {
   const [showGraph, setShowGraph] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showTemplatePicker, setShowTemplatePicker] = useState(false);
+  const [pendingTemplatePath, setPendingTemplatePath] = useState<string | null>(null);
 
   const handleNoteSelect = useCallback((path: string) => {
     notes.openNote(path);
@@ -44,6 +49,39 @@ export default function App() {
     const path = findNote(notes.tree);
     if (path) notes.openNote(path);
   }, [notes]);
+
+  const handleDailyNote = useCallback(async () => {
+    try {
+      const note = await api.createDailyNote();
+      await notes.refreshTree();
+      notes.openNote(note.path);
+      setMobileMenuOpen(false);
+    } catch {
+      notes.setError('Failed to create daily note');
+    }
+  }, [notes]);
+
+  const handleCreateFromTemplate = useCallback(() => {
+    setPendingTemplatePath(null);
+    setShowTemplatePicker(true);
+  }, []);
+
+  const handleTemplateSelected = useCallback(async (templateContent: string) => {
+    setShowTemplatePicker(false);
+    if (pendingTemplatePath) {
+      // Apply template to a pending note path
+      await notes.createNote(pendingTemplatePath, templateContent || undefined);
+    } else {
+      // Create a new note with template — prompt for name via inline creation
+      // For simplicity, create with a default name and template content
+      const now = new Date();
+      const timestamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
+      const noteName = `New Note ${timestamp}`;
+      const content = templateContent || `# ${noteName}\n\n`;
+      await notes.createNote(noteName, content);
+    }
+    setPendingTemplatePath(null);
+  }, [notes, pendingTemplatePath]);
 
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-white dark:bg-surface-950">
@@ -138,6 +176,8 @@ export default function App() {
             onCreateFolder={notes.createFolder}
             onDeleteFolder={notes.deleteFolder}
             onRenameFolder={notes.renameFolder}
+            onDailyNote={handleDailyNote}
+            onCreateFromTemplate={handleCreateFromTemplate}
           />
         </aside>
 
@@ -168,6 +208,10 @@ export default function App() {
                       allNotes={notes.tree}
                     />
                   </div>
+                  <BacklinksPanel
+                    notePath={notes.activeNote.path}
+                    onNoteSelect={handleNoteSelect}
+                  />
                 </div>
               )}
               {(viewMode === 'preview' || viewMode === 'split') && (
@@ -214,6 +258,15 @@ export default function App() {
       {/* Graph modal */}
       {showGraph && (
         <GraphView onClose={() => setShowGraph(false)} onNoteSelect={handleNoteSelect} />
+      )}
+
+      {/* Template picker modal */}
+      {showTemplatePicker && (
+        <TemplatePicker
+          onSelect={handleTemplateSelected}
+          onClose={() => setShowTemplatePicker(false)}
+          noteTitle="New Note"
+        />
       )}
     </div>
   );

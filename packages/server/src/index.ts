@@ -1,5 +1,5 @@
 import "reflect-metadata";
-import express from "express";
+import express, { Request, Response } from "express";
 import cors from "cors";
 import * as path from "path";
 import * as fs from "fs/promises";
@@ -9,6 +9,10 @@ import { createFoldersRouter, createFoldersRenameRouter } from "./routes/folders
 import { createSearchRouter } from "./routes/search";
 import { createGraphRouter } from "./routes/graph";
 import { createSettingsRouter } from "./routes/settings";
+import { createBacklinksRouter } from "./routes/backlinks";
+import { createTagsRouter } from "./routes/tags";
+import { createDailyRouter } from "./routes/daily";
+import { createTemplatesRouter } from "./routes/templates";
 import { indexAllNotes } from "./services/noteService";
 
 const PORT = parseInt(process.env.PORT || "3001", 10);
@@ -101,6 +105,46 @@ See the [[Projects/Mnemo Roadmap]] for how we're building this into Mnemo.
 #ideas #knowledge-management #zettelkasten
 `,
 
+  "Templates/Meeting Notes.md": `# {{title}}
+
+## Date
+{{date}}
+
+## Attendees
+-
+
+## Agenda
+1.
+
+## Notes
+
+
+## Action Items
+- [ ]
+
+#meeting
+`,
+
+  "Templates/Project.md": `# {{title}}
+
+## Overview
+
+
+## Goals
+- [ ]
+
+## Timeline
+
+
+## Resources
+-
+
+## Notes
+
+
+#project
+`,
+
   "Daily/2026-03-23.md": `# Daily Note — 2026-03-23
 
 ## Tasks
@@ -174,6 +218,36 @@ async function main(): Promise<void> {
   app.use("/api/search", createSearchRouter());
   app.use("/api/graph", createGraphRouter());
   app.use("/api/settings", createSettingsRouter());
+  app.use("/api/backlinks", createBacklinksRouter());
+  app.use("/api/tags", createTagsRouter());
+  app.use("/api/daily", createDailyRouter(NOTES_DIR));
+  app.use("/api/templates", createTemplatesRouter(NOTES_DIR));
+
+  // Serve image files from notes directory
+  app.get("/api/files/*", async (req: Request, res: Response) => {
+    const filePath = decodeURIComponent(req.params[0]);
+    const allowedExts = [".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".bmp"];
+    const ext = path.extname(filePath).toLowerCase();
+
+    if (!allowedExts.includes(ext)) {
+      res.status(403).json({ error: "File type not allowed" });
+      return;
+    }
+
+    const fullPath = path.resolve(path.join(NOTES_DIR, filePath));
+    const resolvedBase = path.resolve(NOTES_DIR);
+    if (!fullPath.startsWith(resolvedBase + path.sep) && fullPath !== resolvedBase) {
+      res.status(400).json({ error: "Invalid path" });
+      return;
+    }
+
+    try {
+      await fs.stat(fullPath);
+      res.sendFile(fullPath);
+    } catch {
+      res.status(404).json({ error: "File not found" });
+    }
+  });
 
   // Health check
   app.get("/api/health", (_req, res) => {

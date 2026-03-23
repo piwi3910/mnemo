@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { FileNode } from '../../lib/api';
-import { FileText, Folder, FolderOpen, ChevronRight, Plus, FolderPlus, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import { FileText, Folder, FolderOpen, ChevronRight, Plus, FolderPlus, MoreHorizontal, Pencil, Trash2, Calendar, LayoutTemplate } from 'lucide-react';
+import { TagPane } from '../Tags/TagPane';
 
 interface SidebarProps {
   tree: FileNode[];
@@ -12,6 +13,8 @@ interface SidebarProps {
   onCreateFolder: (path: string) => Promise<void>;
   onDeleteFolder: (path: string) => Promise<void>;
   onRenameFolder: (oldPath: string, newPath: string) => Promise<void>;
+  onDailyNote: () => void;
+  onCreateFromTemplate: () => void;
 }
 
 export function Sidebar({
@@ -24,6 +27,8 @@ export function Sidebar({
   onCreateFolder,
   onDeleteFolder,
   onRenameFolder,
+  onDailyNote,
+  onCreateFromTemplate,
 }: SidebarProps) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set(['']));
   const [creating, setCreating] = useState<{ type: 'file' | 'folder'; parentPath: string } | null>(null);
@@ -191,6 +196,22 @@ export function Sidebar({
         <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Notes</span>
         <div className="flex items-center gap-0.5">
           <button
+            onClick={onDailyNote}
+            className="btn-ghost p-1.5"
+            title="Today's daily note"
+            aria-label="Today's daily note"
+          >
+            <Calendar size={15} />
+          </button>
+          <button
+            onClick={onCreateFromTemplate}
+            className="btn-ghost p-1.5"
+            title="New from template"
+            aria-label="New from template"
+          >
+            <LayoutTemplate size={15} />
+          </button>
+          <button
             onClick={() => handleCreate('file', '')}
             className="btn-ghost p-1.5"
             title="New note"
@@ -230,6 +251,9 @@ export function Sidebar({
         )}
         {tree.map((node) => renderNode(node, 0))}
       </div>
+
+      {/* Tag Pane */}
+      <TagPane onNoteSelect={onSelect} />
 
       {/* Context menu */}
       {contextMenu && (

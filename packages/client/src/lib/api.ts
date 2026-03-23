@@ -24,6 +24,31 @@ export interface GraphData {
   edges: { fromNoteId: string; toNoteId: string }[];
 }
 
+export interface BacklinkData {
+  path: string;
+  title: string;
+}
+
+export interface TagData {
+  tag: string;
+  count: number;
+}
+
+export interface TagNoteData {
+  notePath: string;
+  title: string;
+}
+
+export interface TemplateData {
+  name: string;
+  path: string;
+}
+
+export interface TemplateContent {
+  name: string;
+  content: string;
+}
+
 const BASE = '/api';
 
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
@@ -69,4 +94,18 @@ export const api = {
   getSettings: () => request<Record<string, string>>('/settings'),
   updateSetting: (key: string, value: string) =>
     request<void>(`/settings/${key}`, { method: 'PUT', body: JSON.stringify({ value }) }),
+
+  // Backlinks
+  getBacklinks: (path: string) => request<BacklinkData[]>(`/backlinks/${encodeURIComponent(path)}`),
+
+  // Tags
+  getTags: () => request<TagData[]>('/tags'),
+  getNotesByTag: (tag: string) => request<TagNoteData[]>(`/tags/${encodeURIComponent(tag)}/notes`),
+
+  // Templates
+  getTemplates: () => request<TemplateData[]>('/templates'),
+  getTemplateContent: (name: string) => request<TemplateContent>(`/templates/${encodeURIComponent(name)}`),
+
+  // Daily note
+  createDailyNote: () => request<NoteData>('/daily', { method: 'POST' }),
 };

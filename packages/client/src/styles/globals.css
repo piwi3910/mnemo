@@ -187,6 +187,43 @@
   @apply text-blue-500 dark:text-blue-400 hover:underline cursor-pointer font-medium;
 }
 
+/* Embed styling in preview */
+.embed-note {
+  @apply my-4 border rounded-lg bg-gray-50 dark:bg-surface-900/50 overflow-hidden;
+}
+
+.embed-note .embed-note-header {
+  @apply px-4 py-2 bg-gray-100 dark:bg-gray-800/50 border-b text-sm font-medium text-gray-600 dark:text-gray-400;
+}
+
+.embed-note .embed-note-header .wiki-link {
+  @apply font-medium;
+}
+
+.embed-note > *:not(.embed-note-header) {
+  @apply px-4;
+}
+
+.embed-note > *:last-child {
+  @apply pb-3;
+}
+
+.embed-note.embed-loading {
+  @apply opacity-60;
+}
+
+.embed-note-loading-text {
+  @apply text-xs text-gray-400 italic px-4 py-2;
+}
+
+.embed-image {
+  @apply my-4 rounded-lg overflow-hidden;
+}
+
+.embed-image img {
+  @apply max-w-full rounded-lg shadow-sm;
+}
+
 /* Autocomplete dropdown */
 .cm-tooltip-autocomplete {
   @apply bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg overflow-hidden !important;

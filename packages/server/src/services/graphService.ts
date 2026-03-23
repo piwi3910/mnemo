@@ -122,6 +122,38 @@ export interface GraphData {
 /**
  * Return the full graph: all nodes (from SearchIndex) and all edges.
  */
+/**
+ * Get all notes that link TO the given note (backlinks).
+ */
+export async function getBacklinks(
+  notePath: string
+): Promise<{ path: string; title: string }[]> {
+  const repo = AppDataSource.getRepository(GraphEdge);
+  const noteId = noteIdFromPath(notePath);
+
+  const edges = await repo.find({ where: { toNoteId: noteId } });
+  if (edges.length === 0) return [];
+
+  const { SearchIndex } = await import("../entities/SearchIndex");
+  const searchRepo = AppDataSource.getRepository(SearchIndex);
+
+  const backlinks: { path: string; title: string }[] = [];
+  for (const edge of edges) {
+    const note = await searchRepo.findOneBy({ notePath: edge.fromPath });
+    if (note) {
+      backlinks.push({ path: note.notePath, title: note.title });
+    }
+  }
+
+  // Deduplicate by path
+  const seen = new Set<string>();
+  return backlinks.filter((b) => {
+    if (seen.has(b.path)) return false;
+    seen.add(b.path);
+    return true;
+  });
+}
+
 export async function getFullGraph(): Promise<GraphData> {
   const edgeRepo = AppDataSource.getRepository(GraphEdge);
   const { SearchIndex } = await import("../entities/SearchIndex");
