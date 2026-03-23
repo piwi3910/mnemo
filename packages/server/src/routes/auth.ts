@@ -20,6 +20,7 @@ import {
   exchangeGitHubCode,
   resolveOAuthUser,
 } from "../services/oauthService";
+import { provisionUserNotes } from "../services/userNotesDir";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -253,7 +254,7 @@ function sanitizeUser(user: User) {
  *       404:
  *         description: User not found
  */
-export function createAuthRouter(): Router {
+export function createAuthRouter(notesDir: string): Router {
   const router = Router();
 
   // GET /auth/config — public auth configuration
@@ -344,6 +345,9 @@ export function createAuthRouter(): Router {
         role,
       });
       const savedUser = await userRepo.save(user);
+
+      // Provision per-user notes directory with sample notes
+      await provisionUserNotes(notesDir, savedUser.id);
 
       // Mark invite code as used
       if (invite) {
@@ -538,7 +542,11 @@ export function createAuthRouter(): Router {
       }
 
       const profile = await exchangeGoogleCode(code);
-      const user = await resolveOAuthUser("google", profile, state);
+      const { user, isNewUser } = await resolveOAuthUser("google", profile, state);
+
+      if (isNewUser) {
+        await provisionUserNotes(notesDir, user.id);
+      }
 
       const accessToken = generateAccessToken(user);
       const { cookieValue } = await createRefreshToken(user.id);
@@ -618,7 +626,11 @@ export function createAuthRouter(): Router {
       }
 
       const profile = await exchangeGitHubCode(code);
-      const user = await resolveOAuthUser("github", profile, state);
+      const { user, isNewUser } = await resolveOAuthUser("github", profile, state);
+
+      if (isNewUser) {
+        await provisionUserNotes(notesDir, user.id);
+      }
 
       const accessToken = generateAccessToken(user);
       const { cookieValue } = await createRefreshToken(user.id);

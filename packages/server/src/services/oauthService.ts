@@ -187,7 +187,7 @@ export async function resolveOAuthUser(
   provider: string,
   profile: OAuthProfile,
   inviteCode: string | null,
-): Promise<User> {
+): Promise<{ user: User; isNewUser: boolean }> {
   const authProviderRepo = AppDataSource.getRepository(AuthProvider);
   const userRepo = AppDataSource.getRepository(User);
   const settingsRepo = AppDataSource.getRepository(Settings);
@@ -206,7 +206,7 @@ export async function resolveOAuthUser(
     if (user.disabled) {
       throw new Error("Account is disabled");
     }
-    return user;
+    return { user, isNewUser: false };
   }
 
   // 2. Look up User by email — link provider to existing user
@@ -228,7 +228,7 @@ export async function resolveOAuthUser(
       await userRepo.save(existingUser);
     }
 
-    return existingUser;
+    return { user: existingUser, isNewUser: false };
   }
 
   // 3. Completely new user — check registration_mode
@@ -279,5 +279,5 @@ export async function resolveOAuthUser(
     await inviteRepo.save(invite);
   }
 
-  return savedUser;
+  return { user: savedUser, isNewUser: true };
 }
