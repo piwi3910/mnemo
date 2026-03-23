@@ -37,6 +37,33 @@ docker-compose up
 - Dark/light mode
 - Responsive design
 
+## CI/CD
+
+GitHub Actions automates build and deploy on push to master.
+
+### Required GitHub Secrets
+
+| Secret | Description |
+|--------|-------------|
+| `TRUENAS_HOST` | TrueNAS IP address (e.g., `192.168.10.253`) |
+| `TRUENAS_USER` | SSH username (e.g., `root`) |
+| `TRUENAS_PASSWORD` | SSH password |
+
+### Workflow
+
+1. **Build job**: TypeCheck → Lint → Build → Upload artifacts
+2. **Docker job**: Build image → Push to `ghcr.io/piwi3910/mnemo:latest`
+3. **Deploy job**: SSH to TrueNAS → Pull image → Restart containers
+
+### Manual Deploy
+
+```bash
+# On TrueNAS
+cd /mnt/Pool0/Docker/mnemo
+docker compose -f docker-compose.prod.yml pull
+docker compose -f docker-compose.prod.yml up -d
+```
+
 ## License
 
 MIT
