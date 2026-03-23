@@ -2,7 +2,6 @@ import { Router, Request, Response } from "express";
 import { AppDataSource } from "../data-source";
 import { NoteShare } from "../entities/NoteShare";
 import { AccessRequest } from "../entities/AccessRequest";
-import { User } from "../entities/User";
 import { getSharedNotesForUser } from "../services/shareService";
 
 /**

@@ -11,7 +11,7 @@ import { swaggerSpec } from "./swagger";
 import { authMiddleware, adminMiddleware, csrfCheck } from "./middleware/auth";
 import { createAuthRouter } from "./routes/auth";
 import { createAdminRouter } from "./routes/admin";
-import { createNotesRouter, createNotesRenameRouter } from "./routes/notes";
+import { createNotesRouter, createNotesRenameRouter, createSharedNotesRouter } from "./routes/notes";
 import { createFoldersRouter, createFoldersRenameRouter } from "./routes/folders";
 import { createSearchRouter } from "./routes/search";
 import { createGraphRouter } from "./routes/graph";
@@ -123,6 +123,8 @@ async function main(): Promise<void> {
   app.use("/api/admin", authMiddleware, adminMiddleware, createAdminRouter());
 
   // Protected routes (auth middleware)
+  // Mount shared notes BEFORE the regular /api/notes router to avoid wildcard conflicts
+  app.use("/api/notes/shared", authMiddleware, createSharedNotesRouter(NOTES_DIR));
   app.use("/api/notes", authMiddleware, createNotesRouter(NOTES_DIR));
   app.use("/api/notes-rename", authMiddleware, createNotesRenameRouter(NOTES_DIR));
   app.use("/api/folders", authMiddleware, createFoldersRouter(NOTES_DIR));

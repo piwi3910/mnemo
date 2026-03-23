@@ -7,6 +7,7 @@ import {
   renameNote,
 } from "../services/noteService";
 import { getUserNotesDir } from "../services/userNotesDir";
+import { hasAccess } from "../services/shareService";
 
 /**
  * @swagger
@@ -406,6 +407,103 @@ export function createNotesRenameRouter(notesDir: string): Router {
       }
       console.error("Error renaming note:", err);
       res.status(500).json({ error: "Failed to rename note" });
+    }
+  });
+
+  return router;
+}
+
+/**
+ * Router for reading/writing shared notes.
+ * Mounted at /api/notes/shared BEFORE the regular /api/notes router
+ * to avoid wildcard conflicts.
+ */
+export function createSharedNotesRouter(notesDir: string): Router {
+  const router = Router();
+
+  // GET /api/notes/shared/:ownerUserId/:path(*) — Read a shared note
+  router.get("/:ownerUserId/{*path}", async (req: Request, res: Response) => {
+    try {
+      const ownerUserId = req.params.ownerUserId as string;
+      const notePath = decodeURIComponent(
+        Array.isArray(req.params.path) ? req.params.path.join("/") : (req.params.path as string),
+      );
+
+      if (!notePath) {
+        res.status(400).json({ error: "Path is required" });
+        return;
+      }
+
+      // Validate owner UUID and get their notes dir
+      const ownerDir = await getUserNotesDir(notesDir, ownerUserId);
+
+      // Check permission
+      const fullNotePath = notePath.endsWith(".md") ? notePath : `${notePath}.md`;
+      const access = await hasAccess(ownerUserId, fullNotePath, req.user!.id);
+      if (!access.canRead) {
+        res.status(403).json({ error: "You do not have permission to read this note" });
+        return;
+      }
+
+      const note = await readNote(ownerDir, fullNotePath);
+      res.json({ path: fullNotePath, content: note.content, title: note.title });
+    } catch (err) {
+      if (
+        err instanceof Error &&
+        (err.message.includes("ENOENT") || err.message.includes("no such file"))
+      ) {
+        res.status(404).json({ error: "Note not found" });
+        return;
+      }
+      if (err instanceof Error && err.message.includes("Invalid path")) {
+        res.status(400).json({ error: err.message });
+        return;
+      }
+      console.error("Error reading shared note:", err);
+      res.status(500).json({ error: "Failed to read shared note" });
+    }
+  });
+
+  // PUT /api/notes/shared/:ownerUserId/:path(*) — Write to a shared note
+  router.put("/:ownerUserId/{*path}", async (req: Request, res: Response) => {
+    try {
+      const ownerUserId = req.params.ownerUserId as string;
+      const notePath = decodeURIComponent(
+        Array.isArray(req.params.path) ? req.params.path.join("/") : (req.params.path as string),
+      );
+
+      if (!notePath) {
+        res.status(400).json({ error: "Path is required" });
+        return;
+      }
+
+      // Validate owner UUID and get their notes dir
+      const ownerDir = await getUserNotesDir(notesDir, ownerUserId);
+
+      // Check permission — must have canWrite
+      const fullNotePath = notePath.endsWith(".md") ? notePath : `${notePath}.md`;
+      const access = await hasAccess(ownerUserId, fullNotePath, req.user!.id);
+      if (!access.canWrite) {
+        res.status(403).json({ error: "You do not have permission to write to this note" });
+        return;
+      }
+
+      const { content } = req.body as { content?: string };
+      if (content === undefined) {
+        res.status(400).json({ error: "Content is required" });
+        return;
+      }
+
+      // Write to owner's file, re-index under owner's userId
+      await writeNote(ownerDir, fullNotePath, content, ownerUserId);
+      res.json({ path: fullNotePath, message: "Note updated" });
+    } catch (err) {
+      if (err instanceof Error && err.message.includes("Invalid path")) {
+        res.status(400).json({ error: err.message });
+        return;
+      }
+      console.error("Error writing shared note:", err);
+      res.status(500).json({ error: "Failed to write shared note" });
     }
   });
 
