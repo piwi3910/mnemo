@@ -1,6 +1,7 @@
 import { Router, Request, Response } from "express";
 import * as fs from "fs/promises";
 import * as path from "path";
+import { getUserNotesDir } from "../services/userNotesDir";
 
 /**
  * @swagger
@@ -76,25 +77,26 @@ export function createFoldersRouter(notesDir: string): Router {
   const router = Router();
 
   /**
-   * Validate that a resolved path is within the notes directory.
+   * Validate that a resolved path is within the given base directory.
    */
-  function validatePath(targetPath: string): boolean {
+  function validatePath(targetPath: string, baseDir: string): boolean {
     const resolved = path.resolve(targetPath);
-    const base = path.resolve(notesDir);
+    const base = path.resolve(baseDir);
     return resolved.startsWith(base + path.sep) || resolved === base;
   }
 
   // POST /api/folders — Create a folder
   router.post("/", async (req: Request, res: Response) => {
     try {
+      const userDir = await getUserNotesDir(notesDir, req.user!.id);
       const { path: folderPath } = req.body as { path?: string };
       if (!folderPath) {
         res.status(400).json({ error: "Path is required" });
         return;
       }
 
-      const fullPath = path.join(notesDir, folderPath);
-      if (!validatePath(fullPath)) {
+      const fullPath = path.join(userDir, folderPath);
+      if (!validatePath(fullPath, userDir)) {
         res.status(400).json({ error: "Invalid path: outside notes directory" });
         return;
       }
@@ -110,14 +112,15 @@ export function createFoldersRouter(notesDir: string): Router {
   // DELETE /api/folders/:path(*) — Delete an empty folder
   router.delete("/{*path}", async (req: Request, res: Response) => {
     try {
+      const userDir = await getUserNotesDir(notesDir, req.user!.id);
       const folderPath = decodeURIComponent(Array.isArray(req.params.path) ? req.params.path.join("/") : req.params.path as string);
       if (!folderPath) {
         res.status(400).json({ error: "Path is required" });
         return;
       }
 
-      const fullPath = path.join(notesDir, folderPath);
-      if (!validatePath(fullPath)) {
+      const fullPath = path.join(userDir, folderPath);
+      if (!validatePath(fullPath, userDir)) {
         res.status(400).json({ error: "Invalid path: outside notes directory" });
         return;
       }
@@ -205,6 +208,7 @@ export function createFoldersRenameRouter(notesDir: string): Router {
   // POST /api/folders-rename/:path(*) — Rename a folder
   router.post("/{*path}", async (req: Request, res: Response) => {
     try {
+      const userDir = await getUserNotesDir(notesDir, req.user!.id);
       const folderPath = decodeURIComponent(Array.isArray(req.params.path) ? req.params.path.join("/") : req.params.path as string);
       if (!folderPath) {
         res.status(400).json({ error: "Path is required" });
@@ -217,10 +221,10 @@ export function createFoldersRenameRouter(notesDir: string): Router {
         return;
       }
 
-      const oldFullPath = path.join(notesDir, folderPath);
-      const newFullPath = path.join(notesDir, newPath);
+      const oldFullPath = path.join(userDir, folderPath);
+      const newFullPath = path.join(userDir, newPath);
 
-      const resolvedBase = path.resolve(notesDir);
+      const resolvedBase = path.resolve(userDir);
       if (
         !path.resolve(oldFullPath).startsWith(resolvedBase + path.sep) ||
         !path.resolve(newFullPath).startsWith(resolvedBase + path.sep)

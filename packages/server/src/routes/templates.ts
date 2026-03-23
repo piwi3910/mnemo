@@ -1,6 +1,7 @@
 import { Router, Request, Response } from "express";
 import * as path from "path";
 import * as fs from "fs/promises";
+import { getUserNotesDir } from "../services/userNotesDir";
 
 /**
  * @swagger
@@ -67,11 +68,12 @@ import * as fs from "fs/promises";
 export function createTemplatesRouter(notesDir: string): Router {
   const router = Router();
 
-  const templatesDir = path.join(notesDir, "Templates");
-
   // GET /api/templates — List all templates
-  router.get("/", async (_req: Request, res: Response) => {
+  router.get("/", async (req: Request, res: Response) => {
     try {
+      const userDir = await getUserNotesDir(notesDir, req.user!.id);
+      const templatesDir = path.join(userDir, "Templates");
+
       // Ensure templates directory exists
       await fs.mkdir(templatesDir, { recursive: true });
 
@@ -93,6 +95,8 @@ export function createTemplatesRouter(notesDir: string): Router {
   // GET /api/templates/:name — Get template content
   router.get("/:name", async (req: Request, res: Response) => {
     try {
+      const userDir = await getUserNotesDir(notesDir, req.user!.id);
+      const templatesDir = path.join(userDir, "Templates");
       const { name } = req.params;
       const filePath = path.join(templatesDir, `${name}.md`);
 

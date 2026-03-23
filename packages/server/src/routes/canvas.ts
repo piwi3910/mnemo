@@ -1,6 +1,7 @@
 import { Router, Request, Response } from "express";
 import * as fs from "fs/promises";
 import * as path from "path";
+import { getUserNotesDir } from "../services/userNotesDir";
 
 /**
  * Validate that a resolved path stays within the base directory (path traversal protection).
@@ -194,19 +195,20 @@ function safePath(baseDir: string, name: string): string {
  */
 export function createCanvasRouter(notesDir: string): Router {
   const router = Router();
-  const canvasDir = path.join(notesDir, "Canvas");
 
   /**
-   * Ensure the Canvas/ subdirectory exists.
+   * Ensure the Canvas/ subdirectory exists for the given user directory.
    */
-  async function ensureCanvasDir(): Promise<void> {
+  async function ensureCanvasDir(canvasDir: string): Promise<void> {
     await fs.mkdir(canvasDir, { recursive: true });
   }
 
   // GET /api/canvas — List all .canvas files
-  router.get("/", async (_req: Request, res: Response) => {
+  router.get("/", async (req: Request, res: Response) => {
     try {
-      await ensureCanvasDir();
+      const userDir = await getUserNotesDir(notesDir, req.user!.id);
+      const canvasDir = path.join(userDir, "Canvas");
+      await ensureCanvasDir(canvasDir);
       const entries = await fs.readdir(canvasDir);
       const canvasFiles = entries
         .filter((f) => f.endsWith(".canvas"))
@@ -221,6 +223,8 @@ export function createCanvasRouter(notesDir: string): Router {
   // GET /api/canvas/:name — Get a canvas file content (JSON)
   router.get("/:name", async (req: Request, res: Response) => {
     try {
+      const userDir = await getUserNotesDir(notesDir, req.user!.id);
+      const canvasDir = path.join(userDir, "Canvas");
       const name = req.params.name as string;
       if (!name) {
         res.status(400).json({ error: "Name is required" });
@@ -252,6 +256,8 @@ export function createCanvasRouter(notesDir: string): Router {
   // POST /api/canvas — Create a new canvas file
   router.post("/", async (req: Request, res: Response) => {
     try {
+      const userDir = await getUserNotesDir(notesDir, req.user!.id);
+      const canvasDir = path.join(userDir, "Canvas");
       const { name, content } = req.body as { name?: string; content?: unknown };
 
       if (!name) {
@@ -262,7 +268,7 @@ export function createCanvasRouter(notesDir: string): Router {
       const fileName = name.endsWith(".canvas") ? name : `${name}.canvas`;
       const filePath = safePath(canvasDir, fileName);
 
-      await ensureCanvasDir();
+      await ensureCanvasDir(canvasDir);
 
       // Check if file already exists
       try {
@@ -289,6 +295,8 @@ export function createCanvasRouter(notesDir: string): Router {
   // PUT /api/canvas/:name — Update a canvas file
   router.put("/:name", async (req: Request, res: Response) => {
     try {
+      const userDir = await getUserNotesDir(notesDir, req.user!.id);
+      const canvasDir = path.join(userDir, "Canvas");
       const name = req.params.name as string;
       if (!name) {
         res.status(400).json({ error: "Name is required" });
@@ -304,7 +312,7 @@ export function createCanvasRouter(notesDir: string): Router {
       const fileName = name.endsWith(".canvas") ? name : `${name}.canvas`;
       const filePath = safePath(canvasDir, fileName);
 
-      await ensureCanvasDir();
+      await ensureCanvasDir(canvasDir);
       await fs.writeFile(filePath, JSON.stringify(body, null, 2), "utf-8");
       res.json({ name: fileName, message: "Canvas file updated" });
     } catch (err) {
@@ -320,6 +328,8 @@ export function createCanvasRouter(notesDir: string): Router {
   // DELETE /api/canvas/:name — Delete a canvas file
   router.delete("/:name", async (req: Request, res: Response) => {
     try {
+      const userDir = await getUserNotesDir(notesDir, req.user!.id);
+      const canvasDir = path.join(userDir, "Canvas");
       const name = req.params.name as string;
       if (!name) {
         res.status(400).json({ error: "Name is required" });

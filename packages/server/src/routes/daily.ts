@@ -1,9 +1,11 @@
 import { Router, Request, Response } from "express";
 import * as path from "path";
 import * as fs from "fs/promises";
+import { IsNull } from "typeorm";
 import { readNote, writeNote } from "../services/noteService";
 import { AppDataSource } from "../data-source";
 import { Settings } from "../entities/Settings";
+import { getUserNotesDir } from "../services/userNotesDir";
 
 function formatDate(date: Date): string {
   const y = date.getFullYear();
@@ -12,10 +14,12 @@ function formatDate(date: Date): string {
   return `${y}-${m}-${d}`;
 }
 
-async function getDailyTemplate(): Promise<string> {
+async function getDailyTemplate(userId: string): Promise<string> {
   try {
     const repo = AppDataSource.getRepository(Settings);
-    const setting = await repo.findOneBy({ key: "dailyNoteTemplate" });
+    // Try user-specific template first, then fall back to global
+    const setting = await repo.findOneBy({ key: "dailyNoteTemplate", userId })
+      || await repo.findOneBy({ key: "dailyNoteTemplate", userId: IsNull() });
     if (setting?.value) return setting.value;
   } catch {
     // Use default
@@ -74,17 +78,18 @@ export function createDailyRouter(notesDir: string): Router {
   const router = Router();
 
   // POST /api/daily — Create or get today's daily note
-  router.post("/", async (_req: Request, res: Response) => {
+  router.post("/", async (req: Request, res: Response) => {
     try {
+      const userDir = await getUserNotesDir(notesDir, req.user!.id);
       const today = formatDate(new Date());
       const notePath = `Daily/${today}.md`;
-      const fullPath = path.join(notesDir, notePath);
+      const fullPath = path.join(userDir, notePath);
 
       // Check if note already exists
       try {
         await fs.access(fullPath);
         // Note exists, just return it
-        const note = await readNote(notesDir, notePath);
+        const note = await readNote(userDir, notePath);
         res.json(note);
         return;
       } catch {
@@ -92,17 +97,17 @@ export function createDailyRouter(notesDir: string): Router {
       }
 
       // Create the Daily directory if needed
-      await fs.mkdir(path.join(notesDir, "Daily"), { recursive: true });
+      await fs.mkdir(path.join(userDir, "Daily"), { recursive: true });
 
       // Get template and apply variables
-      const template = await getDailyTemplate();
+      const template = await getDailyTemplate(req.user!.id);
       const content = applyTemplateVars(template, {
         date: today,
         title: `Daily Note — ${today}`,
       });
 
-      await writeNote(notesDir, notePath, content);
-      const note = await readNote(notesDir, notePath);
+      await writeNote(userDir, notePath, content, req.user!.id);
+      const note = await readNote(userDir, notePath);
       res.status(201).json(note);
     } catch (err) {
       console.error("Error creating daily note:", err);

@@ -6,6 +6,7 @@ import {
   deleteNote,
   renameNote,
 } from "../services/noteService";
+import { getUserNotesDir } from "../services/userNotesDir";
 
 /**
  * @swagger
@@ -178,9 +179,10 @@ export function createNotesRouter(notesDir: string): Router {
   const router = Router();
 
   // GET /api/notes — List all notes as tree structure
-  router.get("/", async (_req: Request, res: Response) => {
+  router.get("/", async (req: Request, res: Response) => {
     try {
-      const tree = await scanDirectory(notesDir);
+      const userDir = await getUserNotesDir(notesDir, req.user!.id);
+      const tree = await scanDirectory(userDir);
       res.json(tree);
     } catch (err) {
       console.error("Error scanning notes directory:", err);
@@ -191,6 +193,7 @@ export function createNotesRouter(notesDir: string): Router {
   // GET /api/notes/:path(*) — Get note content (path is wildcard to support slashes)
   router.get("/{*path}", async (req: Request, res: Response) => {
     try {
+      const userDir = await getUserNotesDir(notesDir, req.user!.id);
       const notePath = decodeURIComponent(Array.isArray(req.params.path) ? req.params.path.join("/") : req.params.path as string);
       if (!notePath) {
         res.status(400).json({ error: "Path is required" });
@@ -200,7 +203,7 @@ export function createNotesRouter(notesDir: string): Router {
       // Append .md if not present
       const fullNotePath = notePath.endsWith(".md") ? notePath : `${notePath}.md`;
 
-      const note = await readNote(notesDir, fullNotePath);
+      const note = await readNote(userDir, fullNotePath);
       res.json(note);
     } catch (err) {
       if (
@@ -222,6 +225,7 @@ export function createNotesRouter(notesDir: string): Router {
   // POST /api/notes — Create a new note
   router.post("/", async (req: Request, res: Response) => {
     try {
+      const userDir = await getUserNotesDir(notesDir, req.user!.id);
       const { path: notePath, content } = req.body as {
         path?: string;
         content?: string;
@@ -235,7 +239,7 @@ export function createNotesRouter(notesDir: string): Router {
       // Append .md if not present
       const fullNotePath = notePath.endsWith(".md") ? notePath : `${notePath}.md`;
 
-      await writeNote(notesDir, fullNotePath, content || "");
+      await writeNote(userDir, fullNotePath, content || "", req.user!.id);
       res.status(201).json({ path: fullNotePath, message: "Note created" });
     } catch (err) {
       if (err instanceof Error && err.message.includes("Invalid path")) {
@@ -250,6 +254,7 @@ export function createNotesRouter(notesDir: string): Router {
   // PUT /api/notes/:path(*) — Update a note
   router.put("/{*path}", async (req: Request, res: Response) => {
     try {
+      const userDir = await getUserNotesDir(notesDir, req.user!.id);
       const notePath = decodeURIComponent(Array.isArray(req.params.path) ? req.params.path.join("/") : req.params.path as string);
       if (!notePath) {
         res.status(400).json({ error: "Path is required" });
@@ -264,7 +269,7 @@ export function createNotesRouter(notesDir: string): Router {
 
       const fullNotePath = notePath.endsWith(".md") ? notePath : `${notePath}.md`;
 
-      await writeNote(notesDir, fullNotePath, content);
+      await writeNote(userDir, fullNotePath, content, req.user!.id);
       res.json({ path: fullNotePath, message: "Note updated" });
     } catch (err) {
       if (err instanceof Error && err.message.includes("Invalid path")) {
@@ -279,6 +284,7 @@ export function createNotesRouter(notesDir: string): Router {
   // DELETE /api/notes/:path(*) — Delete a note
   router.delete("/{*path}", async (req: Request, res: Response) => {
     try {
+      const userDir = await getUserNotesDir(notesDir, req.user!.id);
       const notePath = decodeURIComponent(Array.isArray(req.params.path) ? req.params.path.join("/") : req.params.path as string);
       if (!notePath) {
         res.status(400).json({ error: "Path is required" });
@@ -287,7 +293,7 @@ export function createNotesRouter(notesDir: string): Router {
 
       const fullNotePath = notePath.endsWith(".md") ? notePath : `${notePath}.md`;
 
-      await deleteNote(notesDir, fullNotePath);
+      await deleteNote(userDir, fullNotePath, req.user!.id);
       res.json({ message: "Note deleted" });
     } catch (err) {
       if (
@@ -368,6 +374,7 @@ export function createNotesRenameRouter(notesDir: string): Router {
   // POST /api/notes-rename/:path(*) — Rename a note
   router.post("/{*path}", async (req: Request, res: Response) => {
     try {
+      const userDir = await getUserNotesDir(notesDir, req.user!.id);
       const oldPath = decodeURIComponent(Array.isArray(req.params.path) ? req.params.path.join("/") : req.params.path as string);
       if (!oldPath) {
         res.status(400).json({ error: "Path is required" });
@@ -383,7 +390,7 @@ export function createNotesRenameRouter(notesDir: string): Router {
       const fullOldPath = oldPath.endsWith(".md") ? oldPath : `${oldPath}.md`;
       const fullNewPath = newPath.endsWith(".md") ? newPath : `${newPath}.md`;
 
-      await renameNote(notesDir, fullOldPath, fullNewPath);
+      await renameNote(userDir, fullOldPath, fullNewPath, req.user!.id);
       res.json({ oldPath: fullOldPath, newPath: fullNewPath, message: "Note renamed" });
     } catch (err) {
       if (
