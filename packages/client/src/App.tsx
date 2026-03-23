@@ -287,7 +287,7 @@ function AppContent() {
     createNote: handleNewNote,
     renameNote: handleRenameNote,
     toggleStar: toggleActiveNoteStar,
-  }), [handleNewNote, handleRenameNote, toggleActiveNoteStar, notes.activeNote, editing, cancelEdit, enterEditMode]);
+  }), [handleNewNote, handleRenameNote, toggleActiveNoteStar, editing, cancelEdit, enterEditMode]);
 
   useKeyboardShortcuts(shortcutActions);
 

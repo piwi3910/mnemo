@@ -252,7 +252,7 @@ export function Preview({ content, onLinkClick, allNotes, onCreateNote }: Previe
   const codeBlocks: string[] = [];
   processedContent = processedContent.replace(/`([^`]+)`/g, (_match, _code: string) => {
     codeBlocks.push(_match);
-    return `\x00CODE${codeBlocks.length - 1}\x00`;
+    return `%%CODE${codeBlocks.length - 1}%%`;
   });
 
   // Transform content: handle embeds and wiki-links
@@ -289,7 +289,7 @@ export function Preview({ content, onLinkClick, allNotes, onCreateNote }: Previe
     );
 
   // Restore inline code blocks
-  transformedContent = transformedContent.replace(/\x00CODE(\d+)\x00/g, (_match, idx: string) => {
+  transformedContent = transformedContent.replace(/%%CODE(\d+)%%/g, (_match, idx: string) => {
     return codeBlocks[parseInt(idx, 10)];
   });
 
