@@ -49,7 +49,9 @@ export function ResizeHandle({ direction, onResize, onResizeEnd }: ResizeHandleP
     <div
       onMouseDown={handleMouseDown}
       className={`
-        ${isHorizontal ? 'w-1 cursor-col-resize hover:bg-violet-500/30 active:bg-violet-500/50' : 'h-1 cursor-row-resize hover:bg-violet-500/30 active:bg-violet-500/50'}
+        ${isHorizontal
+          ? 'w-1 cursor-col-resize hover:bg-violet-500/30 active:bg-violet-500/50 border-l border-gray-700/50'
+          : 'h-1 cursor-row-resize hover:bg-violet-500/30 active:bg-violet-500/50 border-t border-gray-700/50'}
         flex-shrink-0 transition-colors duration-100
       `}
     />
