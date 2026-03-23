@@ -68,7 +68,7 @@ const BASE = '/api';
 let _accessToken: string | null = null;
 export function setAccessToken(token: string | null) { _accessToken = token; }
 
-async function request<T>(url: string, options?: RequestInit): Promise<T> {
+export async function request<T>(url: string, options?: RequestInit): Promise<T> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     'X-Requested-With': 'XMLHttpRequest',

@@ -22,6 +22,7 @@ import { StatusBar } from './components/StatusBar/StatusBar';
 import { QuickSwitcher } from './components/QuickSwitcher/QuickSwitcher';
 import { ResizeHandle } from './components/Layout/ResizeHandle';
 import LoginPage from './pages/LoginPage';
+import AdminPage from './pages/AdminPage';
 import { PanelLeft, BookOpen, X, Menu, Star, FileDown, Pencil } from 'lucide-react';
 
 export default function App() {
@@ -596,15 +597,8 @@ function AppContent() {
         />
       )}
 
-      {/* Admin panel placeholder */}
-      {showAdmin && (
-        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center" onClick={() => setShowAdmin(false)}>
-          <div className="bg-surface-900 rounded-xl p-8 text-white" onClick={e => e.stopPropagation()}>
-            Admin panel coming soon...
-            <button onClick={() => setShowAdmin(false)} className="btn-ghost mt-4">Close</button>
-          </div>
-        </div>
-      )}
+      {/* Admin panel */}
+      {showAdmin && <AdminPage onClose={() => setShowAdmin(false)} />}
     </div>
   );
 }
