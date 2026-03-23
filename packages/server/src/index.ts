@@ -227,7 +227,7 @@ async function main(): Promise<void> {
 
   // Serve image files from notes directory
   app.get("/api/files/:path(*)", async (req: Request, res: Response) => {
-    const filePath = decodeURIComponent(req.params.path);
+    const filePath = decodeURIComponent(req.params.path as string);
     const allowedExts = [".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".bmp"];
     const ext = path.extname(filePath).toLowerCase();
 

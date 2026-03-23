@@ -40,7 +40,7 @@ export function createFoldersRouter(notesDir: string): Router {
   // DELETE /api/folders/:path(*) — Delete an empty folder
   router.delete("/:path(*)", async (req: Request, res: Response) => {
     try {
-      const folderPath = decodeURIComponent(req.params.path);
+      const folderPath = decodeURIComponent(req.params.path as string);
       if (!folderPath) {
         res.status(400).json({ error: "Path is required" });
         return;
@@ -86,7 +86,7 @@ export function createFoldersRenameRouter(notesDir: string): Router {
   // POST /api/folders-rename/:path(*) — Rename a folder
   router.post("/:path(*)", async (req: Request, res: Response) => {
     try {
-      const folderPath = decodeURIComponent(req.params.path);
+      const folderPath = decodeURIComponent(req.params.path as string);
       if (!folderPath) {
         res.status(400).json({ error: "Path is required" });
         return;
