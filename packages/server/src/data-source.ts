@@ -1,7 +1,9 @@
 import { DataSource } from "typeorm";
+import { AccessRequest } from "./entities/AccessRequest";
 import { AuthProvider } from "./entities/AuthProvider";
 import { GraphEdge } from "./entities/GraphEdge";
 import { InviteCode } from "./entities/InviteCode";
+import { NoteShare } from "./entities/NoteShare";
 import { RefreshToken } from "./entities/RefreshToken";
 import { SearchIndex } from "./entities/SearchIndex";
 import { Settings } from "./entities/Settings";
@@ -16,5 +18,5 @@ export const AppDataSource = new DataSource({
   url: DATABASE_URL,
   synchronize: true,
   logging: false,
-  entities: [AuthProvider, GraphEdge, InviteCode, RefreshToken, SearchIndex, Settings, User],
+  entities: [AccessRequest, AuthProvider, GraphEdge, InviteCode, NoteShare, RefreshToken, SearchIndex, Settings, User],
 });
