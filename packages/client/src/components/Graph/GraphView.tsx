@@ -9,6 +9,7 @@ interface GraphViewProps {
   activeNotePath: string | null;
   mode: 'local' | 'full';
   onNoteSelect: (path: string) => void;
+  recenterRef?: React.MutableRefObject<(() => void) | null>;
 }
 
 interface SimNode extends d3.SimulationNodeDatum {
@@ -22,13 +23,14 @@ interface SimLink extends d3.SimulationLinkDatum<SimNode> {
   target: SimNode | string;
 }
 
-export function GraphView({ graphData, loading, activeNotePath, mode, onNoteSelect }: GraphViewProps) {
+export function GraphView({ graphData, loading, activeNotePath, mode, onNoteSelect, recenterRef }: GraphViewProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const simulationRef = useRef<d3.Simulation<SimNode, SimLink>>(undefined);
   const hoveredNodeRef = useRef<SimNode | null>(null);
   const nodesRef = useRef<SimNode[]>([]);
   const linksRef = useRef<SimLink[]>([]);
   const transformRef = useRef(d3.zoomIdentity);
+  const zoomRef = useRef<d3.ZoomBehavior<HTMLCanvasElement, unknown> | null>(null);
 
   const handleNodeClick = useCallback((node: SimNode) => {
     onNoteSelect(node.path);
@@ -182,6 +184,15 @@ export function GraphView({ graphData, loading, activeNotePath, mode, onNoteSele
       });
 
     d3Canvas.call(zoom);
+    zoomRef.current = zoom;
+
+    // Expose recenter function
+    if (recenterRef) {
+      recenterRef.current = () => {
+        transformRef.current = d3.zoomIdentity;
+        d3Canvas.transition().duration(300).call(zoom.transform, d3.zoomIdentity);
+      };
+    }
 
     // Hit-test helper
     function getNodeAt(mx: number, my: number): SimNode | null {

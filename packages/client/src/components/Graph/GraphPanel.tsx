@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Network } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { Network, Crosshair } from 'lucide-react';
 import { GraphView } from './GraphView';
 import { GraphData } from '../../lib/api';
 
@@ -12,6 +12,7 @@ interface GraphPanelProps {
 
 export function GraphPanel({ graphData, loading, activeNotePath, onNoteSelect }: GraphPanelProps) {
   const [mode, setMode] = useState<'local' | 'full'>('local');
+  const recenterRef = useRef<(() => void) | null>(null);
 
   // Force full mode when no note is selected (local mode needs an anchor)
   const effectiveMode = activeNotePath ? mode : 'full';
@@ -24,6 +25,14 @@ export function GraphPanel({ graphData, loading, activeNotePath, onNoteSelect }:
           <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Graph</span>
         </div>
         <div className="flex items-center gap-1">
+          <button
+            onClick={() => recenterRef.current?.()}
+            className="p-1 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 rounded transition-colors"
+            aria-label="Center graph"
+            title="Center graph"
+          >
+            <Crosshair size={13} />
+          </button>
           <button
             onClick={() => setMode('local')}
             className={`px-2 py-0.5 text-xs rounded transition-colors ${
@@ -52,6 +61,7 @@ export function GraphPanel({ graphData, loading, activeNotePath, onNoteSelect }:
         activeNotePath={activeNotePath}
         mode={effectiveMode}
         onNoteSelect={onNoteSelect}
+        recenterRef={recenterRef}
       />
     </div>
   );
