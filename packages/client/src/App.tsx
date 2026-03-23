@@ -19,7 +19,7 @@ import { OutlinePane } from './components/Outline/OutlinePane';
 import { StatusBar } from './components/StatusBar/StatusBar';
 import { QuickSwitcher } from './components/QuickSwitcher/QuickSwitcher';
 import { ResizeHandle } from './components/Layout/ResizeHandle';
-import { PanelLeft, BookOpen, X, Menu, Star, FileDown, Pencil } from 'lucide-react';
+import { PanelLeft, BookOpen, X, Menu, Star, FileDown, Pencil, Code } from 'lucide-react';
 
 export default function App() {
   const themeCtx = useTheme();
@@ -260,6 +260,15 @@ export default function App() {
         </div>
 
         <div className="flex items-center gap-0.5">
+          <a
+            href="/api/docs"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn-ghost p-2"
+            title="API Docs"
+          >
+            <Code size={18} />
+          </a>
           <ThemeToggle theme={themeCtx.theme} setTheme={themeCtx.setTheme} />
         </div>
       </header>
