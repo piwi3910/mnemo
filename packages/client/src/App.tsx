@@ -9,7 +9,8 @@ import { Sidebar } from './components/Sidebar/Sidebar';
 import { Editor, EditorCursorState } from './components/Editor/Editor';
 import { Preview } from './components/Preview/Preview';
 import { SearchBar } from './components/Search/SearchBar';
-import { GraphView } from './components/Graph/GraphView';
+// GraphView is now used via GraphPanel - will be integrated into sidebar layout in a later task
+// import { GraphView } from './components/Graph/GraphView';
 import { ThemeToggle } from './components/Layout/ThemeToggle';
 import { BacklinksPanel } from './components/Backlinks/BacklinksPanel';
 import { OutgoingLinksPanel } from './components/OutgoingLinks/OutgoingLinksPanel';
@@ -25,7 +26,8 @@ export default function App() {
   const themeCtx = useTheme();
   const notes = useNotes();
   const [viewMode, setViewMode] = useState<ViewMode>('split');
-  const [showGraph, setShowGraph] = useState(false);
+  // showGraph state will be replaced by sidebar graph panel in a later task
+  const [_showGraph, setShowGraph] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [outlineOpen, setOutlineOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -440,10 +442,7 @@ export default function App() {
         </div>
       )}
 
-      {/* Graph modal */}
-      {showGraph && (
-        <GraphView onClose={() => setShowGraph(false)} onNoteSelect={handleNoteSelect} />
-      )}
+      {/* Graph panel - will be integrated into sidebar layout in a later task */}
 
       {/* Template picker modal */}
       {showTemplatePicker && (

@@ -1,10 +1,13 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
-import { X, Loader2 } from 'lucide-react';
+import { useEffect, useRef, useCallback } from 'react';
+import { Loader2 } from 'lucide-react';
 import * as d3 from 'd3';
-import { api, GraphData } from '../../lib/api';
+import { GraphData } from '../../lib/api';
 
 interface GraphViewProps {
-  onClose: () => void;
+  graphData: GraphData | null;
+  loading: boolean;
+  activeNotePath: string | null;
+  mode: 'local' | 'full';
   onNoteSelect: (path: string) => void;
 }
 
@@ -19,34 +22,43 @@ interface SimLink extends d3.SimulationLinkDatum<SimNode> {
   target: SimNode | string;
 }
 
-export function GraphView({ onClose, onNoteSelect }: GraphViewProps) {
+export function GraphView({ graphData, loading, activeNotePath, mode, onNoteSelect }: GraphViewProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [graphData, setGraphData] = useState<GraphData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const simulationRef = useRef<d3.Simulation<SimNode, SimLink>>(undefined);
   const hoveredNodeRef = useRef<SimNode | null>(null);
   const nodesRef = useRef<SimNode[]>([]);
   const linksRef = useRef<SimLink[]>([]);
   const transformRef = useRef(d3.zoomIdentity);
 
-  useEffect(() => {
-    api.getGraph()
-      .then(data => { setGraphData(data); setLoading(false); })
-      .catch(() => { setError('Failed to load graph'); setLoading(false); });
-  }, []);
-
   const handleNodeClick = useCallback((node: SimNode) => {
     onNoteSelect(node.path);
-    onClose();
-  }, [onNoteSelect, onClose]);
+  }, [onNoteSelect]);
 
+  // Simulation setup
   useEffect(() => {
     if (!graphData || !canvasRef.current) return;
 
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
+
+    // Filter for local mode
+    let filteredNodes = graphData.nodes;
+    let filteredEdges = graphData.edges;
+
+    if (mode === 'local' && activeNotePath) {
+      const activeNodeId = graphData.nodes.find(n => n.path === activeNotePath)?.id;
+      if (activeNodeId) {
+        const connectedIds = new Set<string>();
+        connectedIds.add(activeNodeId);
+        for (const edge of graphData.edges) {
+          if (edge.fromNoteId === activeNodeId) connectedIds.add(edge.toNoteId);
+          if (edge.toNoteId === activeNodeId) connectedIds.add(edge.fromNoteId);
+        }
+        filteredNodes = graphData.nodes.filter(n => connectedIds.has(n.id));
+        filteredEdges = graphData.edges.filter(e => connectedIds.has(e.fromNoteId) && connectedIds.has(e.toNoteId));
+      }
+    }
 
     const isDark = document.documentElement.classList.contains('dark');
 
@@ -62,10 +74,10 @@ export function GraphView({ onClose, onNoteSelect }: GraphViewProps) {
     };
     resize();
 
-    const nodes: SimNode[] = graphData.nodes.map(n => ({ ...n }));
+    const nodes: SimNode[] = filteredNodes.map(n => ({ ...n }));
     const nodeMap = new Map(nodes.map(n => [n.id, n]));
 
-    const links: SimLink[] = graphData.edges
+    const links: SimLink[] = filteredEdges
       .filter(e => nodeMap.has(e.fromNoteId) && nodeMap.has(e.toNoteId))
       .map(e => ({
         source: e.fromNoteId,
@@ -115,24 +127,27 @@ export function GraphView({ onClose, onNoteSelect }: GraphViewProps) {
       for (const node of nodes) {
         if (node.x == null || node.y == null) continue;
         const isHovered = hoveredNodeRef.current === node;
-        const radius = isHovered ? 8 : 6;
+        const isActive = node.path === activeNotePath;
+        const radius = isActive ? 10 : isHovered ? 8 : 6;
 
         // Node circle
         ctx.beginPath();
         ctx.arc(node.x, node.y, radius, 0, 2 * Math.PI);
-        ctx.fillStyle = isHovered
-          ? '#3b82f6'
-          : isDark ? '#60a5fa' : '#3b82f6';
+        ctx.fillStyle = isActive
+          ? '#2563eb'
+          : isHovered
+            ? '#3b82f6'
+            : isDark ? '#60a5fa' : '#3b82f6';
         ctx.fill();
 
-        if (isHovered) {
+        if (isHovered || isActive) {
           ctx.strokeStyle = isDark ? '#93c5fd' : '#2563eb';
           ctx.lineWidth = 2;
           ctx.stroke();
         }
 
         // Label
-        ctx.font = `${isHovered ? '12' : '11'}px Inter, system-ui, sans-serif`;
+        ctx.font = `${isHovered || isActive ? '12' : '11'}px Inter, system-ui, sans-serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'top';
         ctx.fillStyle = isDark ? '#e2e8f0' : '#334155';
@@ -144,6 +159,20 @@ export function GraphView({ onClose, onNoteSelect }: GraphViewProps) {
     }
 
     simulation.on('tick', draw);
+
+    // Auto-center on active node after simulation settles
+    simulation.on('end', () => {
+      if (activeNotePath) {
+        const activeNode = nodes.find(n => n.path === activeNotePath);
+        if (activeNode && activeNode.x != null && activeNode.y != null) {
+          const centerX = width / 2;
+          const centerY = height / 2;
+          const t = d3.zoomIdentity.translate(centerX - activeNode.x, centerY - activeNode.y);
+          transformRef.current = t;
+          draw();
+        }
+      }
+    });
 
     // Zoom + pan
     const d3Canvas = d3.select(canvas);
@@ -239,55 +268,21 @@ export function GraphView({ onClose, onNoteSelect }: GraphViewProps) {
       window.removeEventListener('mouseup', handleMouseUp);
       resizeObserver.disconnect();
     };
-  }, [graphData, handleNodeClick]);
-
-  // Close on Escape
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    document.addEventListener('keydown', handler);
-    return () => document.removeEventListener('keydown', handler);
-  }, [onClose]);
+  }, [graphData, mode, activeNotePath, handleNodeClick]);
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center">
-      <div className="bg-white dark:bg-surface-900 rounded-xl shadow-2xl w-[90vw] h-[85vh] flex flex-col overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b">
-          <div>
-            <h2 className="font-semibold text-sm">Knowledge Graph</h2>
-            {graphData && (
-              <span className="text-xs text-gray-500">
-                {graphData.nodes.length} notes, {graphData.edges.length} connections
-              </span>
-            )}
-          </div>
-          <button onClick={onClose} className="btn-ghost p-2" aria-label="Close graph">
-            <X size={18} />
-          </button>
+    <div className="flex-1 relative">
+      {loading && (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <Loader2 size={20} className="animate-spin text-blue-500" />
         </div>
-
-        {/* Canvas */}
-        <div className="flex-1 relative">
-          {loading && (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <Loader2 size={24} className="animate-spin text-blue-500" />
-            </div>
-          )}
-          {error && (
-            <div className="absolute inset-0 flex items-center justify-center text-red-500 text-sm">
-              {error}
-            </div>
-          )}
-          {graphData && graphData.nodes.length === 0 && (
-            <div className="absolute inset-0 flex items-center justify-center text-gray-500 text-sm">
-              No notes yet. Create some notes to see the graph.
-            </div>
-          )}
-          <canvas ref={canvasRef} className="w-full h-full" />
+      )}
+      {graphData && graphData.nodes.length === 0 && (
+        <div className="absolute inset-0 flex items-center justify-center text-gray-500 text-xs">
+          No notes yet
         </div>
-      </div>
+      )}
+      <canvas ref={canvasRef} className="w-full h-full" />
     </div>
   );
 }
