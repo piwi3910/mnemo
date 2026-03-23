@@ -17,12 +17,16 @@ import { TemplatePicker } from './components/Templates/TemplatePicker';
 import { OutlinePane } from './components/Outline/OutlinePane';
 import { StatusBar } from './components/StatusBar/StatusBar';
 import { QuickSwitcher } from './components/QuickSwitcher/QuickSwitcher';
+import { ResizeHandle } from './components/Layout/ResizeHandle';
 import { PanelLeft, BookOpen, X, Menu, Star, FileDown, Pencil } from 'lucide-react';
 
 export default function App() {
   const themeCtx = useTheme();
   const notes = useNotes();
   const [editing, setEditing] = useState(false);
+  const [sidebarWidth, setSidebarWidth] = useState(256);
+  const [rightPanelWidth, setRightPanelWidth] = useState(320);
+  const [graphHeight, setGraphHeight] = useState<number | null>(null); // null = flex-1 (auto)
   const [graphData, setGraphData] = useState<GraphData | null>(null);
   const [graphLoading, setGraphLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -219,6 +223,20 @@ export default function App() {
 
   const isActiveNoteStarred = notes.activeNote ? starredPaths.has(notes.activeNote.path) : false;
 
+  // Resize handlers
+  const handleSidebarResize = useCallback((delta: number) => {
+    setSidebarWidth(w => Math.max(180, Math.min(500, w + delta)));
+  }, []);
+  const handleRightPanelResize = useCallback((delta: number) => {
+    setRightPanelWidth(w => Math.max(200, Math.min(600, w - delta)));
+  }, []);
+  const handleGraphResize = useCallback((delta: number) => {
+    setGraphHeight(h => {
+      const current = h ?? 400;
+      return Math.max(100, current + delta);
+    });
+  }, []);
+
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-white dark:bg-surface-950">
       {/* Header */}
@@ -282,11 +300,12 @@ export default function App() {
           className={`
             ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
             md:translate-x-0
-            ${sidebarOpen ? 'md:w-64' : 'md:w-0 md:overflow-hidden md:border-r-0'}
+            ${sidebarOpen ? '' : 'md:!w-0 md:overflow-hidden md:border-r-0'}
             fixed md:relative inset-y-0 left-0 z-40 md:z-0
-            w-72 flex-shrink-0 transition-all duration-200 ease-in-out
+            w-72 flex-shrink-0
             bg-gray-50 dark:bg-surface-900 border-r
           `}
+          style={sidebarOpen ? { width: `${sidebarWidth}px` } : undefined}
         >
           {/* Toggle button at top of open sidebar */}
           <div className="hidden md:flex items-center px-2 py-1.5 border-b">
@@ -315,6 +334,9 @@ export default function App() {
             onToggleStar={toggleStar}
           />
         </aside>
+
+        {/* Sidebar resize handle */}
+        {sidebarOpen && <ResizeHandle direction="horizontal" onResize={handleSidebarResize} />}
 
         {/* Main content area */}
         <main className="flex-1 flex overflow-hidden">
@@ -465,22 +487,33 @@ export default function App() {
 
         {/* Right panel: Graph + Outline (hidden in edit mode) */}
         {!editing && (
-          <aside className="w-80 flex-shrink-0 flex flex-col bg-gray-50 dark:bg-surface-900 overflow-hidden border-l">
-            <GraphPanel
-              graphData={graphData}
-              loading={graphLoading}
-              activeNotePath={notes.activeNote?.path || null}
-              onNoteSelect={handleNoteSelect}
-            />
-            {notes.activeNote && (
-              <div className="h-48 flex-shrink-0 border-t">
-                <OutlinePane
-                  content={notes.activeNote.content}
-                  onJumpToLine={handleOutlineJump}
+          <>
+            <ResizeHandle direction="horizontal" onResize={handleRightPanelResize} />
+            <aside
+              className="flex-shrink-0 flex flex-col bg-gray-50 dark:bg-surface-900 overflow-hidden"
+              style={{ width: `${rightPanelWidth}px` }}
+            >
+              <div style={graphHeight != null ? { height: `${graphHeight}px` } : { flex: 1 }} className="flex flex-col overflow-hidden">
+                <GraphPanel
+                  graphData={graphData}
+                  loading={graphLoading}
+                  activeNotePath={notes.activeNote?.path || null}
+                  onNoteSelect={handleNoteSelect}
                 />
               </div>
-            )}
-          </aside>
+              {notes.activeNote && (
+                <>
+                  <ResizeHandle direction="vertical" onResize={handleGraphResize} />
+                  <div className="flex-1 min-h-[100px] overflow-hidden">
+                    <OutlinePane
+                      content={notes.activeNote.content}
+                      onJumpToLine={handleOutlineJump}
+                    />
+                  </div>
+                </>
+              )}
+            </aside>
+          </>
         )}
       </div>
 

@@ -283,7 +283,7 @@ export function GraphView({ graphData, loading, activeNotePath, mode, onNoteSele
       window.removeEventListener('mouseup', handleMouseUp);
       resizeObserver.disconnect();
     };
-  }, [graphData, mode, activeNotePath, handleNodeClick]);
+  }, [graphData, mode, activeNotePath, handleNodeClick, recenterRef]);
 
   return (
     <div className="flex-1 relative overflow-hidden">
