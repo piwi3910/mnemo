@@ -17,8 +17,7 @@ import { TemplatePicker } from './components/Templates/TemplatePicker';
 import { OutlinePane } from './components/Outline/OutlinePane';
 import { StatusBar } from './components/StatusBar/StatusBar';
 import { QuickSwitcher } from './components/QuickSwitcher/QuickSwitcher';
-import { CanvasView } from './components/Canvas/CanvasView';
-import { PanelLeft, BookOpen, Network, X, Menu, ListTree, Star, FileDown, LayoutDashboard } from 'lucide-react';
+import { PanelLeft, BookOpen, Network, X, Menu, ListTree, Star, FileDown } from 'lucide-react';
 
 type ViewMode = 'editor' | 'preview' | 'split';
 
@@ -27,7 +26,6 @@ export default function App() {
   const notes = useNotes();
   const [viewMode, setViewMode] = useState<ViewMode>('split');
   const [showGraph, setShowGraph] = useState(false);
-  const [showCanvas, setShowCanvas] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [outlineOpen, setOutlineOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -243,14 +241,6 @@ export default function App() {
             <ListTree size={18} />
           </button>
           <button
-            onClick={() => setShowCanvas(true)}
-            className="btn-ghost p-2"
-            aria-label="Canvas view"
-            title="Canvas view"
-          >
-            <LayoutDashboard size={18} />
-          </button>
-          <button
             onClick={() => setShowGraph(true)}
             className="btn-ghost p-2"
             aria-label="Graph view"
@@ -453,15 +443,6 @@ export default function App() {
       {/* Graph modal */}
       {showGraph && (
         <GraphView onClose={() => setShowGraph(false)} onNoteSelect={handleNoteSelect} />
-      )}
-
-      {/* Canvas modal */}
-      {showCanvas && (
-        <CanvasView
-          onClose={() => setShowCanvas(false)}
-          onNoteSelect={handleNoteSelect}
-          allNotes={notes.tree}
-        />
       )}
 
       {/* Template picker modal */}

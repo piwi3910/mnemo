@@ -21,7 +21,6 @@
     "@codemirror/theme-one-dark": "^6.1.3",
     "@codemirror/view": "^6.40.0",
     "@replit/codemirror-vim": "^6.3.0",
-    "@xyflow/react": "^12.10.1",
     "codemirror": "^6.0.2",
     "d3": "^7.9.0",
     "html2canvas": "^1.4.1",
