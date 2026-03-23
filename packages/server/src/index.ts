@@ -226,8 +226,8 @@ async function main(): Promise<void> {
   app.use("/api/canvas", createCanvasRouter(NOTES_DIR));
 
   // Serve image files from notes directory
-  app.get("/api/files/*", async (req: Request, res: Response) => {
-    const filePath = decodeURIComponent(req.params[0]);
+  app.get("/api/files/:path(*)", async (req: Request, res: Response) => {
+    const filePath = decodeURIComponent(req.params.path);
     const allowedExts = [".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".bmp"];
     const ext = path.extname(filePath).toLowerCase();
 

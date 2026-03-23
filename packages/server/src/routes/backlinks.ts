@@ -4,10 +4,10 @@ import { getBacklinks } from "../services/graphService";
 export function createBacklinksRouter(): Router {
   const router = Router();
 
-  // GET /api/backlinks/:path — Get notes that link TO this note
-  router.get("/*", async (req: Request, res: Response) => {
+  // GET /api/backlinks/:path(*) — Get notes that link TO this note
+  router.get("/:path(*)", async (req: Request, res: Response) => {
     try {
-      const notePath = decodeURIComponent(req.params[0]);
+      const notePath = decodeURIComponent(req.params.path);
       if (!notePath) {
         res.status(400).json({ error: "Path is required" });
         return;

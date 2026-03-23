@@ -37,10 +37,10 @@ export function createFoldersRouter(notesDir: string): Router {
     }
   });
 
-  // DELETE /api/folders/:path — Delete an empty folder
-  router.delete("/*", async (req: Request, res: Response) => {
+  // DELETE /api/folders/:path(*) — Delete an empty folder
+  router.delete("/:path(*)", async (req: Request, res: Response) => {
     try {
-      const folderPath = decodeURIComponent(req.params[0]);
+      const folderPath = decodeURIComponent(req.params.path);
       if (!folderPath) {
         res.status(400).json({ error: "Path is required" });
         return;
@@ -83,10 +83,10 @@ export function createFoldersRouter(notesDir: string): Router {
 export function createFoldersRenameRouter(notesDir: string): Router {
   const router = Router();
 
-  // POST /api/folders-rename/:path — Rename a folder
-  router.post("/*", async (req: Request, res: Response) => {
+  // POST /api/folders-rename/:path(*) — Rename a folder
+  router.post("/:path(*)", async (req: Request, res: Response) => {
     try {
-      const folderPath = decodeURIComponent(req.params[0]);
+      const folderPath = decodeURIComponent(req.params.path);
       if (!folderPath) {
         res.status(400).json({ error: "Path is required" });
         return;
