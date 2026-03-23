@@ -493,7 +493,7 @@ export default function App() {
               className="flex-shrink-0 flex flex-col bg-gray-50 dark:bg-surface-900 overflow-hidden"
               style={{ width: `${rightPanelWidth}px` }}
             >
-              <div style={graphHeight != null ? { height: `${graphHeight}px` } : { flex: 1 }} className="flex flex-col overflow-hidden border-b border-gray-700/50">
+              <div style={graphHeight != null ? { height: `${graphHeight}px` } : { flex: 1 }} className="flex flex-col overflow-hidden">
                 <GraphPanel
                   graphData={graphData}
                   loading={graphLoading}
