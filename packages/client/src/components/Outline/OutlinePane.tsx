@@ -31,7 +31,7 @@ function extractHeadings(content: string): Heading[] {
 export function OutlinePane({ content, onJumpToLine }: OutlinePaneProps) {
   const [headings, setHeadings] = useState<Heading[]>([]);
   const [collapsed, setCollapsed] = useState<Set<number>>(new Set());
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);

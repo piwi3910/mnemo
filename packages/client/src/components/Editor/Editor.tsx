@@ -61,7 +61,7 @@ function getVimMode(view: EditorView): string {
 
 export function Editor({ content, onChange, darkMode, allNotes, onCursorStateChange, viewRef: externalViewRef }: EditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const viewRef = useRef<EditorView>();
+  const viewRef = useRef<EditorView>(undefined);
   const onChangeRef = useRef(onChange);
   const allNotesRef = useRef(allNotes);
   const onCursorStateChangeRef = useRef(onCursorStateChange);

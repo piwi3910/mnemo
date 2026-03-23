@@ -38,8 +38,8 @@ export default function App() {
     line: 1, col: 1, vimMode: '-- NORMAL --', wordCount: 0,
   });
   const [starredPaths, setStarredPaths] = useState<Set<string>>(new Set());
-  const editorViewRef = useRef<EditorView>();
-  const searchInputRef = useRef<HTMLInputElement>();
+  const editorViewRef = useRef<EditorView>(undefined);
+  const searchInputRef = useRef<HTMLInputElement>(undefined);
   const previewRef = useRef<HTMLDivElement>(null);
 
   // Load starred notes from settings on mount

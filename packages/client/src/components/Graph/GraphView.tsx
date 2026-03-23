@@ -24,7 +24,7 @@ export function GraphView({ onClose, onNoteSelect }: GraphViewProps) {
   const [graphData, setGraphData] = useState<GraphData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const simulationRef = useRef<d3.Simulation<SimNode, SimLink>>();
+  const simulationRef = useRef<d3.Simulation<SimNode, SimLink>>(undefined);
   const hoveredNodeRef = useRef<SimNode | null>(null);
   const nodesRef = useRef<SimNode[]>([]);
   const linksRef = useRef<SimLink[]>([]);

@@ -5,6 +5,11 @@
   "workspaces": [
     "packages/*"
   ],
+  "overrides": {
+    "lucide-react": {
+      "react": "$react"
+    }
+  },
   "scripts": {
     "dev": "npm run dev --workspace=packages/server & npm run dev --workspace=packages/client",
     "build": "npm run build --workspace=packages/server && npm run build --workspace=packages/client",
