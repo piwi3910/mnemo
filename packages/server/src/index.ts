@@ -21,6 +21,8 @@ import { createTagsRouter } from "./routes/tags";
 import { createDailyRouter } from "./routes/daily";
 import { createTemplatesRouter } from "./routes/templates";
 import { createCanvasRouter } from "./routes/canvas";
+import { createSharesRouter, createAccessRequestsRouter } from "./routes/shares";
+import { createUsersRouter } from "./routes/users";
 import { cleanupOldNotes, getUserNotesDir } from "./services/userNotesDir";
 import { SearchIndex } from "./entities/SearchIndex";
 import { GraphEdge } from "./entities/GraphEdge";
@@ -133,6 +135,9 @@ async function main(): Promise<void> {
   app.use("/api/daily", authMiddleware, createDailyRouter(NOTES_DIR));
   app.use("/api/templates", authMiddleware, createTemplatesRouter(NOTES_DIR));
   app.use("/api/canvas", authMiddleware, createCanvasRouter(NOTES_DIR));
+  app.use("/api/shares", authMiddleware, createSharesRouter());
+  app.use("/api/access-requests", authMiddleware, createAccessRequestsRouter());
+  app.use("/api/users", authMiddleware, createUsersRouter());
 
   /**
    * @swagger
