@@ -231,4 +231,3 @@ Add an endpoint or startup hook for re-indexing a user's notes. For now, indexin
 - All client files — API shapes unchanged
 - Auth entities (User, AuthProvider, RefreshToken, InviteCode) — unchanged
 - Auth middleware, token service — unchanged
-- OAuth service — unchanged
