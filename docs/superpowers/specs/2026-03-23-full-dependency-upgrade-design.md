@@ -78,7 +78,16 @@ export default defineConfig({
 ```
 
 **Migrate `globals.css`:**
-Replace Tailwind directives and move theme config from JS to CSS:
+Replace only the top three Tailwind directives and add the `@theme` block. All existing content below (the `@layer base`, `@layer components` blocks, CodeMirror overrides, markdown preview styles, etc.) is **preserved as-is**.
+
+Replace:
+```css
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+```
+
+With:
 ```css
 @import "tailwindcss";
 
@@ -102,6 +111,7 @@ Replace Tailwind directives and move theme config from JS to CSS:
 - All `dark:` variant classes in components remain unchanged
 - `@layer base`, `@layer components` blocks remain valid CSS
 - `@apply` directive still works in Tailwind 4
+- Tailwind 4's `@tailwindcss/vite` plugin uses automatic content detection — no `@source` directive or manual `content` config needed for standard Vite project layouts
 
 ### Files Modified
 - `packages/client/vite.config.ts`
@@ -150,7 +160,7 @@ export default tseslint.config(
 );
 ```
 
-**Create `packages/server/eslint.config.js`:**
+**Create `packages/server/eslint.config.mjs`:** (`.mjs` required because server package is CommonJS — no `"type": "module"`)
 ```js
 import eslint from '@eslint/js';
 import tseslint from 'typescript-eslint';
@@ -170,7 +180,7 @@ export default tseslint.config(
 
 **Update lint scripts** in both `package.json` files:
 - `"lint": "eslint src"` (remove `--ext` flag, no longer supported)
-- `"lint:fix": "eslint src --fix"`
+- `"lint:fix": "eslint src --fix"` (add to server — currently missing)
 
 **Dependency changes:**
 - Remove: `eslint` v8, `@typescript-eslint/eslint-plugin` v7, `@typescript-eslint/parser` v7
@@ -181,7 +191,7 @@ export default tseslint.config(
 - `packages/client/package.json`
 - `packages/server/package.json`
 - Create: `packages/client/eslint.config.js`
-- Create: `packages/server/eslint.config.js`
+- Create: `packages/server/eslint.config.mjs`
 - Delete: `packages/client/.eslintrc.json`
 - Delete: `packages/server/.eslintrc.json`
 
@@ -244,6 +254,10 @@ React 19 is the riskiest single upgrade. Runtime testing needed to verify CodeMi
 - `@types/node` 20 → 25 (matches Node 24 runtime)
 - `tsx` → latest 4.x
 - `typescript` → latest 5.x (both client and server)
+- `cors`, `@types/cors`: bump to latest patch/minor (no major changes)
+- `pg`: bump to latest 8.x patch/minor
+- `typeorm`: bump to latest 0.3.x patch/minor
+- `reflect-metadata`: bump to latest 0.2.x patch/minor
 
 ### Files Modified
 - `packages/server/package.json`
