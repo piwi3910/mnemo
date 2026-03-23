@@ -5,6 +5,8 @@ import { AppDataSource } from "../data-source";
 import { User } from "../entities/User";
 import { InviteCode } from "../entities/InviteCode";
 import { Settings } from "../entities/Settings";
+import { SearchIndex } from "../entities/SearchIndex";
+import { GraphEdge } from "../entities/GraphEdge";
 import { deleteAllUserRefreshTokens } from "../services/tokenService";
 
 /**
@@ -442,6 +444,11 @@ export function createAdminRouter(): Router {
         userId,
       });
       await userRepo.remove(user);
+
+      // Clean up user's data (notes directory is kept as soft delete)
+      await AppDataSource.getRepository(SearchIndex).delete({ userId });
+      await AppDataSource.getRepository(GraphEdge).delete({ userId });
+      await AppDataSource.getRepository(Settings).delete({ userId });
 
       res.json({ ok: true });
     } catch (err) {
