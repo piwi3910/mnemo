@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { api, FileNode, NoteData } from '../lib/api';
+import { api, FileNode, NoteData, getAccessToken } from '../lib/api';
 
-export function useNotes() {
+export function useNotes(userId?: string) {
   const [tree, setTree] = useState<FileNode[]>([]);
   const [activeNote, setActiveNote] = useState<NoteData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -113,8 +113,13 @@ export function useNotes() {
   }, [refreshTree]);
 
   useEffect(() => {
+    // Only fetch when authenticated
+    if (!userId || !getAccessToken()) {
+      setLoading(false);
+      return;
+    }
     refreshTree().finally(() => setLoading(false));
-  }, [refreshTree]);
+  }, [refreshTree, userId]);
 
   // Cleanup timeout on unmount
   useEffect(() => {

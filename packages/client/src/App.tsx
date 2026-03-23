@@ -38,7 +38,7 @@ export default function App() {
 function AppContent() {
   const { user, loading } = useAuth();
   const themeCtx = useTheme();
-  const notes = useNotes();
+  const notes = useNotes(user?.id);
   const [editing, setEditing] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(256);
