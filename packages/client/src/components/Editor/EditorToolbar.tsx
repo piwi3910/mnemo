@@ -147,17 +147,20 @@ export function EditorToolbar({ viewRef, vimEnabled, onVimToggle }: EditorToolba
       <ToolbarButton icon={Minus} title="Horizontal rule" onClick={() => insertText('\n---\n')} />
       <ToolbarButton icon={Table} title="Table" onClick={insertTable} />
       <div className="flex-1" />
-      <button
-        onClick={() => onVimToggle(!vimEnabled)}
-        className={`px-2 py-0.5 rounded text-xs font-mono transition-colors ${
-          vimEnabled
-            ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30'
-            : 'bg-gray-700/30 text-gray-500 hover:bg-gray-700/50'
-        }`}
-        title={vimEnabled ? 'Vim mode enabled — click to disable' : 'Vim mode disabled — click to enable'}
-      >
-        VIM
-      </button>
+      <div className="flex items-center gap-1.5">
+        <span className="text-xs text-gray-500">Vim</span>
+        <button
+          onClick={() => onVimToggle(!vimEnabled)}
+          className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+            vimEnabled ? 'bg-violet-500' : 'bg-gray-600'
+          }`}
+          title={vimEnabled ? 'Vim mode enabled — click to disable' : 'Vim mode disabled — click to enable'}
+        >
+          <span className={`inline-block h-3.5 w-3.5 rounded-full bg-white transition-transform ${
+            vimEnabled ? 'translate-x-4.5' : 'translate-x-0.5'
+          }`} />
+        </button>
+      </div>
     </div>
   );
 }
