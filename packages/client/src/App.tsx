@@ -63,8 +63,9 @@ function AppContent() {
   const searchInputRef = useRef<HTMLInputElement>(undefined);
   const previewRef = useRef<HTMLDivElement>(null);
 
-  // Load starred notes from settings on mount
+  // Load starred notes from settings on mount (only when authenticated)
   useEffect(() => {
+    if (!user) return;
     api.getSettings().then(settings => {
       if (settings.starred) {
         try {
@@ -74,26 +75,26 @@ function AppContent() {
           // ignore invalid JSON
         }
       }
-    }).catch(() => {
-      // settings endpoint might fail, ignore
-    });
-  }, []);
+    }).catch(() => {});
+  }, [user]);
 
-  // Fetch shared notes on mount
+  // Fetch shared notes (only when authenticated)
   useEffect(() => {
+    if (!user) return;
     shareApi.withMe().then(data => setSharedNotes(data || [])).catch(() => {});
-  }, []);
+  }, [user]);
 
-  // Fetch graph data whenever the note tree changes
+  // Fetch graph data whenever the note tree changes (only when authenticated)
   const treeKey = notes.tree.length;
 
   useEffect(() => {
+    if (!user) return;
     let cancelled = false;
     api.getGraph()
       .then(data => { if (!cancelled) { setGraphData(data); setGraphLoading(false); } })
       .catch(() => { if (!cancelled) { setGraphLoading(false); } });
     return () => { cancelled = true; };
-  }, [treeKey]);
+  }, [treeKey, user]);
 
   const toggleStar = useCallback((path: string) => {
     setStarredPaths(prev => {
