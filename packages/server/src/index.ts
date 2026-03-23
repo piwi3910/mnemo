@@ -13,6 +13,7 @@ import { createBacklinksRouter } from "./routes/backlinks";
 import { createTagsRouter } from "./routes/tags";
 import { createDailyRouter } from "./routes/daily";
 import { createTemplatesRouter } from "./routes/templates";
+import { createCanvasRouter } from "./routes/canvas";
 import { indexAllNotes } from "./services/noteService";
 
 const PORT = parseInt(process.env.PORT || "3001", 10);
@@ -222,6 +223,7 @@ async function main(): Promise<void> {
   app.use("/api/tags", createTagsRouter());
   app.use("/api/daily", createDailyRouter(NOTES_DIR));
   app.use("/api/templates", createTemplatesRouter(NOTES_DIR));
+  app.use("/api/canvas", createCanvasRouter(NOTES_DIR));
 
   // Serve image files from notes directory
   app.get("/api/files/*", async (req: Request, res: Response) => {

@@ -187,6 +187,13 @@
   @apply text-blue-500 dark:text-blue-400 hover:underline cursor-pointer font-medium;
 }
 
+/* Broken wiki link styling */
+.wiki-link-broken {
+  @apply text-red-500 dark:text-red-400;
+  text-decoration: underline wavy red;
+  text-underline-offset: 3px;
+}
+
 /* Embed styling in preview */
 .embed-note {
   @apply my-4 border rounded-lg bg-gray-50 dark:bg-surface-900/50 overflow-hidden;
@@ -222,6 +229,16 @@
 
 .embed-image img {
   @apply max-w-full rounded-lg shadow-sm;
+}
+
+/* Keyboard shortcut badge */
+.kbd {
+  @apply inline-block bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded px-1.5 py-0.5 text-xs font-mono;
+}
+
+/* Vim mode styles - hide default vim status bar since we use our own */
+.cm-vim-panel {
+  display: none !important;
 }
 
 /* Autocomplete dropdown */

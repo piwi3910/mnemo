@@ -1,6 +1,6 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { FileNode } from '../../lib/api';
-import { FileText, Folder, FolderOpen, ChevronRight, Plus, FolderPlus, MoreHorizontal, Pencil, Trash2, Calendar, LayoutTemplate } from 'lucide-react';
+import { FileText, Folder, FolderOpen, ChevronRight, Plus, FolderPlus, MoreHorizontal, Pencil, Trash2, Calendar, LayoutTemplate, Star } from 'lucide-react';
 import { TagPane } from '../Tags/TagPane';
 
 interface SidebarProps {
@@ -15,6 +15,8 @@ interface SidebarProps {
   onRenameFolder: (oldPath: string, newPath: string) => Promise<void>;
   onDailyNote: () => void;
   onCreateFromTemplate: () => void;
+  starredPaths: Set<string>;
+  onToggleStar: (path: string) => void;
 }
 
 export function Sidebar({
@@ -29,12 +31,28 @@ export function Sidebar({
   onRenameFolder,
   onDailyNote,
   onCreateFromTemplate,
+  starredPaths,
+  onToggleStar,
 }: SidebarProps) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set(['']));
   const [creating, setCreating] = useState<{ type: 'file' | 'folder'; parentPath: string } | null>(null);
   const [renaming, setRenaming] = useState<{ path: string; type: 'file' | 'folder' } | null>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; node: FileNode } | null>(null);
   const [newName, setNewName] = useState('');
+
+  // Listen for external rename requests (F2 shortcut)
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.path) {
+        const name = detail.path.split('/').pop()?.replace(/\.md$/, '') || '';
+        setRenaming({ path: detail.path, type: 'file' });
+        setNewName(name);
+      }
+    };
+    window.addEventListener('mnemo:rename-note', handler);
+    return () => window.removeEventListener('mnemo:rename-note', handler);
+  }, []);
 
   const toggleExpand = useCallback((path: string) => {
     setExpanded(prev => {
@@ -45,8 +63,8 @@ export function Sidebar({
     });
   }, []);
 
-  const handleCreate = useCallback(async (type: 'file' | 'folder', parentPath: string) => {
-    setCreating({ type, parentPath });
+  const handleCreate = useCallback((_type: 'file' | 'folder', parentPath: string) => {
+    setCreating({ type: _type, parentPath });
     setNewName('');
   }, []);
 
@@ -98,10 +116,23 @@ export function Sidebar({
     setContextMenu({ x: e.clientX, y: e.clientY, node });
   }, []);
 
+  // Collect starred notes that exist in the tree
+  const starredNotes: FileNode[] = [];
+  function findStarredNotes(nodes: FileNode[]) {
+    for (const node of nodes) {
+      if (node.type === 'file' && starredPaths.has(node.path)) {
+        starredNotes.push(node);
+      }
+      if (node.children) findStarredNotes(node.children);
+    }
+  }
+  findStarredNotes(tree);
+
   const renderNode = (node: FileNode, depth: number) => {
     const isActive = node.type === 'file' && node.path === activeNotePath;
     const isExpanded = expanded.has(node.path);
     const isRenaming = renaming?.path === node.path;
+    const isStarred = node.type === 'file' && starredPaths.has(node.path);
     const displayName = node.type === 'file' ? node.name.replace(/\.md$/, '') : node.name;
 
     return (
@@ -152,6 +183,22 @@ export function Sidebar({
             />
           ) : (
             <span className="flex-1 truncate">{displayName}</span>
+          )}
+          {node.type === 'file' && !isRenaming && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleStar(node.path);
+              }}
+              className={`p-0.5 rounded transition-opacity ${
+                isStarred
+                  ? 'text-yellow-500 opacity-100'
+                  : 'opacity-0 group-hover:opacity-100 text-gray-400 hover:text-yellow-500'
+              }`}
+              title={isStarred ? 'Unstar' : 'Star'}
+            >
+              <Star size={13} fill={isStarred ? 'currentColor' : 'none'} />
+            </button>
           )}
           <button
             onClick={(e) => {
@@ -230,6 +277,35 @@ export function Sidebar({
         </div>
       </div>
 
+      {/* Starred section */}
+      {starredNotes.length > 0 && (
+        <div className="border-b">
+          <div className="px-3 py-1.5">
+            <span className="text-xs font-semibold text-yellow-600 dark:text-yellow-500 uppercase tracking-wider flex items-center gap-1">
+              <Star size={11} fill="currentColor" />
+              Starred
+            </span>
+          </div>
+          <div className="pb-1">
+            {starredNotes.map((node) => (
+              <div
+                key={`starred-${node.path}`}
+                className={`group flex items-center gap-1 px-2 py-1 cursor-pointer text-sm rounded-md mx-1 transition-colors duration-100
+                  ${node.path === activeNotePath
+                    ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 font-medium'
+                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-200/60 dark:hover:bg-gray-700/40'
+                  }`}
+                style={{ paddingLeft: '8px' }}
+                onClick={() => onSelect(node.path)}
+              >
+                <Star size={13} className="flex-shrink-0 text-yellow-500" fill="currentColor" />
+                <span className="flex-1 truncate">{node.name.replace(/\.md$/, '')}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* File tree */}
       <div className="flex-1 overflow-y-auto py-1">
         {creating && creating.parentPath === '' && (
@@ -275,6 +351,20 @@ export function Sidebar({
                 className="w-full flex items-center gap-2 px-3 py-1.5 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
               >
                 <FolderPlus size={14} /> New folder here
+              </button>
+              <div className="border-t my-1" />
+            </>
+          )}
+          {contextMenu.node.type === 'file' && (
+            <>
+              <button
+                onClick={() => {
+                  onToggleStar(contextMenu.node.path);
+                  setContextMenu(null);
+                }}
+                className="w-full flex items-center gap-2 px-3 py-1.5 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+              >
+                <Star size={14} /> {starredPaths.has(contextMenu.node.path) ? 'Unstar' : 'Star'}
               </button>
               <div className="border-t my-1" />
             </>

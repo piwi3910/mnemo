@@ -49,6 +49,20 @@ export interface TemplateContent {
   content: string;
 }
 
+export interface CanvasData {
+  nodes: Array<{
+    id: string;
+    type: string;
+    position: { x: number; y: number };
+    data: { notePath: string; label: string; content?: string };
+  }>;
+  edges: Array<{
+    id: string;
+    source: string;
+    target: string;
+  }>;
+}
+
 const BASE = '/api';
 
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
@@ -108,4 +122,14 @@ export const api = {
 
   // Daily note
   createDailyNote: () => request<NoteData>('/daily', { method: 'POST' }),
+
+  // Canvas
+  getCanvasList: () => request<string[]>('/canvas'),
+  getCanvas: (name: string) => request<CanvasData>(`/canvas/${encodeURIComponent(name)}`),
+  saveCanvas: (name: string, data: CanvasData) =>
+    request<void>(`/canvas/${encodeURIComponent(name)}`, { method: 'PUT', body: JSON.stringify(data) }),
+  createCanvas: (name: string) =>
+    request<void>('/canvas', { method: 'POST', body: JSON.stringify({ name }) }),
+  deleteCanvas: (name: string) =>
+    request<void>(`/canvas/${encodeURIComponent(name)}`, { method: 'DELETE' }),
 };

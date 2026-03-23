@@ -4,9 +4,10 @@ import { api, SearchResult } from '../../lib/api';
 
 interface SearchBarProps {
   onSelect: (path: string) => void;
+  inputRef?: React.MutableRefObject<HTMLInputElement | undefined>;
 }
 
-export function SearchBar({ onSelect }: SearchBarProps) {
+export function SearchBar({ onSelect, inputRef: externalRef }: SearchBarProps) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [open, setOpen] = useState(false);
@@ -76,6 +77,13 @@ export function SearchBar({ onSelect }: SearchBarProps) {
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
+
+  // Expose input ref to parent
+  useEffect(() => {
+    if (externalRef && inputRef.current) {
+      externalRef.current = inputRef.current;
+    }
+  }, [externalRef]);
 
   // Keyboard shortcut: Ctrl/Cmd+K to focus search
   useEffect(() => {

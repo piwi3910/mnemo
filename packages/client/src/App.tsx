@@ -1,16 +1,24 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useMemo, useEffect } from 'react';
+import { EditorView } from '@codemirror/view';
 import { useTheme } from './hooks/useTheme';
 import { useNotes } from './hooks/useNotes';
+import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { api } from './lib/api';
+import { exportNoteToPdf } from './lib/exportPdf';
 import { Sidebar } from './components/Sidebar/Sidebar';
-import { Editor } from './components/Editor/Editor';
+import { Editor, EditorCursorState } from './components/Editor/Editor';
 import { Preview } from './components/Preview/Preview';
 import { SearchBar } from './components/Search/SearchBar';
 import { GraphView } from './components/Graph/GraphView';
 import { ThemeToggle } from './components/Layout/ThemeToggle';
 import { BacklinksPanel } from './components/Backlinks/BacklinksPanel';
+import { OutgoingLinksPanel } from './components/OutgoingLinks/OutgoingLinksPanel';
 import { TemplatePicker } from './components/Templates/TemplatePicker';
-import { PanelLeft, BookOpen, Network, X, Menu } from 'lucide-react';
+import { OutlinePane } from './components/Outline/OutlinePane';
+import { StatusBar } from './components/StatusBar/StatusBar';
+import { QuickSwitcher } from './components/QuickSwitcher/QuickSwitcher';
+import { CanvasView } from './components/Canvas/CanvasView';
+import { PanelLeft, BookOpen, Network, X, Menu, ListTree, Star, FileDown, LayoutDashboard } from 'lucide-react';
 
 type ViewMode = 'editor' | 'preview' | 'split';
 
@@ -19,10 +27,53 @@ export default function App() {
   const notes = useNotes();
   const [viewMode, setViewMode] = useState<ViewMode>('split');
   const [showGraph, setShowGraph] = useState(false);
+  const [showCanvas, setShowCanvas] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [outlineOpen, setOutlineOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showTemplatePicker, setShowTemplatePicker] = useState(false);
   const [pendingTemplatePath, setPendingTemplatePath] = useState<string | null>(null);
+  const [showQuickSwitcher, setShowQuickSwitcher] = useState(false);
+  const [cursorState, setCursorState] = useState<EditorCursorState>({
+    line: 1, col: 1, vimMode: '-- NORMAL --', wordCount: 0,
+  });
+  const [starredPaths, setStarredPaths] = useState<Set<string>>(new Set());
+  const editorViewRef = useRef<EditorView>();
+  const searchInputRef = useRef<HTMLInputElement>();
+  const previewRef = useRef<HTMLDivElement>(null);
+
+  // Load starred notes from settings on mount
+  useEffect(() => {
+    api.getSettings().then(settings => {
+      if (settings.starred) {
+        try {
+          const paths = JSON.parse(settings.starred) as string[];
+          setStarredPaths(new Set(paths));
+        } catch {
+          // ignore invalid JSON
+        }
+      }
+    }).catch(() => {
+      // settings endpoint might fail, ignore
+    });
+  }, []);
+
+  const toggleStar = useCallback((path: string) => {
+    setStarredPaths(prev => {
+      const next = new Set(prev);
+      if (next.has(path)) next.delete(path);
+      else next.add(path);
+      const arr = Array.from(next);
+      api.updateSetting('starred', JSON.stringify(arr)).catch(() => {});
+      return next;
+    });
+  }, []);
+
+  const toggleActiveNoteStar = useCallback(() => {
+    if (notes.activeNote) {
+      toggleStar(notes.activeNote.path);
+    }
+  }, [notes.activeNote, toggleStar]);
 
   const handleNoteSelect = useCallback((path: string) => {
     notes.openNote(path);
@@ -30,7 +81,6 @@ export default function App() {
   }, [notes]);
 
   const handleLinkClick = useCallback((noteName: string) => {
-    // Find the note by matching end of path
     const findNote = (nodes: typeof notes.tree): string | null => {
       for (const node of nodes) {
         if (node.type === 'file') {
@@ -48,6 +98,10 @@ export default function App() {
     };
     const path = findNote(notes.tree);
     if (path) notes.openNote(path);
+  }, [notes]);
+
+  const handleCreateNoteFromLink = useCallback(async (name: string) => {
+    await notes.createNote(name);
   }, [notes]);
 
   const handleDailyNote = useCallback(async () => {
@@ -69,11 +123,8 @@ export default function App() {
   const handleTemplateSelected = useCallback(async (templateContent: string) => {
     setShowTemplatePicker(false);
     if (pendingTemplatePath) {
-      // Apply template to a pending note path
       await notes.createNote(pendingTemplatePath, templateContent || undefined);
     } else {
-      // Create a new note with template — prompt for name via inline creation
-      // For simplicity, create with a default name and template content
       const now = new Date();
       const timestamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
       const noteName = `New Note ${timestamp}`;
@@ -83,12 +134,63 @@ export default function App() {
     setPendingTemplatePath(null);
   }, [notes, pendingTemplatePath]);
 
+  const handleOutlineJump = useCallback((line: number) => {
+    const view = editorViewRef.current;
+    if (!view) return;
+    const doc = view.state.doc;
+    if (line < 1 || line > doc.lines) return;
+    const lineObj = doc.line(line);
+    view.dispatch({
+      selection: { anchor: lineObj.from },
+      scrollIntoView: true,
+    });
+    view.focus();
+  }, []);
+
+  const handleNewNote = useCallback(async () => {
+    const now = new Date();
+    const timestamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`;
+    const noteName = `New Note ${timestamp}`;
+    await notes.createNote(noteName);
+  }, [notes]);
+
+  const handleRenameNote = useCallback(() => {
+    if (!notes.activeNote) return;
+    window.dispatchEvent(new CustomEvent('mnemo:rename-note', { detail: { path: notes.activeNote.path } }));
+  }, [notes.activeNote]);
+
+  const handlePdfExport = useCallback(async () => {
+    if (!notes.activeNote) return;
+    const el = previewRef.current;
+    if (el) {
+      await exportNoteToPdf(notes.activeNote.title, el.innerHTML);
+    } else {
+      // Fallback: render content to HTML string
+      const div = document.createElement('div');
+      div.innerHTML = `<h1>${notes.activeNote.title}</h1><pre>${notes.activeNote.content}</pre>`;
+      await exportNoteToPdf(notes.activeNote.title, div.innerHTML);
+    }
+  }, [notes.activeNote]);
+
+  const shortcutActions = useMemo(() => ({
+    toggleSidebar: () => setSidebarOpen(prev => !prev),
+    toggleOutline: () => setOutlineOpen(prev => !prev),
+    openQuickSwitcher: () => setShowQuickSwitcher(true),
+    focusSearch: () => searchInputRef.current?.focus(),
+    createNote: handleNewNote,
+    renameNote: handleRenameNote,
+    toggleStar: toggleActiveNoteStar,
+  }), [handleNewNote, handleRenameNote, toggleActiveNoteStar]);
+
+  useKeyboardShortcuts(shortcutActions);
+
+  const isActiveNoteStarred = notes.activeNote ? starredPaths.has(notes.activeNote.path) : false;
+
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-white dark:bg-surface-950">
       {/* Header */}
       <header className="h-13 flex-shrink-0 flex items-center justify-between px-3 border-b bg-gray-50/80 dark:bg-surface-900/80 backdrop-blur-sm">
         <div className="flex items-center gap-1">
-          {/* Mobile menu toggle */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="btn-ghost p-2 md:hidden"
@@ -96,11 +198,11 @@ export default function App() {
           >
             <Menu size={18} />
           </button>
-          {/* Desktop sidebar toggle */}
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
             className="btn-ghost p-2 hidden md:flex"
             aria-label="Toggle sidebar"
+            title="Toggle sidebar (Ctrl+B)"
           >
             <PanelLeft size={18} />
           </button>
@@ -113,11 +215,10 @@ export default function App() {
         </div>
 
         <div className="flex-1 max-w-md mx-4">
-          <SearchBar onSelect={handleNoteSelect} />
+          <SearchBar onSelect={handleNoteSelect} inputRef={searchInputRef} />
         </div>
 
         <div className="flex items-center gap-0.5">
-          {/* View mode toggles */}
           <div className="hidden sm:flex items-center border rounded-md overflow-hidden mr-2">
             {(['editor', 'split', 'preview'] as ViewMode[]).map((mode) => (
               <button
@@ -133,6 +234,22 @@ export default function App() {
               </button>
             ))}
           </div>
+          <button
+            onClick={() => setOutlineOpen(!outlineOpen)}
+            className={`btn-ghost p-2 ${outlineOpen ? 'text-blue-500' : ''}`}
+            aria-label="Toggle outline"
+            title="Toggle outline (Ctrl+O)"
+          >
+            <ListTree size={18} />
+          </button>
+          <button
+            onClick={() => setShowCanvas(true)}
+            className="btn-ghost p-2"
+            aria-label="Canvas view"
+            title="Canvas view"
+          >
+            <LayoutDashboard size={18} />
+          </button>
           <button
             onClick={() => setShowGraph(true)}
             className="btn-ghost p-2"
@@ -178,6 +295,8 @@ export default function App() {
             onRenameFolder={notes.renameFolder}
             onDailyNote={handleDailyNote}
             onCreateFromTemplate={handleCreateFromTemplate}
+            starredPaths={starredPaths}
+            onToggleStar={toggleStar}
           />
         </aside>
 
@@ -192,6 +311,24 @@ export default function App() {
                       {notes.activeNote.path}
                     </span>
                     <div className="flex items-center gap-2">
+                      <button
+                        onClick={toggleActiveNoteStar}
+                        className={`p-1 rounded transition-colors ${
+                          isActiveNoteStarred
+                            ? 'text-yellow-500 hover:text-yellow-600'
+                            : 'text-gray-400 hover:text-yellow-500'
+                        }`}
+                        title={isActiveNoteStarred ? 'Unstar (Ctrl+Shift+S)' : 'Star (Ctrl+Shift+S)'}
+                      >
+                        <Star size={14} fill={isActiveNoteStarred ? 'currentColor' : 'none'} />
+                      </button>
+                      <button
+                        onClick={handlePdfExport}
+                        className="p-1 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                        title="Export as PDF"
+                      >
+                        <FileDown size={14} />
+                      </button>
                       {notes.saving && (
                         <span className="text-xs text-gray-400">Saving...</span>
                       )}
@@ -206,8 +343,16 @@ export default function App() {
                       onChange={notes.updateContent}
                       darkMode={themeCtx.resolvedTheme === 'dark'}
                       allNotes={notes.tree}
+                      onCursorStateChange={setCursorState}
+                      viewRef={editorViewRef}
                     />
                   </div>
+                  <OutgoingLinksPanel
+                    content={notes.activeNote.content}
+                    allNotes={notes.tree}
+                    onNoteSelect={handleNoteSelect}
+                    onCreateNote={handleCreateNoteFromLink}
+                  />
                   <BacklinksPanel
                     notePath={notes.activeNote.path}
                     onNoteSelect={handleNoteSelect}
@@ -216,14 +361,40 @@ export default function App() {
               )}
               {(viewMode === 'preview' || viewMode === 'split') && (
                 <div className={`${viewMode === 'split' ? 'w-1/2' : 'w-full'} flex flex-col overflow-hidden`}>
-                  <div className="flex items-center px-4 py-2 border-b bg-gray-50/50 dark:bg-surface-900/50">
-                    <BookOpen size={14} className="text-gray-400 mr-2" />
-                    <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">Preview</span>
+                  <div className="flex items-center justify-between px-4 py-2 border-b bg-gray-50/50 dark:bg-surface-900/50">
+                    <div className="flex items-center">
+                      <BookOpen size={14} className="text-gray-400 mr-2" />
+                      <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">Preview</span>
+                    </div>
+                    {viewMode === 'preview' && (
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={toggleActiveNoteStar}
+                          className={`p-1 rounded transition-colors ${
+                            isActiveNoteStarred
+                              ? 'text-yellow-500 hover:text-yellow-600'
+                              : 'text-gray-400 hover:text-yellow-500'
+                          }`}
+                          title={isActiveNoteStarred ? 'Unstar' : 'Star'}
+                        >
+                          <Star size={14} fill={isActiveNoteStarred ? 'currentColor' : 'none'} />
+                        </button>
+                        <button
+                          onClick={handlePdfExport}
+                          className="p-1 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                          title="Export as PDF"
+                        >
+                          <FileDown size={14} />
+                        </button>
+                      </div>
+                    )}
                   </div>
-                  <div className="flex-1 overflow-y-auto">
+                  <div className="flex-1 overflow-y-auto" ref={previewRef}>
                     <Preview
                       content={notes.activeNote.content}
                       onLinkClick={handleLinkClick}
+                      allNotes={notes.tree}
+                      onCreateNote={handleCreateNoteFromLink}
                     />
                   </div>
                 </div>
@@ -239,15 +410,39 @@ export default function App() {
                 <p className="text-sm text-gray-500 dark:text-gray-400">
                   Select a note from the sidebar or create a new one
                 </p>
+                <div className="mt-4 text-xs text-gray-400 dark:text-gray-500 space-y-1">
+                  <p><kbd className="kbd">Ctrl+P</kbd> Quick switcher</p>
+                  <p><kbd className="kbd">Ctrl+N</kbd> New note</p>
+                  <p><kbd className="kbd">Ctrl+B</kbd> Toggle sidebar</p>
+                </div>
               </div>
             </div>
           )}
         </main>
+
+        {/* Outline pane (right sidebar) */}
+        {outlineOpen && notes.activeNote && (
+          <aside className="w-60 flex-shrink-0 border-l bg-gray-50 dark:bg-surface-900 overflow-hidden">
+            <OutlinePane
+              content={notes.activeNote.content}
+              onJumpToLine={handleOutlineJump}
+            />
+          </aside>
+        )}
       </div>
+
+      {/* Status bar */}
+      <StatusBar
+        notePath={notes.activeNote?.path || null}
+        vimMode={cursorState.vimMode}
+        line={cursorState.line}
+        col={cursorState.col}
+        wordCount={cursorState.wordCount}
+      />
 
       {/* Error toast */}
       {notes.error && (
-        <div className="fixed bottom-4 right-4 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 z-50 animate-in slide-in-from-bottom">
+        <div className="fixed bottom-10 right-4 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 z-50 animate-in slide-in-from-bottom">
           <span className="text-sm">{notes.error}</span>
           <button onClick={() => notes.setError(null)} className="hover:bg-red-600 rounded p-0.5">
             <X size={14} />
@@ -260,12 +455,30 @@ export default function App() {
         <GraphView onClose={() => setShowGraph(false)} onNoteSelect={handleNoteSelect} />
       )}
 
+      {/* Canvas modal */}
+      {showCanvas && (
+        <CanvasView
+          onClose={() => setShowCanvas(false)}
+          onNoteSelect={handleNoteSelect}
+          allNotes={notes.tree}
+        />
+      )}
+
       {/* Template picker modal */}
       {showTemplatePicker && (
         <TemplatePicker
           onSelect={handleTemplateSelected}
           onClose={() => setShowTemplatePicker(false)}
           noteTitle="New Note"
+        />
+      )}
+
+      {/* Quick switcher modal */}
+      {showQuickSwitcher && (
+        <QuickSwitcher
+          notes={notes.tree}
+          onSelect={handleNoteSelect}
+          onClose={() => setShowQuickSwitcher(false)}
         />
       )}
     </div>

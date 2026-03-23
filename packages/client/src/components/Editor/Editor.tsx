@@ -7,13 +7,23 @@ import { syntaxHighlighting, defaultHighlightStyle, bracketMatching } from '@cod
 import { oneDark } from '@codemirror/theme-one-dark';
 import { autocompletion, CompletionContext, CompletionResult } from '@codemirror/autocomplete';
 import { search as cmSearch, searchKeymap } from '@codemirror/search';
+import { vim, getCM } from '@replit/codemirror-vim';
 import { FileNode } from '../../lib/api';
+
+export interface EditorCursorState {
+  line: number;
+  col: number;
+  vimMode: string;
+  wordCount: number;
+}
 
 interface EditorProps {
   content: string;
   onChange: (content: string) => void;
   darkMode: boolean;
   allNotes: FileNode[];
+  onCursorStateChange?: (state: EditorCursorState) => void;
+  viewRef?: React.MutableRefObject<EditorView | undefined>;
 }
 
 function collectNotePaths(nodes: FileNode[]): string[] {
@@ -29,14 +39,36 @@ function collectNotePaths(nodes: FileNode[]): string[] {
   return paths;
 }
 
-export function Editor({ content, onChange, darkMode, allNotes }: EditorProps) {
+function countWords(text: string): number {
+  const trimmed = text.trim();
+  if (!trimmed) return 0;
+  return trimmed.split(/\s+/).length;
+}
+
+function getVimMode(view: EditorView): string {
+  const cm = getCM(view);
+  if (!cm) return '-- NORMAL --';
+  const vimState = cm.state.vim;
+  if (!vimState) return '-- NORMAL --';
+  if (vimState.insertMode) return '-- INSERT --';
+  if (vimState.visualMode) {
+    if (vimState.visualLine) return '-- VISUAL LINE --';
+    if (vimState.visualBlock) return '-- VISUAL BLOCK --';
+    return '-- VISUAL --';
+  }
+  return '-- NORMAL --';
+}
+
+export function Editor({ content, onChange, darkMode, allNotes, onCursorStateChange, viewRef: externalViewRef }: EditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView>();
   const onChangeRef = useRef(onChange);
   const allNotesRef = useRef(allNotes);
+  const onCursorStateChangeRef = useRef(onCursorStateChange);
 
   onChangeRef.current = onChange;
   allNotesRef.current = allNotes;
+  onCursorStateChangeRef.current = onCursorStateChange;
 
   const wikiLinkCompletion = useCallback((context: CompletionContext): CompletionResult | null => {
     const before = context.matchBefore(/\[\[([^\]]*)$/);
@@ -47,14 +79,11 @@ export function Editor({ content, onChange, darkMode, allNotes }: EditorProps) {
 
     const options = paths
       .filter(p => p.toLowerCase().includes(query))
-      .map(p => {
-        const label = p.includes('/') ? p : p;
-        return {
-          label,
-          apply: `${p}]]`,
-          type: 'text' as const,
-        };
-      });
+      .map(p => ({
+        label: p,
+        apply: `${p}]]`,
+        type: 'text' as const,
+      }));
 
     return {
       from: before.from + 2,
@@ -66,10 +95,23 @@ export function Editor({ content, onChange, darkMode, allNotes }: EditorProps) {
   useEffect(() => {
     if (!containerRef.current) return;
 
+    const emitCursorState = (view: EditorView) => {
+      if (!onCursorStateChangeRef.current) return;
+      const pos = view.state.selection.main.head;
+      const line = view.state.doc.lineAt(pos);
+      onCursorStateChangeRef.current({
+        line: line.number,
+        col: pos - line.from + 1,
+        vimMode: getVimMode(view),
+        wordCount: countWords(view.state.doc.toString()),
+      });
+    };
+
     const updateListener = EditorView.updateListener.of((update: ViewUpdate) => {
       if (update.docChanged) {
         onChangeRef.current(update.state.doc.toString());
       }
+      emitCursorState(update.view);
     });
 
     const themeExtensions = darkMode ? [oneDark] : [];
@@ -77,6 +119,7 @@ export function Editor({ content, onChange, darkMode, allNotes }: EditorProps) {
     const state = EditorState.create({
       doc: content,
       extensions: [
+        vim(),
         ...themeExtensions,
         markdown({ base: markdownLanguage }),
         syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
@@ -109,6 +152,17 @@ export function Editor({ content, onChange, darkMode, allNotes }: EditorProps) {
     });
 
     viewRef.current = view;
+    if (externalViewRef) externalViewRef.current = view;
+
+    // Fire initial cursor state
+    if (onCursorStateChangeRef.current) {
+      onCursorStateChangeRef.current({
+        line: 1,
+        col: 1,
+        vimMode: '-- NORMAL --',
+        wordCount: countWords(content),
+      });
+    }
 
     return () => {
       view.destroy();
