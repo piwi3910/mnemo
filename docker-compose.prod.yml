@@ -1,6 +1,6 @@
 services:
   mnemo:
-    image: ghcr.io/piwi3910/mnemo:latest
+    image: ghcr.io/piwi3910/mnemo/mnemo:latest
     ports:
       - "3100:3000"
     volumes:
