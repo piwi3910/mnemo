@@ -1,10 +1,13 @@
 import path from "path";
 import fs from "fs";
+import { DataSource, Repository } from "typeorm";
 import { PluginManifest, PluginInstance, PluginModule } from "./types";
 import { PluginEventBus } from "./PluginEventBus";
 import { PluginRouter } from "./PluginRouter";
 import { PluginHealthMonitor } from "./PluginHealthMonitor";
 import { PluginApiFactory } from "./PluginApiFactory";
+import { PluginWebSocket } from "./PluginWebSocket";
+import { InstalledPlugin } from "../entities/InstalledPlugin";
 
 interface PluginManagerDeps {
   pluginsDir: string;
@@ -12,6 +15,8 @@ interface PluginManagerDeps {
   pluginRouter: PluginRouter;
   healthMonitor: PluginHealthMonitor;
   apiFactory: PluginApiFactory;
+  dataSource?: DataSource;
+  pluginWebSocket?: PluginWebSocket;
 }
 
 export class PluginManager {
@@ -25,6 +30,52 @@ export class PluginManager {
 
   setActivationTimeout(ms: number): void {
     this.activationTimeoutMs = ms;
+  }
+
+  setPluginWebSocket(ws: PluginWebSocket): void {
+    this.deps.pluginWebSocket = ws;
+  }
+
+  private getPluginRepo(): Repository<InstalledPlugin> | null {
+    if (!this.deps.dataSource) return null;
+    return this.deps.dataSource.getRepository(InstalledPlugin);
+  }
+
+  private async persistPluginState(
+    manifest: PluginManifest,
+    state: string,
+    error: string | null = null
+  ): Promise<void> {
+    const repo = this.getPluginRepo();
+    if (!repo) return;
+    try {
+      await repo.upsert(
+        {
+          id: manifest.id,
+          name: manifest.name,
+          version: manifest.version,
+          description: manifest.description ?? "",
+          author: manifest.author ?? "",
+          state,
+          error,
+          manifest: manifest as unknown as object,
+          enabled: state !== "error" && state !== "unloaded",
+        },
+        ["id"]
+      );
+    } catch (err) {
+      console.error(`[plugins] Failed to persist state for ${manifest.id}:`, err);
+    }
+  }
+
+  private async persistEnabled(pluginId: string, enabled: boolean): Promise<void> {
+    const repo = this.getPluginRepo();
+    if (!repo) return;
+    try {
+      await repo.update(pluginId, { enabled });
+    } catch (err) {
+      console.error(`[plugins] Failed to update enabled for ${pluginId}:`, err);
+    }
   }
 
   async loadPlugin(pluginId: string): Promise<void> {
@@ -48,6 +99,8 @@ export class PluginManager {
 
     if (!manifest.server) {
       instance.state = "active";
+      await this.persistPluginState(manifest, "active");
+      this.deps.pluginWebSocket?.broadcast("plugin:activated", { id: pluginId, name: manifest.name });
       return;
     }
 
@@ -69,6 +122,8 @@ export class PluginManager {
     } catch (err) {
       instance.state = "error";
       instance.error = `Failed to load: ${(err as Error).message}`;
+      await this.persistPluginState(manifest, "error", instance.error);
+      this.deps.pluginWebSocket?.broadcast("plugin:error", { id: pluginId, name: manifest.name, error: instance.error });
       return;
     }
 
@@ -87,12 +142,16 @@ export class PluginManager {
         ),
       ]);
       instance.state = "active";
+      await this.persistPluginState(manifest, "active");
+      this.deps.pluginWebSocket?.broadcast("plugin:activated", { id: pluginId, name: manifest.name });
     } catch (err) {
       instance.state = "error";
       instance.error = `Activation failed: ${(err as Error).message}`;
       // Clean up any partial registrations
       this.deps.eventBus.removeAllForPlugin(pluginId);
       this.deps.pluginRouter.removeAllForPlugin(pluginId);
+      await this.persistPluginState(manifest, "error", instance.error);
+      this.deps.pluginWebSocket?.broadcast("plugin:error", { id: pluginId, name: manifest.name, error: instance.error });
     }
   }
 
@@ -133,10 +192,14 @@ export class PluginManager {
     instance.state = "unloaded";
     instance.module = null;
     instance.api = null;
+
+    await this.persistPluginState(instance.manifest, "unloaded");
+    this.deps.pluginWebSocket?.broadcast("plugin:deactivated", { id: pluginId, name: instance.manifest.name });
   }
 
   async disablePlugin(pluginId: string): Promise<void> {
     await this.unloadPlugin(pluginId);
+    await this.persistEnabled(pluginId, false);
   }
 
   async reloadPlugin(pluginId: string): Promise<void> {

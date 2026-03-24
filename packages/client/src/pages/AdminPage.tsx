@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { request } from '../lib/api';
-import { X, Users, Ticket, Settings, Trash2, ShieldCheck, ShieldOff, UserX, UserCheck, Plus, Copy, Check, Key } from 'lucide-react';
+import { X, Users, Ticket, Settings, Trash2, ShieldCheck, ShieldOff, UserX, UserCheck, Plus, Copy, Check, Key, Package } from 'lucide-react';
+import { PluginsTab } from './PluginsTab';
 
 interface AdminUser {
   id: string;
@@ -21,7 +22,7 @@ interface InviteCode {
   createdAt: string;
 }
 
-type Tab = 'users' | 'invites' | 'settings';
+type Tab = 'users' | 'invites' | 'settings' | 'plugins';
 
 export default function AdminPage({ onClose }: { onClose: () => void }) {
   const { user } = useAuth();
@@ -53,6 +54,7 @@ export default function AdminPage({ onClose }: { onClose: () => void }) {
             { key: 'users' as Tab, label: 'Users', icon: Users },
             { key: 'invites' as Tab, label: 'Invite Codes', icon: Ticket },
             { key: 'settings' as Tab, label: 'Settings', icon: Settings },
+            { key: 'plugins' as Tab, label: 'Plugins', icon: Package },
           ]).map(t => (
             <button
               key={t.key}
@@ -74,6 +76,7 @@ export default function AdminPage({ onClose }: { onClose: () => void }) {
           {tab === 'users' && <UsersSection currentUserId={user?.id ?? ''} />}
           {tab === 'invites' && <InvitesSection />}
           {tab === 'settings' && <SettingsSection />}
+          {tab === 'plugins' && <PluginsTab />}
         </div>
       </div>
     </div>
