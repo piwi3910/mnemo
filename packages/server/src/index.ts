@@ -39,7 +39,7 @@ import { createPluginsRouter } from "./routes/plugins";
 
 const PORT = parseInt(process.env.PORT || "3001", 10);
 const NOTES_DIR = path.resolve(
-  process.env.NOTES_DIR || path.join(__dirname, "../../notes")
+  process.env.NOTES_DIR || path.join(import.meta.dirname, "../../notes")
 );
 
 async function main(): Promise<void> {
@@ -246,7 +246,7 @@ async function main(): Promise<void> {
   });
 
   // Serve static frontend in production
-  const publicDir = path.join(__dirname, "../public");
+  const publicDir = path.join(import.meta.dirname, "../public");
   try {
     const stat = await fs.stat(publicDir);
     if (stat.isDirectory()) {

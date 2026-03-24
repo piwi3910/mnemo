@@ -1,5 +1,8 @@
 import path from "path";
 import fs from "fs";
+import { createRequire } from "module";
+
+const require = createRequire(import.meta.url);
 import { DataSource, Repository } from "typeorm";
 import { PluginManifest, PluginInstance, PluginModule } from "./types";
 import { PluginEventBus } from "./PluginEventBus";
