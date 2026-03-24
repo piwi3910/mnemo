@@ -1,4 +1,5 @@
 import { MutableRefObject } from 'react';
+import { Extension } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import { FileNode } from '../../lib/api';
 import { Editor, EditorCursorState } from '../Editor/Editor';
@@ -12,17 +13,16 @@ interface EditModeViewProps {
   activeNote: { path: string; title: string; content: string };
   editContent: string | null;
   originalContent: string | null;
-  vimEnabled: boolean;
   isStarred: boolean;
   resolvedTheme: string;
   allNotes: FileNode[];
   editorViewRef: MutableRefObject<EditorView | undefined>;
   previewRef: MutableRefObject<HTMLDivElement | null>;
+  pluginExtensions?: Extension[];
   onSave: () => void;
   onCancel: () => void;
   onToggleStar: () => void;
   onPdfExport: () => void;
-  onVimToggle: (enabled: boolean) => void;
   onContentChange: (content: string) => void;
   onCursorStateChange: (state: EditorCursorState) => void;
   onNoteSelect: (path: string) => void;
@@ -32,10 +32,10 @@ interface EditModeViewProps {
 
 export function EditModeView({
   activeNote, editContent, originalContent,
-  vimEnabled, isStarred, resolvedTheme, allNotes,
-  editorViewRef, previewRef,
+  isStarred, resolvedTheme, allNotes,
+  editorViewRef, previewRef, pluginExtensions,
   onSave, onCancel, onToggleStar, onPdfExport,
-  onVimToggle, onContentChange, onCursorStateChange,
+  onContentChange, onCursorStateChange,
   onNoteSelect, onLinkClick, onCreateNote,
 }: EditModeViewProps) {
   const hasChanges = editContent !== originalContent;
@@ -80,7 +80,7 @@ export function EditModeView({
             {!hasChanges && <span className="text-xs text-gray-500">No changes</span>}
           </div>
         </div>
-        <EditorToolbar viewRef={editorViewRef} vimEnabled={vimEnabled} onVimToggle={onVimToggle} />
+        <EditorToolbar viewRef={editorViewRef} />
         <div className="flex-1 overflow-hidden">
           <Editor
             content={editContent ?? activeNote.content}
@@ -89,7 +89,7 @@ export function EditModeView({
             allNotes={allNotes}
             onCursorStateChange={onCursorStateChange}
             viewRef={editorViewRef}
-            vimEnabled={vimEnabled}
+            pluginExtensions={pluginExtensions}
           />
         </div>
         <OutgoingLinksPanel

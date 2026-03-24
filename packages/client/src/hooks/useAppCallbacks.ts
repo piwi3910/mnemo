@@ -7,7 +7,7 @@ export function useAppCallbacks(state: AppState) {
   const {
     notes, editing, editContent, originalContent,
     setEditing, setEditContent, setOriginalContent,
-    setVimEnabled, setMobileMenuOpen,
+    setMobileMenuOpen,
     setShowTemplatePicker, setPendingTemplatePath,
     setSidebarWidth,
     setRightPanelWidth, setGraphHeight, setStarredPaths,
@@ -25,11 +25,6 @@ export function useAppCallbacks(state: AppState) {
       return next;
     });
   }, [setStarredPaths]);
-
-  const handleVimToggle = useCallback((enabled: boolean) => {
-    setVimEnabled(enabled);
-    api.updateSetting('vimEnabled', String(enabled)).catch(() => {});
-  }, [setVimEnabled]);
 
   const toggleActiveNoteStar = useCallback(() => {
     if (notes.activeNote) toggleStar(notes.activeNote.path);
@@ -192,7 +187,7 @@ export function useAppCallbacks(state: AppState) {
   }, [setShareTarget, setShowShareDialog]);
 
   return {
-    toggleStar, handleVimToggle, toggleActiveNoteStar,
+    toggleStar, toggleActiveNoteStar,
     handleNoteSelect, handleLinkClick, handleCreateNoteFromLink,
     handleDailyNote, handleCreateFromTemplate, handleTemplateSelected,
     handleOutlineJump, handleNewNote, handleRenameNote, handlePdfExport,
