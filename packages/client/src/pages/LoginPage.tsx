@@ -1,6 +1,7 @@
 import { useState, useEffect, type FormEvent } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { authApi } from '../lib/api';
+import { authClient } from '../lib/auth-client';
 
 type Tab = 'signin' | 'register';
 
@@ -52,6 +53,21 @@ export default function LoginPage() {
     }
   };
 
+  const handlePasskeySignIn = async () => {
+    setError('');
+    setLoading(true);
+    try {
+      const result = await authClient.signIn.passkey();
+      if (result.error) {
+        setError(String(result.error.message) || 'Passkey authentication failed');
+      }
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Passkey authentication failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleRegister = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
@@ -76,6 +92,16 @@ export default function LoginPage() {
 
   const handleOAuthGithub = () => {
     loginWithGithub(registrationMode === 'invite-only' ? inviteCode : undefined);
+  };
+
+  const handleForgotPassword = async (e: FormEvent) => {
+    e.preventDefault();
+    try {
+      await authClient.requestPasswordReset({ email: forgotEmail, redirectTo: window.location.origin + '/reset-password' });
+      setForgotSent(true);
+    } catch {
+      setForgotSent(true);
+    }
   };
 
   const switchTab = (t: Tab) => {
@@ -164,6 +190,20 @@ export default function LoginPage() {
               >
                 {loading ? 'Signing in...' : 'Sign In'}
               </button>
+
+              {/* Passkey sign in */}
+              <button
+                type="button"
+                onClick={handlePasskeySignIn}
+                disabled={loading}
+                className="w-full flex items-center justify-center gap-2 rounded-lg border border-gray-700/50 bg-surface-950 px-4 py-2.5 text-sm font-medium text-gray-300 hover:bg-surface-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25a3 3 0 0 1 3 3m3 0a6 6 0 0 1-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1 1 21.75 8.25z" />
+                </svg>
+                Sign in with Passkey
+              </button>
+
               {smtpEnabled && (
                 <button type="button" onClick={() => { setForgotMode(true); setForgotSent(false); setError(''); }}
                   className="w-full text-center text-xs text-violet-400 hover:text-violet-300 mt-2">
@@ -185,16 +225,7 @@ export default function LoginPage() {
               {forgotSent ? (
                 <p className="text-xs text-green-400">If an account exists with that email, a reset link has been sent.</p>
               ) : (
-                <form onSubmit={async (e) => {
-                  e.preventDefault();
-                  try {
-                    await fetch('/api/auth/forgot-password', {
-                      method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-                      body: JSON.stringify({ email: forgotEmail }),
-                    });
-                    setForgotSent(true);
-                  } catch { setForgotSent(true); }
-                }} className="space-y-2">
+                <form onSubmit={handleForgotPassword} className="space-y-2">
                   <input type="email" value={forgotEmail} onChange={e => setForgotEmail(e.target.value)} required
                     placeholder="Enter your email" className="w-full bg-surface-950 border border-gray-700/50 rounded-lg px-3 py-2 text-sm text-gray-100 focus:outline-none focus:ring-2 focus:ring-violet-500/50" />
                   <div className="flex gap-2">
@@ -287,7 +318,7 @@ export default function LoginPage() {
             </div>
           </div>}
 
-          {/* OAuth buttons — only show if providers are configured */}
+          {/* OAuth buttons -- only show if providers are configured */}
           {(googleEnabled || githubEnabled) && <div className="space-y-3">
             {googleEnabled && <button
               type="button"

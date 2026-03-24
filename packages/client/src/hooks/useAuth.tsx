@@ -1,5 +1,6 @@
-import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
-import { authApi, setAccessToken, AuthUser } from '../lib/api';
+import { createContext, useContext, useCallback, useMemo } from 'react';
+import { authClient } from '../lib/auth-client';
+import type { AuthUser } from '../lib/api';
 
 interface AuthContextType {
   user: AuthUser | null;
@@ -14,85 +15,68 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType>(null!);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [loading, setLoading] = useState(true);
-  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const session = authClient.useSession();
+  const loading = session.isPending;
 
-  // Use a ref to avoid self-referencing useCallback
-  const scheduleRefreshRef = useRef<() => void>(() => {});
-
-  const scheduleRefresh = useCallback(() => {
-    if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
-    refreshTimerRef.current = setTimeout(async () => {
-      const result = await authApi.refresh();
-      if (result) {
-        setAccessToken(result.accessToken);
-        setUser(result.user);
-        scheduleRefreshRef.current();
-      } else {
-        setAccessToken(null);
-        setUser(null);
-      }
-    }, 14 * 60 * 1000); // 14 minutes
-  }, []);
-
-  useEffect(() => {
-    scheduleRefreshRef.current = scheduleRefresh;
-  }, [scheduleRefresh]);
-
-  // On mount: try refresh to restore session
-  useEffect(() => {
-    authApi.refresh().then(result => {
-      if (result) {
-        setAccessToken(result.accessToken);
-        setUser(result.user);
-        scheduleRefresh();
-      }
-      setLoading(false);
-    }).catch(() => setLoading(false));
-
-    // Also handle ?auth=success from OAuth redirect
-    const params = new URLSearchParams(window.location.search);
-    if (params.has('auth')) {
-      window.history.replaceState({}, '', window.location.pathname);
-    }
-
-    return () => { if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current); };
-  }, [scheduleRefresh]);
+  const user: AuthUser | null = useMemo(() => {
+    if (!session.data?.user) return null;
+    const u = session.data.user;
+    return {
+      id: u.id,
+      email: u.email,
+      name: u.name,
+      role: (u as Record<string, unknown>).role as string || 'user',
+      avatarUrl: u.image ?? null,
+    };
+  }, [session.data]);
 
   const login = useCallback(async (email: string, password: string) => {
-    const result = await authApi.login(email, password);
-    setAccessToken(result.accessToken);
-    setUser(result.user);
-    scheduleRefresh();
-  }, [scheduleRefresh]);
+    const result = await authClient.signIn.email({ email, password });
+    if (result.error) {
+      throw new Error(String(result.error.message) || 'Login failed');
+    }
+  }, []);
 
   const register = useCallback(async (email: string, password: string, name: string, inviteCode?: string) => {
-    const result = await authApi.register({ email, password, name, inviteCode });
-    setAccessToken(result.accessToken);
-    setUser(result.user);
-    scheduleRefresh();
-  }, [scheduleRefresh]);
+    const result = await authClient.signUp.email({
+      email,
+      password,
+      name,
+      ...(inviteCode ? { inviteCode } : {}),
+    } as Parameters<typeof authClient.signUp.email>[0]);
+    if (result.error) {
+      throw new Error(String(result.error.message) || 'Registration failed');
+    }
+  }, []);
 
   const loginWithGoogle = useCallback((inviteCode?: string) => {
-    const url = inviteCode ? `/api/auth/google?inviteCode=${encodeURIComponent(inviteCode)}` : '/api/auth/google';
-    window.location.href = url;
+    const callbackURL = window.location.origin;
+    authClient.signIn.social({
+      provider: "google",
+      callbackURL,
+      ...(inviteCode ? { inviteCode } : {}),
+    } as Parameters<typeof authClient.signIn.social>[0]);
   }, []);
 
   const loginWithGithub = useCallback((inviteCode?: string) => {
-    const url = inviteCode ? `/api/auth/github?inviteCode=${encodeURIComponent(inviteCode)}` : '/api/auth/github';
-    window.location.href = url;
+    const callbackURL = window.location.origin;
+    authClient.signIn.social({
+      provider: "github",
+      callbackURL,
+      ...(inviteCode ? { inviteCode } : {}),
+    } as Parameters<typeof authClient.signIn.social>[0]);
   }, []);
 
   const logout = useCallback(async () => {
-    await authApi.logout();
-    setAccessToken(null);
-    setUser(null);
-    if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
+    await authClient.signOut();
   }, []);
 
+  const value = useMemo(() => ({
+    user, loading, login, register, loginWithGoogle, loginWithGithub, logout,
+  }), [user, loading, login, register, loginWithGoogle, loginWithGithub, logout]);
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, loginWithGoogle, loginWithGithub, logout }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

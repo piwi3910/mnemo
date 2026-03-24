@@ -1,6 +1,6 @@
 import { PluginSlotRegistry } from "./PluginSlotRegistry";
 import { ClientPluginAPI, ClientPluginModule, ActivePluginInfo } from "./types";
-import { request, getAccessToken } from "../lib/api";
+import { request } from "../lib/api";
 
 export class ClientPluginManager {
   private registry: PluginSlotRegistry;
@@ -181,13 +181,11 @@ export class ClientPluginManager {
       api: {
         fetch: (path, options) => {
           const url = `/api/plugins/${pluginId}${path}`;
-          const token = getAccessToken();
           return fetch(url, {
             ...options,
             headers: {
               ...options?.headers,
               "X-Requested-With": "XMLHttpRequest",
-              ...(token ? { "Authorization": `Bearer ${token}` } : {}),
             },
             credentials: "include",
           });
