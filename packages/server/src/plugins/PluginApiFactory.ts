@@ -1,4 +1,4 @@
-import { PluginAPI, PluginManifest, PluginEvent, PluginEventHandler } from "./types";
+import { PluginAPI, PluginManifest, PluginEvent, PluginEventHandler, NoteEntry } from "./types";
 import { PluginEventBus } from "./PluginEventBus";
 import { PluginRouter } from "./PluginRouter";
 import { PluginHealthMonitor } from "./PluginHealthMonitor";
@@ -81,15 +81,24 @@ export class PluginApiFactory {
         return { path: notePath, content, title, modifiedAt: stat.mtime };
       },
       async list(userId: string, folder?: string) {
+        async function scanDir(dirPath: string, prefix: string): Promise<NoteEntry[]> {
+          const entries = await fs.promises.readdir(dirPath, { withFileTypes: true });
+          const results: NoteEntry[] = [];
+          for (const e of entries) {
+            const entryPath = prefix ? `${prefix}/${e.name}` : e.name;
+            if (e.isDirectory()) {
+              const children = await scanDir(path.join(dirPath, e.name), entryPath);
+              results.push({ name: e.name, path: entryPath, type: "directory", children });
+            } else {
+              results.push({ name: e.name, path: entryPath, type: "file" });
+            }
+          }
+          return results;
+        }
         const dir = folder
           ? path.join(notesDir, userId, folder)
           : path.join(notesDir, userId);
-        const entries = await fs.promises.readdir(dir, { withFileTypes: true });
-        return entries.map((e) => ({
-          name: e.name,
-          path: folder ? `${folder}/${e.name}` : e.name,
-          type: e.isDirectory() ? ("directory" as const) : ("file" as const),
-        }));
+        return scanDir(dir, folder || "");
       },
       async create(userId: string, notePath: string, content: string) {
         const fullPath = path.join(notesDir, userId, `${notePath}.md`);
