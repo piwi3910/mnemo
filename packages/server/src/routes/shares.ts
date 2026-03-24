@@ -1,8 +1,6 @@
 import { Router, Request, Response } from "express";
-import { AppDataSource } from "../data-source";
-import { NoteShare } from "../entities/NoteShare";
-import { AccessRequest } from "../entities/AccessRequest";
-import { getSharedNotesForUser } from "../services/shareService";
+import { prisma } from "../prisma.js";
+import { getSharedNotesForUser } from "../services/shareService.js";
 
 /**
  * @swagger
@@ -141,21 +139,21 @@ export function createSharesRouter(): Router {
         return;
       }
 
-      const repo = AppDataSource.getRepository(NoteShare);
-      const share = repo.create({
-        ownerUserId: req.user!.id,
-        path,
-        isFolder,
-        sharedWithUserId,
-        permission,
+      const saved = await prisma.noteShare.create({
+        data: {
+          ownerUserId: req.user!.id,
+          path,
+          isFolder,
+          sharedWithUserId,
+          permission,
+        },
       });
 
-      const saved = await repo.save(share);
       res.status(201).json(saved);
     } catch (err: unknown) {
       if (
         err instanceof Error &&
-        (err.message.includes("UNIQUE") || err.message.includes("duplicate"))
+        (err.message.includes("UNIQUE") || err.message.includes("duplicate") || err.message.includes("Unique constraint"))
       ) {
         res.status(409).json({ error: "Share already exists" });
         return;
@@ -168,8 +166,7 @@ export function createSharesRouter(): Router {
   // GET /api/shares — List my shares (as owner)
   router.get("/", async (req: Request, res: Response) => {
     try {
-      const repo = AppDataSource.getRepository(NoteShare);
-      const shares = await repo.find({
+      const shares = await prisma.noteShare.findMany({
         where: { ownerUserId: req.user!.id },
       });
       res.json(shares);
@@ -201,8 +198,7 @@ export function createSharesRouter(): Router {
         return;
       }
 
-      const repo = AppDataSource.getRepository(NoteShare);
-      const share = await repo.findOne({ where: { id } });
+      const share = await prisma.noteShare.findUnique({ where: { id } });
 
       if (!share) {
         res.status(404).json({ error: "Share not found" });
@@ -214,8 +210,10 @@ export function createSharesRouter(): Router {
         return;
       }
 
-      share.permission = permission;
-      const updated = await repo.save(share);
+      const updated = await prisma.noteShare.update({
+        where: { id },
+        data: { permission },
+      });
       res.json(updated);
     } catch (err) {
       console.error("Error updating share:", err);
@@ -227,8 +225,7 @@ export function createSharesRouter(): Router {
   router.delete("/:id", async (req: Request, res: Response) => {
     try {
       const id = req.params.id as string;
-      const repo = AppDataSource.getRepository(NoteShare);
-      const share = await repo.findOne({ where: { id } });
+      const share = await prisma.noteShare.findUnique({ where: { id } });
 
       if (!share) {
         res.status(404).json({ error: "Share not found" });
@@ -240,7 +237,7 @@ export function createSharesRouter(): Router {
         return;
       }
 
-      await repo.remove(share);
+      await prisma.noteShare.delete({ where: { id } });
       res.json({ message: "Share revoked" });
     } catch (err) {
       console.error("Error revoking share:", err);
@@ -361,8 +358,7 @@ export function createAccessRequestsRouter(): Router {
         return;
       }
 
-      const repo = AppDataSource.getRepository(AccessRequest);
-      const existing = await repo.findOne({
+      const existing = await prisma.accessRequest.findFirst({
         where: {
           requesterUserId: req.user!.id,
           ownerUserId,
@@ -372,8 +368,10 @@ export function createAccessRequestsRouter(): Router {
 
       if (existing) {
         if (existing.status === "denied") {
-          existing.status = "pending";
-          const updated = await repo.save(existing);
+          const updated = await prisma.accessRequest.update({
+            where: { id: existing.id },
+            data: { status: "pending" },
+          });
           res.json(updated);
           return;
         }
@@ -382,14 +380,15 @@ export function createAccessRequestsRouter(): Router {
         return;
       }
 
-      const request = repo.create({
-        requesterUserId: req.user!.id,
-        ownerUserId,
-        notePath,
-        status: "pending",
+      const saved = await prisma.accessRequest.create({
+        data: {
+          requesterUserId: req.user!.id,
+          ownerUserId,
+          notePath,
+          status: "pending",
+        },
       });
 
-      const saved = await repo.save(request);
       res.status(201).json(saved);
     } catch (err) {
       console.error("Error creating access request:", err);
@@ -400,23 +399,19 @@ export function createAccessRequestsRouter(): Router {
   // GET /api/access-requests — List pending requests I need to act on (as owner)
   router.get("/", async (req: Request, res: Response) => {
     try {
-      const repo = AppDataSource.getRepository(AccessRequest);
-      const requests = await repo
-        .createQueryBuilder("ar")
-        .leftJoinAndSelect("ar.requester", "requester")
-        .where("ar.ownerUserId = :userId", { userId: req.user!.id })
-        .andWhere("ar.status = :status", { status: "pending" })
-        .getMany();
+      const requests = await prisma.accessRequest.findMany({
+        where: {
+          ownerUserId: req.user!.id,
+          status: "pending",
+        },
+        include: {
+          requester: {
+            select: { id: true, name: true, email: true },
+          },
+        },
+      });
 
-      // Strip sensitive fields from requester
-      const result = requests.map((r) => ({
-        ...r,
-        requester: r.requester
-          ? { id: r.requester.id, name: r.requester.name, email: r.requester.email }
-          : null,
-      }));
-
-      res.json(result);
+      res.json(requests);
     } catch (err) {
       console.error("Error listing access requests:", err);
       res.status(500).json({ error: "Failed to list access requests" });
@@ -426,8 +421,7 @@ export function createAccessRequestsRouter(): Router {
   // GET /api/access-requests/mine — List my outgoing requests
   router.get("/mine", async (req: Request, res: Response) => {
     try {
-      const repo = AppDataSource.getRepository(AccessRequest);
-      const requests = await repo.find({
+      const requests = await prisma.accessRequest.findMany({
         where: { requesterUserId: req.user!.id },
       });
       res.json(requests);
@@ -451,8 +445,7 @@ export function createAccessRequestsRouter(): Router {
         return;
       }
 
-      const repo = AppDataSource.getRepository(AccessRequest);
-      const request = await repo.findOne({ where: { id } });
+      const request = await prisma.accessRequest.findUnique({ where: { id } });
 
       if (!request) {
         res.status(404).json({ error: "Access request not found" });
@@ -471,23 +464,28 @@ export function createAccessRequestsRouter(): Router {
         }
 
         // Create NoteShare
-        const shareRepo = AppDataSource.getRepository(NoteShare);
-        const share = shareRepo.create({
-          ownerUserId: request.ownerUserId,
-          path: request.notePath,
-          isFolder: false,
-          sharedWithUserId: request.requesterUserId,
-          permission,
+        await prisma.noteShare.create({
+          data: {
+            ownerUserId: request.ownerUserId,
+            path: request.notePath,
+            isFolder: false,
+            sharedWithUserId: request.requesterUserId,
+            permission,
+          },
         });
-        await shareRepo.save(share);
 
-        request.status = "approved";
+        const updated = await prisma.accessRequest.update({
+          where: { id },
+          data: { status: "approved" },
+        });
+        res.json(updated);
       } else {
-        request.status = "denied";
+        const updated = await prisma.accessRequest.update({
+          where: { id },
+          data: { status: "denied" },
+        });
+        res.json(updated);
       }
-
-      const updated = await repo.save(request);
-      res.json(updated);
     } catch (err) {
       console.error("Error updating access request:", err);
       res.status(500).json({ error: "Failed to update access request" });

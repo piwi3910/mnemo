@@ -1,18 +1,15 @@
-import { PluginAPI, PluginManifest, PluginEvent, PluginEventHandler, NoteEntry } from "./types";
-import { PluginEventBus } from "./PluginEventBus";
-import { PluginRouter } from "./PluginRouter";
-import { PluginHealthMonitor } from "./PluginHealthMonitor";
+import { PluginAPI, PluginManifest, PluginEvent, PluginEventHandler, NoteEntry } from "./types.js";
+import { PluginEventBus } from "./PluginEventBus.js";
+import { PluginRouter } from "./PluginRouter.js";
+import { PluginHealthMonitor } from "./PluginHealthMonitor.js";
 import {
   getStorageValue,
   setStorageValue,
   deleteStorageValue,
   listStorageEntries,
-} from "../services/pluginStorageService";
-import { AppDataSource } from "../data-source";
-import { Settings } from "../entities/Settings";
-import { SearchIndex } from "../entities/SearchIndex";
+} from "../services/pluginStorageService.js";
+import { prisma } from "../prisma.js";
 import { RequestHandler } from "express";
-import { EntitySchema, Repository } from "typeorm";
 import path from "path";
 import fs from "fs";
 
@@ -35,21 +32,11 @@ export class PluginApiFactory {
     const dataDir = path.join(process.cwd(), "data", "plugins", pluginId);
     fs.mkdirSync(dataDir, { recursive: true });
 
-    const pluginEntities: EntitySchema[] = [];
-
     const api: PluginAPI = {
       notes: this.createNotesApi(pluginId),
       events: this.createEventsApi(pluginId),
       routes: this.createRoutesApi(pluginId),
       storage: this.createStorageApi(pluginId),
-      database: {
-        registerEntity(entity: EntitySchema): void {
-          pluginEntities.push(entity);
-        },
-        getRepository(entity: EntitySchema): Repository<object> {
-          return AppDataSource.getRepository(entity) as Repository<object>;
-        },
-      },
       settings: this.createSettingsApi(pluginId),
       search: this.createSearchApi(pluginId),
       log: {
@@ -156,22 +143,19 @@ export class PluginApiFactory {
   private createSettingsApi(pluginId: string): PluginAPI["settings"] {
     return {
       async get(key: string, userId?: string) {
-        const repo = AppDataSource.getRepository(Settings);
         const settingsKey = `plugin:${pluginId}:${key}`;
 
         // Check user override first
         if (userId) {
-          const userSetting = await repo.findOneBy({
-            key: settingsKey,
-            userId,
+          const userSetting = await prisma.settings.findUnique({
+            where: { key_userId: { key: settingsKey, userId } },
           });
           if (userSetting) return JSON.parse(userSetting.value);
         }
 
-        // Fall back to admin default
-        const adminSetting = await repo.findOneBy({
-          key: settingsKey,
-          userId: "",
+        // Fall back to admin default (using empty string as global sentinel)
+        const adminSetting = await prisma.settings.findUnique({
+          where: { key_userId: { key: settingsKey, userId: "" } },
         });
         if (adminSetting) return JSON.parse(adminSetting.value);
 
@@ -183,9 +167,9 @@ export class PluginApiFactory {
   private createSearchApi(_pluginId: string): PluginAPI["search"] {
     return {
       async index(userId, notePath, fields) {
-        const repo = AppDataSource.getRepository(SearchIndex);
-        await repo.upsert(
-          {
+        await prisma.searchIndex.upsert({
+          where: { notePath_userId: { notePath, userId } },
+          create: {
             notePath,
             userId,
             title: fields.title,
@@ -193,18 +177,24 @@ export class PluginApiFactory {
             tags: fields.tags || [],
             modifiedAt: new Date(),
           },
-          ["notePath", "userId"]
-        );
+          update: {
+            title: fields.title,
+            content: fields.content,
+            tags: fields.tags || [],
+            modifiedAt: new Date(),
+          },
+        });
       },
       async query(userId, queryStr) {
-        const repo = AppDataSource.getRepository(SearchIndex);
-        const results = await repo
-          .createQueryBuilder("si")
-          .where("si.userId = :userId", { userId })
-          .andWhere("(si.title ILIKE :q OR si.content ILIKE :q)", {
-            q: `%${queryStr}%`,
-          })
-          .getMany();
+        const results = await prisma.searchIndex.findMany({
+          where: {
+            userId,
+            OR: [
+              { title: { contains: queryStr, mode: "insensitive" } },
+              { content: { contains: queryStr, mode: "insensitive" } },
+            ],
+          },
+        });
         return results.map((r) => ({
           path: r.notePath,
           title: r.title,

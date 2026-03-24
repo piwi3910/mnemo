@@ -1,5 +1,4 @@
-import { AppDataSource } from "../data-source";
-import { PluginStorage } from "../entities/PluginStorage";
+import { prisma } from "../prisma.js";
 
 const GLOBAL_USER = "";
 
@@ -8,11 +7,14 @@ export async function getStorageValue(
   key: string,
   userId?: string
 ): Promise<unknown> {
-  const repo = AppDataSource.getRepository(PluginStorage);
-  const entry = await repo.findOneBy({
-    pluginId,
-    key,
-    userId: userId ?? GLOBAL_USER,
+  const entry = await prisma.pluginStorage.findUnique({
+    where: {
+      pluginId_key_userId: {
+        pluginId,
+        key,
+        userId: userId ?? GLOBAL_USER,
+      },
+    },
   });
   return entry?.value ?? null;
 }
@@ -23,16 +25,25 @@ export async function setStorageValue(
   value: unknown,
   userId?: string
 ): Promise<void> {
-  const repo = AppDataSource.getRepository(PluginStorage);
-  await repo.upsert(
-    {
+  const effectiveUserId = userId ?? GLOBAL_USER;
+  await prisma.pluginStorage.upsert({
+    where: {
+      pluginId_key_userId: {
+        pluginId,
+        key,
+        userId: effectiveUserId,
+      },
+    },
+    create: {
       pluginId,
       key,
-      userId: userId ?? GLOBAL_USER,
-      value,
-    } as Parameters<typeof repo.upsert>[0],
-    ["pluginId", "key", "userId"]
-  );
+      userId: effectiveUserId,
+      value: value as Parameters<typeof prisma.pluginStorage.create>[0]["data"]["value"],
+    },
+    update: {
+      value: value as Parameters<typeof prisma.pluginStorage.update>[0]["data"]["value"],
+    },
+  });
 }
 
 export async function deleteStorageValue(
@@ -40,11 +51,12 @@ export async function deleteStorageValue(
   key: string,
   userId?: string
 ): Promise<void> {
-  const repo = AppDataSource.getRepository(PluginStorage);
-  await repo.delete({
-    pluginId,
-    key,
-    userId: userId ?? GLOBAL_USER,
+  await prisma.pluginStorage.deleteMany({
+    where: {
+      pluginId,
+      key,
+      userId: userId ?? GLOBAL_USER,
+    },
   });
 }
 
@@ -53,19 +65,16 @@ export async function listStorageEntries(
   prefix?: string,
   userId?: string
 ): Promise<Array<{ key: string; value: unknown; userId: string | null }>> {
-  const repo = AppDataSource.getRepository(PluginStorage);
-  const qb = repo
-    .createQueryBuilder("ps")
-    .where("ps.pluginId = :pluginId", { pluginId });
+  const where: Record<string, unknown> = { pluginId };
 
   if (userId !== undefined) {
-    qb.andWhere("ps.userId = :userId", { userId });
+    where.userId = userId;
   }
   if (prefix) {
-    qb.andWhere("ps.key LIKE :prefix", { prefix: `${prefix}%` });
+    where.key = { startsWith: prefix };
   }
 
-  const entries = await qb.getMany();
+  const entries = await prisma.pluginStorage.findMany({ where });
   return entries.map((e) => ({
     key: e.key,
     value: e.value,

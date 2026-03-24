@@ -1,5 +1,4 @@
 import { RequestHandler } from "express";
-import { EntitySchema, Repository } from "typeorm";
 
 // --- Plugin Manifest (parsed from manifest.json) ---
 
@@ -81,6 +80,12 @@ export interface SearchResult {
 }
 
 // --- Plugin API (injected into activate()) ---
+//
+// NOTE FOR PLUGIN AUTHORS (piwi3910/mnemo-plugins repo):
+// The old `database.registerEntity()` and `database.getRepository()` methods
+// have been removed as part of the TypeORM → Prisma migration (Task 5).
+// Plugins must use `api.storage` for persistent key-value storage instead.
+// See the `storage` section of PluginAPI below for the available methods.
 
 export interface PluginAPI {
   notes: {
@@ -105,11 +110,6 @@ export interface PluginAPI {
     set(key: string, value: unknown, userId?: string): Promise<void>;
     delete(key: string, userId?: string): Promise<void>;
     list(prefix?: string, userId?: string): Promise<StorageEntry[]>;
-  };
-
-  database: {
-    registerEntity(entity: EntitySchema): void;
-    getRepository(entity: EntitySchema): Repository<object>;
   };
 
   settings: {

@@ -1,9 +1,8 @@
 import * as fs from "fs/promises";
 import * as path from "path";
-import { indexNote, removeFromIndex, renameInIndex, extractTitle } from "./searchService";
-import { updateGraphCache, removeFromGraph, renameInGraph } from "./graphService";
-import { AppDataSource } from "../data-source";
-import { NoteShare } from "../entities/NoteShare";
+import { indexNote, removeFromIndex, renameInIndex, extractTitle } from "./searchService.js";
+import { updateGraphCache, removeFromGraph, renameInGraph } from "./graphService.js";
+import { prisma } from "../prisma.js";
 
 export interface FileTreeNode {
   name: string;
@@ -139,8 +138,9 @@ export async function deleteNote(notesDir: string, notePath: string, userId: str
   ]);
 
   // Clean up NoteShare rows for this exact file
-  const shareRepo = AppDataSource.getRepository(NoteShare);
-  await shareRepo.delete({ ownerUserId: userId, path: notePath, isFolder: false });
+  await prisma.noteShare.deleteMany({
+    where: { ownerUserId: userId, path: notePath, isFolder: false },
+  });
 }
 
 /**
@@ -180,12 +180,10 @@ export async function renameNote(
   ]);
 
   // Update NoteShare rows for this exact file
-  const shareRepo = AppDataSource.getRepository(NoteShare);
-  await shareRepo.createQueryBuilder()
-    .update(NoteShare)
-    .set({ path: newPath })
-    .where("ownerUserId = :userId AND path = :oldPath AND isFolder = false", { userId, oldPath })
-    .execute();
+  await prisma.noteShare.updateMany({
+    where: { ownerUserId: userId, path: oldPath, isFolder: false },
+    data: { path: newPath },
+  });
 }
 
 /**

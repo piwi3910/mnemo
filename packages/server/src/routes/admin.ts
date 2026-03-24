@@ -1,15 +1,6 @@
 import crypto from "crypto";
 import { Router, Request, Response } from "express";
-import { IsNull } from "typeorm";
-import { AppDataSource } from "../data-source";
-import { User } from "../entities/User";
-import { InviteCode } from "../entities/InviteCode";
-import { Settings } from "../entities/Settings";
-import { SearchIndex } from "../entities/SearchIndex";
-import { GraphEdge } from "../entities/GraphEdge";
-import { NoteShare } from "../entities/NoteShare";
-import { AccessRequest } from "../entities/AccessRequest";
-import { deleteAllUserRefreshTokens } from "../services/tokenService";
+import { prisma } from "../prisma.js";
 
 /**
  * @swagger
@@ -55,7 +46,7 @@ import { deleteAllUserRefreshTokens } from "../services/tokenService";
  * /admin/users/{id}:
  *   put:
  *     summary: Update a user
- *     description: Update user disabled status or role. Cannot modify self. Invalidates all refresh tokens when disabling or changing role.
+ *     description: Update user disabled status or role. Cannot modify self.
  *     tags: [Admin]
  *     security:
  *       - bearerAuth: []
@@ -114,7 +105,7 @@ import { deleteAllUserRefreshTokens } from "../services/tokenService";
  * /admin/users/{id}:
  *   delete:
  *     summary: Delete a user
- *     description: Delete a user and cascade delete their AuthProvider and RefreshToken records. Cannot delete self.
+ *     description: Delete a user and cascade delete their data. Cannot delete self.
  *     tags: [Admin]
  *     security:
  *       - bearerAuth: []
@@ -178,9 +169,9 @@ import { deleteAllUserRefreshTokens } from "../services/tokenService";
  *                   type: string
  *                 code:
  *                   type: string
- *                 createdBy:
+ *                 createdById:
  *                   type: string
- *                 usedBy:
+ *                 usedById:
  *                   type: string
  *                   nullable: true
  *                 expiresAt:
@@ -220,9 +211,9 @@ import { deleteAllUserRefreshTokens } from "../services/tokenService";
  *                     type: string
  *                   code:
  *                     type: string
- *                   createdBy:
+ *                   createdById:
  *                     type: string
- *                   usedBy:
+ *                   usedById:
  *                     type: string
  *                     nullable: true
  *                   expiresAt:
@@ -349,10 +340,9 @@ export function createAdminRouter(): Router {
   // GET /users — list all users
   router.get("/users", async (_req: Request, res: Response) => {
     try {
-      const userRepo = AppDataSource.getRepository(User);
-      const users = await userRepo.find({
-        order: { createdAt: "DESC" },
-        select: ["id", "email", "name", "role", "disabled", "createdAt"],
+      const users = await prisma.user.findMany({
+        orderBy: { createdAt: "desc" },
+        select: { id: true, email: true, name: true, role: true, disabled: true, createdAt: true },
       });
       res.json(users);
     } catch (err) {
@@ -371,8 +361,7 @@ export function createAdminRouter(): Router {
         return;
       }
 
-      const userRepo = AppDataSource.getRepository(User);
-      const user = await userRepo.findOneBy({ id: userId });
+      const user = await prisma.user.findUnique({ where: { id: userId } });
 
       if (!user) {
         res.status(404).json({ error: "User not found" });
@@ -386,25 +375,31 @@ export function createAdminRouter(): Router {
 
       let shouldInvalidateTokens = false;
 
+      const updateData: Record<string, unknown> = {};
+
       if (typeof disabled === "boolean") {
         if (disabled && !user.disabled) {
           shouldInvalidateTokens = true;
         }
-        user.disabled = disabled;
+        updateData.disabled = disabled;
       }
 
       if (typeof role === "string") {
         if (role !== user.role) {
           shouldInvalidateTokens = true;
         }
-        user.role = role;
+        updateData.role = role;
       }
 
       if (shouldInvalidateTokens) {
-        await deleteAllUserRefreshTokens(userId);
+        // Delete all sessions for this user (better-auth equivalent of invalidating tokens)
+        await prisma.session.deleteMany({ where: { userId } });
       }
 
-      const saved = await userRepo.save(user);
+      const saved = await prisma.user.update({
+        where: { id: userId },
+        data: updateData,
+      });
 
       res.json({
         id: saved.id,
@@ -430,33 +425,26 @@ export function createAdminRouter(): Router {
         return;
       }
 
-      const userRepo = AppDataSource.getRepository(User);
-      const user = await userRepo.findOneBy({ id: userId });
+      const user = await prisma.user.findUnique({ where: { id: userId } });
 
       if (!user) {
         res.status(404).json({ error: "User not found" });
         return;
       }
 
-      // Cascade delete AuthProvider and RefreshToken via query builder
-      await AppDataSource.getRepository("AuthProvider").delete({
-        userId,
-      });
-      await AppDataSource.getRepository("RefreshToken").delete({
-        userId,
-      });
-      await userRepo.remove(user);
-
-      // Clean up user's data (notes directory is kept as soft delete)
-      await AppDataSource.getRepository(SearchIndex).delete({ userId });
-      await AppDataSource.getRepository(GraphEdge).delete({ userId });
-      await AppDataSource.getRepository(Settings).delete({ userId });
+      // Clean up user's domain data first
+      await prisma.searchIndex.deleteMany({ where: { userId } });
+      await prisma.graphEdge.deleteMany({ where: { userId } });
+      await prisma.settings.deleteMany({ where: { userId } });
 
       // Clean up NoteShare and AccessRequest rows
-      await AppDataSource.getRepository(NoteShare).delete({ ownerUserId: userId });
-      await AppDataSource.getRepository(NoteShare).delete({ sharedWithUserId: userId });
-      await AppDataSource.getRepository(AccessRequest).delete({ requesterUserId: userId });
-      await AppDataSource.getRepository(AccessRequest).delete({ ownerUserId: userId });
+      await prisma.noteShare.deleteMany({ where: { ownerUserId: userId } });
+      await prisma.noteShare.deleteMany({ where: { sharedWithUserId: userId } });
+      await prisma.accessRequest.deleteMany({ where: { requesterUserId: userId } });
+      await prisma.accessRequest.deleteMany({ where: { ownerUserId: userId } });
+
+      // Delete user (cascades to sessions, accounts, passkeys via Prisma schema)
+      await prisma.user.delete({ where: { id: userId } });
 
       res.json({ ok: true });
     } catch (err) {
@@ -501,20 +489,23 @@ export function createAdminRouter(): Router {
         return;
       }
 
-      const userRepo = AppDataSource.getRepository(User);
-      const user = await userRepo.findOneBy({ id: userId });
+      const user = await prisma.user.findUnique({ where: { id: userId } });
       if (!user) {
         res.status(404).json({ error: "User not found" });
         return;
       }
 
-      const bcrypt = await import("bcrypt");
-      user.passwordHash = await bcrypt.hash(newPassword, 12);
-      await userRepo.save(user);
+      // Update password in the credential Account (better-auth stores passwords in the Account table)
+      const { hashPassword } = await import("better-auth/crypto");
+      const hashedPassword = await hashPassword(newPassword);
 
-      // Invalidate all refresh tokens so user must log in with new password
-      const { deleteAllUserRefreshTokens } = await import("../services/tokenService");
-      await deleteAllUserRefreshTokens(userId);
+      await prisma.account.updateMany({
+        where: { userId, providerId: "credential" },
+        data: { password: hashedPassword },
+      });
+
+      // Invalidate all sessions so user must log in with new password
+      await prisma.session.deleteMany({ where: { userId } });
 
       res.json({ ok: true });
     } catch (err) {
@@ -527,17 +518,16 @@ export function createAdminRouter(): Router {
   router.post("/invites", async (req: Request, res: Response) => {
     try {
       const { expiresAt } = req.body as { expiresAt?: string };
-      const inviteRepo = AppDataSource.getRepository(InviteCode);
 
       const code = crypto.randomBytes(4).toString("hex"); // 8-char hex
 
-      const invite = inviteRepo.create({
-        code,
-        createdBy: req.user!.id,
-        expiresAt: expiresAt ? new Date(expiresAt) : null,
+      const saved = await prisma.inviteCode.create({
+        data: {
+          code,
+          createdById: req.user!.id,
+          expiresAt: expiresAt ? new Date(expiresAt) : null,
+        },
       });
-
-      const saved = await inviteRepo.save(invite);
       res.json(saved);
     } catch (err) {
       console.error("Error creating invite:", err);
@@ -548,10 +538,9 @@ export function createAdminRouter(): Router {
   // GET /invites — list all invites
   router.get("/invites", async (_req: Request, res: Response) => {
     try {
-      const inviteRepo = AppDataSource.getRepository(InviteCode);
-      const invites = await inviteRepo.find({
-        order: { createdAt: "DESC" },
-        select: ["id", "code", "createdBy", "usedBy", "expiresAt", "createdAt"],
+      const invites = await prisma.inviteCode.findMany({
+        orderBy: { createdAt: "desc" },
+        select: { id: true, code: true, createdById: true, usedById: true, expiresAt: true, createdAt: true },
       });
       res.json(invites);
     } catch (err) {
@@ -564,15 +553,14 @@ export function createAdminRouter(): Router {
   router.delete("/invites/:id", async (req: Request, res: Response) => {
     try {
       const inviteId = req.params.id as string;
-      const inviteRepo = AppDataSource.getRepository(InviteCode);
 
-      const invite = await inviteRepo.findOneBy({ id: inviteId });
+      const invite = await prisma.inviteCode.findUnique({ where: { id: inviteId } });
       if (!invite) {
         res.status(404).json({ error: "Invite not found" });
         return;
       }
 
-      await inviteRepo.remove(invite);
+      await prisma.inviteCode.delete({ where: { id: inviteId } });
       res.json({ ok: true });
     } catch (err) {
       console.error("Error deleting invite:", err);
@@ -585,11 +573,12 @@ export function createAdminRouter(): Router {
     "/settings/registration",
     async (_req: Request, res: Response) => {
       try {
-        const settingsRepo = AppDataSource.getRepository(Settings);
-        const row = await settingsRepo.findOneBy({
-          key: "registration_mode",
-          userId: IsNull(),
+        // Registration mode is stored as a global setting with a sentinel userId
+        const rows = await prisma.settings.findMany({
+          where: { key: "registration_mode" },
         });
+        // Find the global row (empty userId used as global sentinel)
+        const row = rows.find((r) => r.userId === "" || r.userId === "__global__") ?? rows[0];
         const mode = row?.value ?? "open";
         res.json({ mode });
       } catch (err) {
@@ -611,18 +600,13 @@ export function createAdminRouter(): Router {
           return;
         }
 
-        const settingsRepo = AppDataSource.getRepository(Settings);
-        let row = await settingsRepo.findOneBy({
-          key: "registration_mode",
-          userId: IsNull(),
+        // Use a sentinel userId for global settings (Prisma Settings has a composite key [key, userId])
+        const GLOBAL_USER = "__global__";
+        await prisma.settings.upsert({
+          where: { key_userId: { key: "registration_mode", userId: GLOBAL_USER } },
+          create: { key: "registration_mode", userId: GLOBAL_USER, value: mode },
+          update: { value: mode },
         });
-        if (!row) {
-          row = new Settings();
-          row.key = "registration_mode";
-          row.userId = null;
-        }
-        row.value = mode;
-        await settingsRepo.save(row);
 
         res.json({ mode });
       } catch (err) {

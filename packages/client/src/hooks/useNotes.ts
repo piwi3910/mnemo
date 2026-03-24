@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { api, FileNode, NoteData, getAccessToken } from '../lib/api';
+import { api, FileNode, NoteData } from '../lib/api';
 
 export function useNotes(userId?: string) {
   const [tree, setTree] = useState<FileNode[]>([]);
@@ -114,7 +114,7 @@ export function useNotes(userId?: string) {
 
   useEffect(() => {
     // Only fetch when authenticated
-    if (!userId || !getAccessToken()) {
+    if (!userId) {
       setLoading(false);
       return;
     }

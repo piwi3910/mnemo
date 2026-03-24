@@ -1,7 +1,4 @@
-import { AppDataSource } from "../data-source";
-import { SearchIndex } from "../entities/SearchIndex";
-import { NoteShare } from "../entities/NoteShare";
-import { Brackets } from "typeorm";
+import { prisma } from "../prisma.js";
 
 /**
  * Strip markdown formatting to produce plain text for indexing.
@@ -66,28 +63,34 @@ export async function indexNote(
   content: string,
   userId: string
 ): Promise<void> {
-  const repo = AppDataSource.getRepository(SearchIndex);
   const title = extractTitle(content, notePath);
   const plainContent = stripMarkdown(content);
   const tags = extractTags(content);
 
-  const entry = new SearchIndex();
-  entry.notePath = notePath;
-  entry.userId = userId;
-  entry.title = title;
-  entry.content = plainContent;
-  entry.tags = tags;
-  entry.modifiedAt = new Date();
-
-  await repo.save(entry);
+  await prisma.searchIndex.upsert({
+    where: { notePath_userId: { notePath, userId } },
+    create: {
+      notePath,
+      userId,
+      title,
+      content: plainContent,
+      tags,
+      modifiedAt: new Date(),
+    },
+    update: {
+      title,
+      content: plainContent,
+      tags,
+      modifiedAt: new Date(),
+    },
+  });
 }
 
 /**
  * Remove a note from the search index.
  */
 export async function removeFromIndex(notePath: string, userId: string): Promise<void> {
-  const repo = AppDataSource.getRepository(SearchIndex);
-  await repo.delete({ notePath, userId });
+  await prisma.searchIndex.deleteMany({ where: { notePath, userId } });
 }
 
 /**
@@ -98,12 +101,23 @@ export async function renameInIndex(
   newPath: string,
   userId: string
 ): Promise<void> {
-  const repo = AppDataSource.getRepository(SearchIndex);
-  const entry = await repo.findOneBy({ notePath: oldPath, userId });
+  const entry = await prisma.searchIndex.findUnique({
+    where: { notePath_userId: { notePath: oldPath, userId } },
+  });
   if (entry) {
-    await repo.delete({ notePath: oldPath, userId });
-    entry.notePath = newPath;
-    await repo.save(entry);
+    await prisma.searchIndex.delete({
+      where: { notePath_userId: { notePath: oldPath, userId } },
+    });
+    await prisma.searchIndex.create({
+      data: {
+        notePath: newPath,
+        userId,
+        title: entry.title,
+        content: entry.content,
+        tags: entry.tags,
+        modifiedAt: entry.modifiedAt,
+      },
+    });
   }
 }
 
@@ -111,8 +125,7 @@ export async function renameInIndex(
  * Get all tags across all notes with their counts.
  */
 export async function getAllTags(userId: string): Promise<{ tag: string; count: number }[]> {
-  const repo = AppDataSource.getRepository(SearchIndex);
-  const allNotes = await repo.find({ where: { userId } });
+  const allNotes = await prisma.searchIndex.findMany({ where: { userId } });
 
   const tagCounts = new Map<string, number>();
   for (const note of allNotes) {
@@ -135,8 +148,7 @@ export async function getNotesByTag(
   tag: string,
   userId: string
 ): Promise<{ notePath: string; title: string }[]> {
-  const repo = AppDataSource.getRepository(SearchIndex);
-  const allNotes = await repo.find({ where: { userId } });
+  const allNotes = await prisma.searchIndex.findMany({ where: { userId } });
 
   return allNotes
     .filter((note) => note.tags.includes(tag))
@@ -154,24 +166,21 @@ export interface SearchResult {
 }
 
 /**
- * Search notes by query, matching against title and content using ILIKE.
+ * Search notes by query, matching against title and content using case-insensitive contains.
  * Also includes notes shared with the user.
  */
 export async function search(query: string, userId: string): Promise<SearchResult[]> {
-  const repo = AppDataSource.getRepository(SearchIndex);
-  const shareRepo = AppDataSource.getRepository(NoteShare);
-  const pattern = `%${query}%`;
-
   // 1. Own notes query (existing behaviour)
-  const ownResults = await repo
-    .createQueryBuilder("s")
-    .where("s.userId = :userId", { userId })
-    .andWhere(new Brackets(qb => {
-      qb.where("s.title ILIKE :pattern", { pattern })
-        .orWhere("s.content ILIKE :pattern", { pattern });
-    }))
-    .orderBy("s.modifiedAt", "DESC")
-    .getMany();
+  const ownResults = await prisma.searchIndex.findMany({
+    where: {
+      userId,
+      OR: [
+        { title: { contains: query, mode: "insensitive" } },
+        { content: { contains: query, mode: "insensitive" } },
+      ],
+    },
+    orderBy: { modifiedAt: "desc" },
+  });
 
   const ownMapped: SearchResult[] = ownResults.map((r) => {
     const snippet = createSnippet(r.content, query);
@@ -185,37 +194,39 @@ export async function search(query: string, userId: string): Promise<SearchResul
   });
 
   // 2. Shared notes query
-  const shares = await shareRepo.find({
+  const shares = await prisma.noteShare.findMany({
     where: { sharedWithUserId: userId },
   });
 
   const sharedResults: SearchResult[] = [];
 
   for (const share of shares) {
-    let matchingNotes: SearchIndex[];
+    let matchingNotes;
 
     if (!share.isFolder) {
       // File share: match by exact path and owner
-      matchingNotes = await repo
-        .createQueryBuilder("si")
-        .where("si.notePath = :notePath", { notePath: share.path })
-        .andWhere("si.userId = :ownerUserId", { ownerUserId: share.ownerUserId })
-        .andWhere(new Brackets(qb => {
-          qb.where("si.title ILIKE :pattern", { pattern })
-            .orWhere("si.content ILIKE :pattern", { pattern });
-        }))
-        .getMany();
+      matchingNotes = await prisma.searchIndex.findMany({
+        where: {
+          notePath: share.path,
+          userId: share.ownerUserId,
+          OR: [
+            { title: { contains: query, mode: "insensitive" } },
+            { content: { contains: query, mode: "insensitive" } },
+          ],
+        },
+      });
     } else {
       // Folder share: match notes under the shared folder path
-      matchingNotes = await repo
-        .createQueryBuilder("si")
-        .where("POSITION(:sharePath IN si.notePath) = 1", { sharePath: share.path })
-        .andWhere("si.userId = :ownerUserId", { ownerUserId: share.ownerUserId })
-        .andWhere(new Brackets(qb => {
-          qb.where("si.title ILIKE :pattern", { pattern })
-            .orWhere("si.content ILIKE :pattern", { pattern });
-        }))
-        .getMany();
+      matchingNotes = await prisma.searchIndex.findMany({
+        where: {
+          notePath: { startsWith: share.path },
+          userId: share.ownerUserId,
+          OR: [
+            { title: { contains: query, mode: "insensitive" } },
+            { content: { contains: query, mode: "insensitive" } },
+          ],
+        },
+      });
     }
 
     for (const r of matchingNotes) {

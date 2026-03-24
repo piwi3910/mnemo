@@ -1,13 +1,15 @@
 import path from "path";
 import fs from "fs";
-import { DataSource, Repository } from "typeorm";
-import { PluginManifest, PluginInstance, PluginModule } from "./types";
-import { PluginEventBus } from "./PluginEventBus";
-import { PluginRouter } from "./PluginRouter";
-import { PluginHealthMonitor } from "./PluginHealthMonitor";
-import { PluginApiFactory } from "./PluginApiFactory";
-import { PluginWebSocket } from "./PluginWebSocket";
-import { InstalledPlugin } from "../entities/InstalledPlugin";
+import { createRequire } from "module";
+
+const require = createRequire(import.meta.url);
+import { PluginManifest, PluginInstance, PluginModule } from "./types.js";
+import { PluginEventBus } from "./PluginEventBus.js";
+import { PluginRouter } from "./PluginRouter.js";
+import { PluginHealthMonitor } from "./PluginHealthMonitor.js";
+import { PluginApiFactory } from "./PluginApiFactory.js";
+import { PluginWebSocket } from "./PluginWebSocket.js";
+import { prisma } from "../prisma.js";
 
 interface PluginManagerDeps {
   pluginsDir: string;
@@ -15,7 +17,6 @@ interface PluginManagerDeps {
   pluginRouter: PluginRouter;
   healthMonitor: PluginHealthMonitor;
   apiFactory: PluginApiFactory;
-  dataSource?: DataSource;
   pluginWebSocket?: PluginWebSocket;
 }
 
@@ -36,21 +37,15 @@ export class PluginManager {
     this.deps.pluginWebSocket = ws;
   }
 
-  private getPluginRepo(): Repository<InstalledPlugin> | null {
-    if (!this.deps.dataSource) return null;
-    return this.deps.dataSource.getRepository(InstalledPlugin);
-  }
-
   private async persistPluginState(
     manifest: PluginManifest,
     state: string,
     error: string | null = null
   ): Promise<void> {
-    const repo = this.getPluginRepo();
-    if (!repo) return;
     try {
-      await repo.upsert(
-        {
+      await prisma.installedPlugin.upsert({
+        where: { id: manifest.id },
+        create: {
           id: manifest.id,
           name: manifest.name,
           version: manifest.version,
@@ -61,18 +56,28 @@ export class PluginManager {
           manifest: manifest as unknown as object,
           enabled: state !== "error" && state !== "unloaded",
         },
-        ["id"]
-      );
+        update: {
+          name: manifest.name,
+          version: manifest.version,
+          description: manifest.description ?? "",
+          author: manifest.author ?? "",
+          state,
+          error,
+          manifest: manifest as unknown as object,
+          enabled: state !== "error" && state !== "unloaded",
+        },
+      });
     } catch (err) {
       console.error(`[plugins] Failed to persist state for ${manifest.id}:`, err);
     }
   }
 
   private async persistEnabled(pluginId: string, enabled: boolean): Promise<void> {
-    const repo = this.getPluginRepo();
-    if (!repo) return;
     try {
-      await repo.update(pluginId, { enabled });
+      await prisma.installedPlugin.update({
+        where: { id: pluginId },
+        data: { enabled },
+      });
     } catch (err) {
       console.error(`[plugins] Failed to update enabled for ${pluginId}:`, err);
     }
@@ -115,7 +120,6 @@ export class PluginManager {
 
     let mod: PluginModule;
     try {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
       mod = require(serverEntry) as PluginModule;
       instance.module = mod;
       instance.state = "loaded";

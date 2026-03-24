@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect, useCallback, FormEvent } from 'react';
 import { createPortal } from 'react-dom';
-import { LogOut, Shield, Bell, Key } from 'lucide-react';
+import { LogOut, Shield, Bell, Key, Fingerprint } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { authApi } from '../../lib/api';
+import { PasskeyManager } from '../Security/PasskeyManager';
 
 interface UserMenuProps {
   onAdminClick: () => void;
@@ -13,6 +14,7 @@ export function UserMenu({ onAdminClick, onAccessRequestsClick }: UserMenuProps)
   const { user, logout } = useAuth();
   const [open, setOpen] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [showPasskeyManager, setShowPasskeyManager] = useState(false);
   const [currentPw, setCurrentPw] = useState('');
   const [newPw, setNewPw] = useState('');
   const [confirmPw, setConfirmPw] = useState('');
@@ -149,6 +151,13 @@ export function UserMenu({ onAdminClick, onAccessRequestsClick }: UserMenuProps)
             Access Requests
           </button>
           <button
+            onClick={() => { setShowPasskeyManager(true); setOpen(false); }}
+            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-100 hover:bg-gray-700 transition-colors"
+          >
+            <Fingerprint size={14} />
+            Manage Passkeys
+          </button>
+          <button
             onClick={() => { setShowPasswordModal(true); setOpen(false); setPwError(''); setPwSuccess(false); }}
             className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-100 hover:bg-gray-700 transition-colors"
           >
@@ -165,6 +174,7 @@ export function UserMenu({ onAdminClick, onAccessRequestsClick }: UserMenuProps)
         </div>,
         document.body
       )}
+      <PasskeyManager open={showPasskeyManager} onClose={() => setShowPasskeyManager(false)} />
       {showPasswordModal && createPortal(
         <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center" onClick={() => setShowPasswordModal(false)}>
           <div className="bg-surface-900 rounded-xl shadow-2xl w-full max-w-sm p-6 border border-gray-700/50" onClick={e => e.stopPropagation()}>

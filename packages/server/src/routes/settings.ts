@@ -1,7 +1,5 @@
 import { Router, Request, Response } from "express";
-import { IsNull } from "typeorm";
-import { AppDataSource } from "../data-source";
-import { Settings } from "../entities/Settings";
+import { prisma } from "../prisma.js";
 
 /**
  * @swagger
@@ -79,15 +77,12 @@ export function createSettingsRouter(): Router {
   // GET /api/settings — Get all settings
   router.get("/", async (req: Request, res: Response) => {
     try {
-      const repo = AppDataSource.getRepository(Settings);
-      const userSettings = await repo.find({ where: { userId: req.user!.id } });
-      const globalSettings = await repo.find({ where: { userId: IsNull() } });
+      const userSettings = await prisma.settings.findMany({
+        where: { userId: req.user!.id },
+      });
 
       // Merge: user settings override global for same key
       const result: Record<string, string> = {};
-      for (const setting of globalSettings) {
-        result[setting.key] = setting.value;
-      }
       for (const setting of userSettings) {
         result[setting.key] = setting.value;
       }
@@ -117,16 +112,12 @@ export function createSettingsRouter(): Router {
         return;
       }
 
-      const repo = AppDataSource.getRepository(Settings);
-      let setting = await repo.findOneBy({ key, userId: req.user!.id });
-      if (!setting) {
-        setting = new Settings();
-        setting.key = key;
-        setting.userId = req.user!.id;
-      }
-      setting.value = value;
+      await prisma.settings.upsert({
+        where: { key_userId: { key, userId: req.user!.id } },
+        create: { key, userId: req.user!.id, value },
+        update: { value },
+      });
 
-      await repo.save(setting);
       res.json({ key, value, message: "Setting updated" });
     } catch (err) {
       console.error("Error updating setting:", err);
