@@ -1,4 +1,5 @@
 import "reflect-metadata";
+import http from "http";
 import express, { Request, Response } from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
@@ -33,6 +34,7 @@ import { PluginHealthMonitor } from "./plugins/PluginHealthMonitor";
 import { PluginRouter } from "./plugins/PluginRouter";
 import { PluginApiFactory } from "./plugins/PluginApiFactory";
 import { PluginManager } from "./plugins/PluginManager";
+import { PluginWebSocket } from "./plugins/PluginWebSocket";
 import { createPluginsRouter } from "./routes/plugins";
 
 const PORT = parseInt(process.env.PORT || "3001", 10);
@@ -118,6 +120,7 @@ async function main(): Promise<void> {
     pluginRouter,
     healthMonitor,
     apiFactory,
+    dataSource: AppDataSource,
   });
   managerRef.instance = pluginManager;
 
@@ -258,8 +261,12 @@ async function main(): Promise<void> {
     // No public directory — running in dev mode
   }
 
-  // Start server
-  app.listen(PORT, () => {
+  // Start server — create an explicit http.Server so WebSocket can attach to it
+  const httpServer = http.createServer(app);
+  const pluginWebSocket = new PluginWebSocket(httpServer);
+  pluginManager.setPluginWebSocket(pluginWebSocket);
+
+  httpServer.listen(PORT, () => {
     console.log(`Mnemo server listening on port ${PORT}`);
     console.log(`Notes directory: ${NOTES_DIR}`);
   });
