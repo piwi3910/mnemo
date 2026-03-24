@@ -2,7 +2,7 @@ import { useMemo, useEffect } from 'react';
 import { AuthProvider } from './hooks/useAuth';
 import { PluginSlotRegistry } from './plugins/PluginSlotRegistry';
 import { ClientPluginManager } from './plugins/PluginManager';
-import { PluginProvider } from './plugins/PluginContext';
+import { PluginProvider, usePluginSlots } from './plugins/PluginContext';
 import { PluginSlot } from './components/PluginSlot/PluginSlot';
 
 const pluginRegistry = new PluginSlotRegistry();
@@ -42,7 +42,6 @@ function AppContent() {
     editing,
     editContent, setEditContent,
     originalContent,
-    vimEnabled,
     showAdmin, setShowAdmin,
     sidebarOpen, setSidebarOpen,
     mobileMenuOpen, setMobileMenuOpen,
@@ -64,7 +63,6 @@ function AppContent() {
 
   const {
     toggleStar,
-    handleVimToggle,
     toggleActiveNoteStar,
     handleNoteSelect,
     handleLinkClick,
@@ -102,6 +100,8 @@ function AppContent() {
   }), [handleNewNote, handleRenameNote, toggleActiveNoteStar, editing, cancelEdit, enterEditMode, setSidebarOpen, setShowQuickSwitcher, searchInputRef]);
 
   useKeyboardShortcuts(shortcutActions);
+
+  const { editorExtensions } = usePluginSlots();
 
   if (loading) {
     return (
@@ -163,17 +163,16 @@ function AppContent() {
                   activeNote={notes.activeNote}
                   editContent={editContent}
                   originalContent={originalContent}
-                  vimEnabled={vimEnabled}
                   isStarred={isActiveNoteStarred}
                   resolvedTheme={themeCtx.resolvedTheme}
                   allNotes={notes.tree}
                   editorViewRef={editorViewRef}
                   previewRef={previewRef}
+                  pluginExtensions={editorExtensions}
                   onSave={saveEdit}
                   onCancel={cancelEdit}
                   onToggleStar={toggleActiveNoteStar}
                   onPdfExport={handlePdfExport}
-                  onVimToggle={handleVimToggle}
                   onContentChange={setEditContent}
                   onCursorStateChange={setCursorState}
                   onNoteSelect={handleNoteSelect}
@@ -222,7 +221,6 @@ function AppContent() {
         <PluginSlot slot="statusbar-left" />
         <StatusBar
           notePath={notes.activeNote?.path ?? null}
-          vimMode={cursorState.vimMode}
           line={cursorState.line}
           col={cursorState.col}
           wordCount={cursorState.wordCount}

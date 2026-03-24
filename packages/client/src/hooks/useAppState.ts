@@ -17,7 +17,6 @@ export function useAppState() {
   const [originalContent, setOriginalContent] = useState<string | null>(null);
 
   // UI state
-  const [vimEnabled, setVimEnabled] = useState(true);
   const [showAdmin, setShowAdmin] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -37,7 +36,7 @@ export function useAppState() {
   const [graphData, setGraphData] = useState<GraphData | null>(null);
   const [graphLoading, setGraphLoading] = useState(true);
   const [cursorState, setCursorState] = useState<EditorCursorState>({
-    line: 1, col: 1, vimMode: '-- NORMAL --', wordCount: 0,
+    line: 1, col: 1, wordCount: 0,
   });
   const [starredPaths, setStarredPaths] = useState<Set<string>>(new Set());
   const [sharedNotes, setSharedNotes] = useState<{ id: string; ownerUserId: string; ownerName: string; path: string; isFolder: boolean; permission: string }[]>([]);
@@ -47,7 +46,7 @@ export function useAppState() {
   const searchInputRef = useRef<HTMLInputElement>(undefined);
   const previewRef = useRef<HTMLDivElement>(null);
 
-  // Load starred notes & vim settings
+  // Load starred notes
   useEffect(() => {
     if (!user) return;
     api.getSettings().then(settings => {
@@ -56,9 +55,6 @@ export function useAppState() {
           const paths = JSON.parse(settings.starred) as string[];
           setStarredPaths(new Set(paths));
         } catch { /* ignore */ }
-      }
-      if (settings.vimEnabled !== undefined) {
-        setVimEnabled(settings.vimEnabled === 'true');
       }
     }).catch(() => {});
   }, [user]);
@@ -94,7 +90,6 @@ export function useAppState() {
     editContent, setEditContent,
     originalContent, setOriginalContent,
     // UI toggles
-    vimEnabled, setVimEnabled,
     showAdmin, setShowAdmin,
     sidebarOpen, setSidebarOpen,
     mobileMenuOpen, setMobileMenuOpen,

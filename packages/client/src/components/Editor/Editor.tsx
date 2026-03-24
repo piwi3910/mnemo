@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback } from 'react';
-import { EditorState } from '@codemirror/state';
+import { EditorState, Extension } from '@codemirror/state';
 import { EditorView, keymap, placeholder, ViewUpdate } from '@codemirror/view';
 import { defaultKeymap, indentWithTab, history, historyKeymap } from '@codemirror/commands';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
@@ -7,13 +7,11 @@ import { syntaxHighlighting, defaultHighlightStyle, bracketMatching } from '@cod
 import { oneDark } from '@codemirror/theme-one-dark';
 import { autocompletion, CompletionContext, CompletionResult } from '@codemirror/autocomplete';
 import { search as cmSearch, searchKeymap } from '@codemirror/search';
-import { vim, getCM } from '@replit/codemirror-vim';
 import { FileNode } from '../../lib/api';
 
 export interface EditorCursorState {
   line: number;
   col: number;
-  vimMode: string;
   wordCount: number;
 }
 
@@ -24,7 +22,7 @@ interface EditorProps {
   allNotes: FileNode[];
   onCursorStateChange?: (state: EditorCursorState) => void;
   viewRef?: React.MutableRefObject<EditorView | undefined>;
-  vimEnabled?: boolean;
+  pluginExtensions?: Extension[];
 }
 
 function collectNotePaths(nodes: FileNode[]): string[] {
@@ -46,21 +44,7 @@ function countWords(text: string): number {
   return trimmed.split(/\s+/).length;
 }
 
-function getVimMode(view: EditorView): string {
-  const cm = getCM(view);
-  if (!cm) return '-- NORMAL --';
-  const vimState = cm.state.vim;
-  if (!vimState) return '-- NORMAL --';
-  if (vimState.insertMode) return '-- INSERT --';
-  if (vimState.visualMode) {
-    if (vimState.visualLine) return '-- VISUAL LINE --';
-    if (vimState.visualBlock) return '-- VISUAL BLOCK --';
-    return '-- VISUAL --';
-  }
-  return '-- NORMAL --';
-}
-
-export function Editor({ content, onChange, darkMode, allNotes, onCursorStateChange, viewRef: externalViewRef, vimEnabled = true }: EditorProps) {
+export function Editor({ content, onChange, darkMode, allNotes, onCursorStateChange, viewRef: externalViewRef, pluginExtensions = [] }: EditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView>(undefined);
   const onChangeRef = useRef(onChange);
@@ -103,7 +87,6 @@ export function Editor({ content, onChange, darkMode, allNotes, onCursorStateCha
       onCursorStateChangeRef.current({
         line: line.number,
         col: pos - line.from + 1,
-        vimMode: getVimMode(view),
         wordCount: countWords(view.state.doc.toString()),
       });
     };
@@ -120,7 +103,7 @@ export function Editor({ content, onChange, darkMode, allNotes, onCursorStateCha
     const state = EditorState.create({
       doc: content,
       extensions: [
-        ...(vimEnabled ? [vim()] : []),
+        ...pluginExtensions,
         ...themeExtensions,
         markdown({ base: markdownLanguage }),
         syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
@@ -155,20 +138,11 @@ export function Editor({ content, onChange, darkMode, allNotes, onCursorStateCha
     viewRef.current = view;
     if (externalViewRef) externalViewRef.current = view;
 
-    // Start in insert mode so beginners can type immediately (only when vim enabled)
-    if (vimEnabled) {
-      const cm = getCM(view) as { processKey?: (key: string) => void };
-      if (cm?.processKey) {
-        cm.processKey('i');
-      }
-    }
-
     // Fire initial cursor state
     if (onCursorStateChangeRef.current) {
       onCursorStateChangeRef.current({
         line: 1,
         col: 1,
-        vimMode: vimEnabled ? '-- INSERT --' : '',
         wordCount: countWords(content),
       });
     }
@@ -176,9 +150,9 @@ export function Editor({ content, onChange, darkMode, allNotes, onCursorStateCha
     return () => {
       view.destroy();
     };
-    // Only re-create editor when darkMode changes, not on every content change
+    // Only re-create editor when darkMode or plugin extensions change, not on every content change
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [darkMode, wikiLinkCompletion, vimEnabled]);
+  }, [darkMode, wikiLinkCompletion, pluginExtensions]);
 
   // Sync content from parent when it changes externally (e.g., switching notes)
   useEffect(() => {
