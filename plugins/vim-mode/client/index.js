@@ -2,7 +2,7 @@
 // Provides Vim keybindings, a toolbar toggle, and a status bar mode indicator.
 
 const { React, vim, getCM } = window.__mnemoPluginDeps;
-const { createElement: h, useState, useEffect, useCallback } = React;
+const { createElement: h, useState, useEffect } = React;
 
 /** Determine the current vim mode string from the editor view. */
 function getVimMode(view) {
@@ -26,7 +26,7 @@ function getModeColor(mode) {
   return 'text-violet-500';
 }
 
-// Shared mutable state so the status bar indicator can read the current mode.
+// Shared mutable state so components can read the current mode.
 let currentVimMode = '-- INSERT --';
 let modeListeners = [];
 
@@ -36,22 +36,61 @@ function setCurrentVimMode(mode) {
   modeListeners.forEach((fn) => fn(mode));
 }
 
+function useModeListener() {
+  const [mode, setMode] = useState(currentVimMode);
+  useEffect(() => {
+    modeListeners.push(setMode);
+    return () => {
+      modeListeners = modeListeners.filter((fn) => fn !== setMode);
+    };
+  }, []);
+  return mode;
+}
+
 export function activate(api) {
   // 1. Register the vim() CodeMirror extension
-  const vimExt = vim();
-  api.editor.registerExtension(vimExt);
+  api.editor.registerExtension(vim());
 
-  // 2. Register a status-bar mode indicator (left side, high priority)
+  // 2. Register vim toggle button in editor toolbar
+  function VimToggle() {
+    const settings = api.context.usePluginSettings('enabled');
+    const enabled = settings !== false;
+
+    function toggle() {
+      const next = !enabled;
+      // Persist setting (this will require a page reload to take effect
+      // since CodeMirror extensions are set at editor creation time)
+      api.api.fetch('/toggle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: next }),
+      }).catch(() => {});
+    }
+
+    return h('div', { className: 'flex items-center gap-1.5 mr-2' },
+      h('span', { className: 'text-xs text-gray-400' }, 'Vim'),
+      h('button', {
+        onClick: toggle,
+        className: 'relative inline-flex h-5 w-9 items-center rounded-full transition-colors ' +
+          (enabled ? 'bg-violet-500' : 'bg-gray-600'),
+        title: enabled ? 'Disable Vim mode' : 'Enable Vim mode',
+      },
+        h('span', {
+          className: 'inline-block h-3.5 w-3.5 rounded-full bg-white transition-transform ' +
+            (enabled ? 'translate-x-4' : 'translate-x-1'),
+        })
+      )
+    );
+  }
+
+  api.ui.registerEditorToolbarButton(VimToggle, {
+    id: 'vim-toggle',
+    order: 100,
+  });
+
+  // 3. Register status bar mode indicator
   function VimModeIndicator() {
-    const [mode, setMode] = useState(currentVimMode);
-
-    useEffect(() => {
-      modeListeners.push(setMode);
-      return () => {
-        modeListeners = modeListeners.filter((fn) => fn !== setMode);
-      };
-    }, []);
-
+    const mode = useModeListener();
     return h(
       'div',
       { className: `font-semibold text-xs font-mono px-2 ${getModeColor(mode)}` },
@@ -65,31 +104,21 @@ export function activate(api) {
     order: 1,
   });
 
-  // 3. Poll for vim mode changes via a CodeMirror update listener.
-  //    We piggy-back on the editor view by registering a second extension
-  //    that simply watches for updates and reads the vim state.
-  //    (The EditorView.updateListener extension is available via @codemirror/view
-  //    which is already in the host bundle.)
-  //    Instead, we use a simpler approach: a setInterval that checks the
-  //    focused editor view for the current vim mode.
+  // 4. Poll for vim mode changes (reads from active CodeMirror view)
   const pollInterval = setInterval(() => {
-    // Find the active CodeMirror view via the DOM
     const cmElement = document.querySelector('.cm-editor');
     if (!cmElement) return;
-    // EditorView stores itself on the DOM element
     const view = cmElement.cmView?.view;
     if (!view) return;
     setCurrentVimMode(getVimMode(view));
   }, 200);
 
-  // Store cleanup reference
   activate._cleanup = () => {
     clearInterval(pollInterval);
     modeListeners = [];
   };
 
-  // 4. Start in insert mode so beginners can type immediately.
-  //    We need to wait for the editor to mount, so use a short delay.
+  // 5. Start in insert mode so beginners can type immediately
   const initTimeout = setTimeout(() => {
     const cmElement = document.querySelector('.cm-editor');
     if (!cmElement) return;
