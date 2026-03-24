@@ -1,0 +1,200 @@
+// Prisma schema for Mnemo
+// Better-auth managed tables + domain tables
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Better-auth managed tables
+// ---------------------------------------------------------------------------
+
+model User {
+  id            String   @id
+  name          String
+  email         String   @unique
+  emailVerified Boolean  @default(false)
+  image         String?
+  role          String   @default("user")
+  disabled      Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  sessions Session[]
+  accounts Account[]
+  passkeys Passkey[]
+
+  // Domain relations
+  settings                Settings[]
+  noteShares              NoteShare[]    @relation("owner")
+  sharedWith              NoteShare[]    @relation("sharedWith")
+  accessRequestsOwner     AccessRequest[] @relation("arOwner")
+  accessRequestsRequester AccessRequest[] @relation("arRequester")
+  inviteCodesCreated      InviteCode[]   @relation("createdBy")
+  inviteCodesUsed         InviteCode[]   @relation("usedBy")
+  searchIndices           SearchIndex[]
+  graphEdges              GraphEdge[]
+  pluginStorage           PluginStorage[]
+}
+
+model Session {
+  id        String   @id
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Account {
+  id                   String    @id
+  userId               String
+  accountId            String
+  providerId           String
+  accessToken          String?
+  refreshToken         String?
+  accessTokenExpiresAt DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                String?
+  idToken              String?
+  password             String?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([providerId, accountId])
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Passkey {
+  id           String   @id
+  name         String?
+  publicKey    String
+  userId       String
+  credentialID String   @unique
+  counter      Int
+  deviceType   String
+  backedUp     Boolean
+  transports   String?
+  createdAt    DateTime @default(now())
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ---------------------------------------------------------------------------
+// Domain tables
+// ---------------------------------------------------------------------------
+
+model Settings {
+  key    String
+  userId String
+  value  String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([key, userId])
+}
+
+model SearchIndex {
+  notePath   String
+  userId     String
+  title      String
+  content    String
+  tags       String[]
+  modifiedAt DateTime
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([notePath, userId])
+  @@index([userId])
+}
+
+model GraphEdge {
+  id         String @id @default(uuid())
+  fromPath   String
+  toPath     String
+  fromNoteId String
+  toNoteId   String
+  userId     String
+  user       User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([fromNoteId])
+  @@index([toNoteId])
+}
+
+model NoteShare {
+  id               String   @id @default(uuid())
+  ownerUserId      String
+  path             String
+  isFolder         Boolean
+  sharedWithUserId String
+  permission       String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  owner            User     @relation("owner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  sharedWith       User     @relation("sharedWith", fields: [sharedWithUserId], references: [id], onDelete: Cascade)
+
+  @@unique([ownerUserId, path, sharedWithUserId])
+}
+
+model AccessRequest {
+  id              String   @id @default(uuid())
+  requesterUserId String
+  ownerUserId     String
+  notePath        String
+  status          String   @default("pending")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  requester       User     @relation("arRequester", fields: [requesterUserId], references: [id], onDelete: Cascade)
+  owner           User     @relation("arOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+}
+
+model InviteCode {
+  id          String    @id @default(uuid())
+  code        String    @unique
+  createdById String
+  usedById    String?
+  expiresAt   DateTime?
+  createdAt   DateTime  @default(now())
+  createdBy   User      @relation("createdBy", fields: [createdById], references: [id])
+  usedBy      User?     @relation("usedBy", fields: [usedById], references: [id])
+}
+
+model PluginStorage {
+  pluginId  String
+  key       String
+  userId    String   @default("")
+  value     Json
+  updatedAt DateTime @updatedAt
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([pluginId, key, userId])
+}
+
+model InstalledPlugin {
+  id          String   @id
+  name        String
+  version     String
+  description String
+  author      String
+  state       String   @default("installed")
+  error       String?
+  manifest    Json?
+  enabled     Boolean  @default(true)
+  installedAt DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
