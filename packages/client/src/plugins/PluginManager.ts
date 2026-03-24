@@ -1,6 +1,6 @@
 import { PluginSlotRegistry } from "./PluginSlotRegistry";
 import { ClientPluginAPI, ClientPluginModule, ActivePluginInfo } from "./types";
-import { request } from "../lib/api";
+import { request, getAccessToken } from "../lib/api";
 
 export class ClientPluginManager {
   private registry: PluginSlotRegistry;
@@ -8,12 +8,16 @@ export class ClientPluginManager {
   private ws: WebSocket | null = null;
   private wsReconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private wsReconnectDelayMs = 3000;
+  private loaded = false;
 
   constructor(registry: PluginSlotRegistry) {
     this.registry = registry;
   }
 
   async loadActivePlugins(): Promise<void> {
+    if (this.loaded) return;
+    this.loaded = true;
+
     const plugins = await request<ActivePluginInfo[]>("/plugins/active");
 
     for (const plugin of plugins) {
@@ -177,11 +181,13 @@ export class ClientPluginManager {
       api: {
         fetch: (path, options) => {
           const url = `/api/plugins/${pluginId}${path}`;
+          const token = getAccessToken();
           return fetch(url, {
             ...options,
             headers: {
               ...options?.headers,
               "X-Requested-With": "XMLHttpRequest",
+              ...(token ? { "Authorization": `Bearer ${token}` } : {}),
             },
             credentials: "include",
           });

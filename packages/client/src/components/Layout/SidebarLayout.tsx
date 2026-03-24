@@ -34,6 +34,7 @@ interface SidebarLayoutProps {
   onCreateFromTemplate: () => void;
   onToggleStar: (path: string) => void;
   onShare: (path: string, isFolder: boolean) => void;
+  children?: React.ReactNode;
 }
 
 export function SidebarLayout({
@@ -44,6 +45,7 @@ export function SidebarLayout({
   onSelect, onCreateNote, onDeleteNote, onRenameNote,
   onCreateFolder, onDeleteFolder, onRenameFolder,
   onDailyNote, onCreateFromTemplate, onToggleStar, onShare,
+  children,
 }: SidebarLayoutProps) {
   return (
     <>
@@ -106,6 +108,7 @@ export function SidebarLayout({
           sharedNotes={sharedNotes}
           onShare={onShare}
         />
+        {children}
       </aside>
 
       {/* Sidebar resize handle */}

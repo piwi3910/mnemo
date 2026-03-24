@@ -84,10 +84,11 @@ function AppContent() {
   } = callbacks;
 
   useEffect(() => {
+    if (!user) return;
     pluginManager.loadActivePlugins().catch((err) => {
       console.error('[plugins] Failed to load active plugins:', err);
     });
-  }, []);
+  }, [user]);
 
   const shortcutActions = useMemo(() => ({
     toggleSidebar: () => setSidebarOpen(prev => !prev),
@@ -151,8 +152,9 @@ function AppContent() {
           onCreateFromTemplate={handleCreateFromTemplate}
           onToggleStar={toggleStar}
           onShare={handleShare}
-        />
-        <PluginSlot slot="sidebar" />
+        >
+          <PluginSlot slot="sidebar" />
+        </SidebarLayout>
 
         <main className="flex-1 flex flex-col overflow-hidden">
           <PluginSlot slot="editor-toolbar" />
