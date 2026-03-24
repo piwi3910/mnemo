@@ -62,6 +62,7 @@ export class PluginManager {
 
     let mod: PluginModule;
     try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       mod = require(serverEntry) as PluginModule;
       instance.module = mod;
       instance.state = "loaded";

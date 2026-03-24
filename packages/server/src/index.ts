@@ -93,14 +93,15 @@ async function main(): Promise<void> {
 
   const eventBus = new PluginEventBus();
   const pluginRouter = new PluginRouter(app);
-  // pluginManager is declared here so the healthMonitor callback can reference it
-  let pluginManager: PluginManager;
+  // Use a container object so the healthMonitor closure can reference pluginManager
+  // before it is assigned (forward reference pattern)
+  const managerRef: { instance: PluginManager | null } = { instance: null };
   const healthMonitor = new PluginHealthMonitor({
     maxErrors: 5,
     windowMs: 60_000,
     onDisable: async (pluginId) => {
       console.warn(`[plugins] Auto-disabling plugin ${pluginId} due to excessive errors`);
-      await pluginManager.disablePlugin(pluginId);
+      await managerRef.instance?.disablePlugin(pluginId);
       const repo = AppDataSource.getRepository(InstalledPlugin);
       await repo.update(pluginId, { enabled: false, state: "error", error: "Auto-disabled: too many errors" });
     },
@@ -111,24 +112,17 @@ async function main(): Promise<void> {
     healthMonitor,
     notesDir: NOTES_DIR,
   });
-  pluginManager = new PluginManager({
+  const pluginManager = new PluginManager({
     pluginsDir,
     eventBus,
     pluginRouter,
     healthMonitor,
     apiFactory,
   });
+  managerRef.instance = pluginManager;
 
-  // Load enabled plugins from database
-  const installedPlugins = await AppDataSource.getRepository(InstalledPlugin).find({ where: { enabled: true } });
-  for (const ip of installedPlugins) {
-    try {
-      await pluginManager.loadPlugin(ip.id);
-      console.log(`[plugins] Loaded plugin: ${ip.id}`);
-    } catch (err) {
-      console.error(`[plugins] Failed to load plugin ${ip.id}:`, err);
-    }
-  }
+  // Discover and load plugins from the plugins directory
+  await pluginManager.discoverAndLoadPlugins();
 
   // Serve plugin client bundles as static files
   app.use("/plugins", express.static(pluginsDir));

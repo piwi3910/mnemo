@@ -54,7 +54,7 @@ describe("PluginEventBus", () => {
 
   it("before event context is mutable across handlers", async () => {
     const ctx = { content: "original" };
-    bus.on("note:beforeSave", (c: any) => { c.content = "modified"; });
+    bus.on("note:beforeSave", (c) => { (c as Record<string, string>).content = "modified"; });
     await bus.emitBefore("note:beforeSave", ctx);
     expect(ctx.content).toBe("modified");
   });

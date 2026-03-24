@@ -70,7 +70,7 @@ export class PluginApiFactory {
     return api;
   }
 
-  private createNotesApi(pluginId: string): PluginAPI["notes"] {
+  private createNotesApi(_pluginId: string): PluginAPI["notes"] {
     const notesDir = this.deps.notesDir;
     return {
       async get(userId: string, notePath: string) {
@@ -124,7 +124,7 @@ export class PluginApiFactory {
       register: (method, routePath, handler: RequestHandler) => {
         const wrappedHandler: RequestHandler = async (req, res, next) => {
           try {
-            await (handler as (req: typeof req, res: typeof res, next: typeof next) => Promise<void>)(req, res, next);
+            await Promise.resolve(handler(req, res, next));
           } catch (err) {
             healthMonitor.recordError(pluginId);
             next(err);
@@ -171,7 +171,7 @@ export class PluginApiFactory {
     };
   }
 
-  private createSearchApi(pluginId: string): PluginAPI["search"] {
+  private createSearchApi(_pluginId: string): PluginAPI["search"] {
     return {
       async index(userId, notePath, fields) {
         const repo = AppDataSource.getRepository(SearchIndex);
