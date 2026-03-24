@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { PluginManager } from "../plugins/PluginManager";
+import { adminMiddleware } from "../middleware/auth";
 
 /**
  * @swagger
@@ -53,6 +54,92 @@ export function createPluginsRouter(pluginManager: PluginManager): Router {
         settings: p.manifest.settings || [],
       }))
     );
+  });
+
+  /**
+   * @swagger
+   * /api/plugins/{id}/enable:
+   *   post:
+   *     summary: Enable and load a plugin (admin only)
+   *     tags: [Plugins]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *     responses:
+   *       200:
+   *         description: Plugin enabled
+   *       404:
+   *         description: Plugin not found
+   *       403:
+   *         description: Admin access required
+   */
+  router.post("/:id/enable", adminMiddleware, async (req, res) => {
+    const id = req.params.id as string;
+    try {
+      await pluginManager.loadPlugin(id);
+      const plugin = pluginManager.getPlugin(id);
+      res.json({ id, state: plugin?.state ?? "active" });
+    } catch (err) {
+      res.status(404).json({ error: `Plugin not found or failed to load: ${(err as Error).message}` });
+    }
+  });
+
+  /**
+   * @swagger
+   * /api/plugins/{id}/disable:
+   *   post:
+   *     summary: Disable and unload a plugin (admin only)
+   *     tags: [Plugins]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *     responses:
+   *       200:
+   *         description: Plugin disabled
+   *       403:
+   *         description: Admin access required
+   */
+  router.post("/:id/disable", adminMiddleware, async (req, res) => {
+    const id = req.params.id as string;
+    await pluginManager.disablePlugin(id);
+    res.json({ id, state: "unloaded", enabled: false });
+  });
+
+  /**
+   * @swagger
+   * /api/plugins/{id}/reload:
+   *   post:
+   *     summary: Hot-swap reload a plugin (admin only)
+   *     tags: [Plugins]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *     responses:
+   *       200:
+   *         description: Plugin reloaded
+   *       404:
+   *         description: Plugin not found
+   *       403:
+   *         description: Admin access required
+   */
+  router.post("/:id/reload", adminMiddleware, async (req, res) => {
+    const id = req.params.id as string;
+    try {
+      await pluginManager.reloadPlugin(id);
+      const plugin = pluginManager.getPlugin(id);
+      res.json({ id, state: plugin?.state ?? "active" });
+    } catch (err) {
+      res.status(404).json({ error: `Plugin reload failed: ${(err as Error).message}` });
+    }
   });
 
   return router;
