@@ -1,6 +1,5 @@
 import { Router, Request, Response } from "express";
-import { AppDataSource } from "../data-source";
-import { User } from "../entities/User";
+import { prisma } from "../prisma.js";
 
 /**
  * @swagger
@@ -50,8 +49,7 @@ export function createUsersRouter(): Router {
         return;
       }
 
-      const repo = AppDataSource.getRepository(User);
-      const user = await repo.findOne({ where: { email } });
+      const user = await prisma.user.findUnique({ where: { email } });
 
       if (!user) {
         res.status(404).json({ error: "User not found" });

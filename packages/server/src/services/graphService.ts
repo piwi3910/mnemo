@@ -1,5 +1,4 @@
-import { AppDataSource } from "../data-source";
-import { GraphEdge } from "../entities/GraphEdge";
+import { prisma } from "../prisma.js";
 
 const WIKI_LINK_REGEX = /\[\[([^\]]+)\]\]/g;
 
@@ -42,36 +41,33 @@ export async function updateGraphCache(
   content: string,
   userId: string
 ): Promise<void> {
-  const repo = AppDataSource.getRepository(GraphEdge);
-
   // Remove existing edges from this note for this user
-  await repo.delete({ fromPath: notePath, userId });
+  await prisma.graphEdge.deleteMany({ where: { fromPath: notePath, userId } });
 
   const links = parseLinks(content);
   if (links.length === 0) return;
 
   const edges = links.map((link) => {
     const toPath = linkToPath(link);
-    const edge = new GraphEdge();
-    edge.fromPath = notePath;
-    edge.toPath = toPath;
-    edge.fromNoteId = noteIdFromPath(notePath);
-    edge.toNoteId = noteIdFromPath(toPath);
-    edge.userId = userId;
-    return edge;
+    return {
+      fromPath: notePath,
+      toPath,
+      fromNoteId: noteIdFromPath(notePath),
+      toNoteId: noteIdFromPath(toPath),
+      userId,
+    };
   });
 
-  await repo.save(edges);
+  await prisma.graphEdge.createMany({ data: edges });
 }
 
 /**
  * Remove all graph edges that reference the given note path (as source or target).
  */
 export async function removeFromGraph(notePath: string, userId: string): Promise<void> {
-  const repo = AppDataSource.getRepository(GraphEdge);
-  await repo.delete({ fromPath: notePath, userId });
+  await prisma.graphEdge.deleteMany({ where: { fromPath: notePath, userId } });
   // We also remove edges pointing TO this note
-  await repo.delete({ toPath: notePath, userId });
+  await prisma.graphEdge.deleteMany({ where: { toPath: notePath, userId } });
 }
 
 /**
@@ -82,33 +78,26 @@ export async function renameInGraph(
   newPath: string,
   userId: string
 ): Promise<void> {
-  const repo = AppDataSource.getRepository(GraphEdge);
-  const oldNoteId = noteIdFromPath(oldPath);
   const newNoteId = noteIdFromPath(newPath);
+  const oldNoteId = noteIdFromPath(oldPath);
 
   // Update edges originating from the old path
-  await repo
-    .createQueryBuilder()
-    .update(GraphEdge)
-    .set({ fromPath: newPath, fromNoteId: newNoteId })
-    .where("fromPath = :oldPath AND userId = :userId", { oldPath, userId })
-    .execute();
+  await prisma.graphEdge.updateMany({
+    where: { fromPath: oldPath, userId },
+    data: { fromPath: newPath, fromNoteId: newNoteId },
+  });
 
   // Update edges pointing to the old path
-  await repo
-    .createQueryBuilder()
-    .update(GraphEdge)
-    .set({ toPath: newPath, toNoteId: newNoteId })
-    .where("toPath = :oldPath AND userId = :userId", { oldPath, userId })
-    .execute();
+  await prisma.graphEdge.updateMany({
+    where: { toPath: oldPath, userId },
+    data: { toPath: newPath, toNoteId: newNoteId },
+  });
 
   // Also update edges that reference the old note id without .md
-  await repo
-    .createQueryBuilder()
-    .update(GraphEdge)
-    .set({ toNoteId: newNoteId })
-    .where("toNoteId = :oldNoteId AND userId = :userId", { oldNoteId, userId })
-    .execute();
+  await prisma.graphEdge.updateMany({
+    where: { toNoteId: oldNoteId, userId },
+    data: { toNoteId: newNoteId },
+  });
 }
 
 export interface GraphNode {
@@ -125,31 +114,26 @@ export interface GraphData {
 }
 
 /**
- * Return the full graph: all nodes (from SearchIndex) and all edges.
- */
-/**
  * Get all notes that link TO the given note (backlinks).
  */
 export async function getBacklinks(
   notePath: string,
   userId: string
 ): Promise<{ path: string; title: string }[]> {
-  const repo = AppDataSource.getRepository(GraphEdge);
   const noteId = noteIdFromPath(notePath);
-  const { hasAccess } = await import("../services/shareService");
+  const { hasAccess } = await import("../services/shareService.js");
 
   // Find all edges pointing to this note across ALL users
-  const edges = await repo.find({ where: { toNoteId: noteId } });
+  const edges = await prisma.graphEdge.findMany({ where: { toNoteId: noteId } });
   if (edges.length === 0) return [];
-
-  const { SearchIndex } = await import("../entities/SearchIndex");
-  const searchRepo = AppDataSource.getRepository(SearchIndex);
 
   const backlinks: { path: string; title: string }[] = [];
   for (const edge of edges) {
     if (edge.userId === userId) {
       // Own note — always accessible
-      const note = await searchRepo.findOneBy({ notePath: edge.fromPath, userId });
+      const note = await prisma.searchIndex.findUnique({
+        where: { notePath_userId: { notePath: edge.fromPath, userId } },
+      });
       if (note) {
         backlinks.push({ path: note.notePath, title: note.title });
       }
@@ -157,7 +141,9 @@ export async function getBacklinks(
       // Another user's note — check if it's shared with the viewer
       const access = await hasAccess(edge.userId, edge.fromPath, userId);
       if (access.canRead) {
-        const note = await searchRepo.findOneBy({ notePath: edge.fromPath, userId: edge.userId });
+        const note = await prisma.searchIndex.findUnique({
+          where: { notePath_userId: { notePath: edge.fromPath, userId: edge.userId } },
+        });
         if (note) {
           backlinks.push({ path: note.notePath, title: note.title });
         }
@@ -175,14 +161,11 @@ export async function getBacklinks(
 }
 
 export async function getFullGraph(userId: string): Promise<GraphData> {
-  const edgeRepo = AppDataSource.getRepository(GraphEdge);
-  const { SearchIndex } = await import("../entities/SearchIndex");
-  const searchRepo = AppDataSource.getRepository(SearchIndex);
-  const { getAccessibleSharedPaths } = await import("../services/shareService");
+  const { getAccessibleSharedPaths } = await import("../services/shareService.js");
 
   const [allNotes, allEdges, sharedPaths] = await Promise.all([
-    searchRepo.find({ where: { userId } }),
-    edgeRepo.find({ where: { userId } }),
+    prisma.searchIndex.findMany({ where: { userId } }),
+    prisma.graphEdge.findMany({ where: { userId } }),
     getAccessibleSharedPaths(userId),
   ]);
 
@@ -199,16 +182,14 @@ export async function getFullGraph(userId: string): Promise<GraphData> {
   // Fetch SearchIndex entries for each shared note (from the owner's data)
   const sharedNoteEntries = await Promise.all(
     sharedPaths.map(async (sp) => {
-      const note = await searchRepo.findOneBy({
-        notePath: sp.notePath,
-        userId: sp.ownerUserId,
+      const note = await prisma.searchIndex.findUnique({
+        where: { notePath_userId: { notePath: sp.notePath, userId: sp.ownerUserId } },
       });
       return note ? { note, ownerUserId: sp.ownerUserId } : null;
     }),
   );
 
   // Build a lookup from owner's noteId to namespaced id
-  // ownerNoteId -> namespaced id (for notes the user doesn't own)
   const ownerNoteIdToNamespaced = new Map<string, string>();
 
   for (const entry of sharedNoteEntries) {
@@ -234,20 +215,16 @@ export async function getFullGraph(userId: string): Promise<GraphData> {
   const accessibleIds = new Set(nodes.map((n) => n.id));
 
   // --- Shared edges (from owners' data) ---
-  // Group shared paths by owner for batch edge fetching
   const ownerIds = [...new Set(sharedPaths.map((sp) => sp.ownerUserId))];
-  const sharedEdges: GraphEdge[] = [];
+  const sharedEdges: typeof allEdges = [];
   for (const ownerId of ownerIds) {
-    const ownerEdges = await edgeRepo.find({ where: { userId: ownerId } });
+    const ownerEdges = await prisma.graphEdge.findMany({ where: { userId: ownerId } });
     sharedEdges.push(...ownerEdges);
   }
 
   // --- Map and filter all edges ---
-  // Helper: resolve an owner's noteId to the viewer's graph ID
   const resolveId = (rawNoteId: string, ownerId: string): string | null => {
-    // If it matches one of the viewer's own notes, use as-is
     if (ownNodeIds.has(rawNoteId)) return rawNoteId;
-    // If it's a shared note from this owner, use namespaced ID
     const namespaced = ownerNoteIdToNamespaced.get(`${ownerId}:${rawNoteId}`);
     if (namespaced) return namespaced;
     return null;

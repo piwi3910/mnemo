@@ -1,7 +1,4 @@
-import { AppDataSource } from "../data-source";
-import { NoteShare } from "../entities/NoteShare";
-import { SearchIndex } from "../entities/SearchIndex";
-import { User } from "../entities/User";
+import { prisma } from "../prisma.js";
 
 /**
  * Check whether `requestingUserId` has read/write access to a specific
@@ -12,10 +9,8 @@ export async function hasAccess(
   path: string,
   requestingUserId: string,
 ): Promise<{ canRead: boolean; canWrite: boolean }> {
-  const repo = AppDataSource.getRepository(NoteShare);
-
   // 1. Direct file share
-  const directShare = await repo.findOne({
+  const directShare = await prisma.noteShare.findFirst({
     where: {
       ownerUserId,
       sharedWithUserId: requestingUserId,
@@ -25,16 +20,18 @@ export async function hasAccess(
   });
 
   // 2. Folder shares whose path is a prefix of the requested path
-  const folderShares = await repo
-    .createQueryBuilder("s")
-    .where("s.ownerUserId = :ownerUserId", { ownerUserId })
-    .andWhere("s.sharedWithUserId = :requestingUserId", { requestingUserId })
-    .andWhere("s.isFolder = true")
-    .andWhere("POSITION(s.path IN :path) = 1", { path })
-    .getMany();
+  const folderShares = await prisma.noteShare.findMany({
+    where: {
+      ownerUserId,
+      sharedWithUserId: requestingUserId,
+      isFolder: true,
+    },
+  });
+  // Filter in-app: only keep folder shares where the share path is a prefix of the requested path
+  const matchingFolderShares = folderShares.filter((s) => path.startsWith(s.path));
 
   // 3. Combine all matching shares
-  const allShares: NoteShare[] = [...folderShares];
+  const allShares = [...matchingFolderShares];
   if (directShare) {
     allShares.push(directShare);
   }
@@ -72,23 +69,18 @@ export async function getSharedNotesForUser(
     permission: string;
   }>
 > {
-  const repo = AppDataSource.getRepository(NoteShare);
+  const shares = await prisma.noteShare.findMany({
+    where: { sharedWithUserId: userId },
+    include: { owner: { select: { name: true } } },
+  });
 
-  const result = await repo
-    .createQueryBuilder("s")
-    .leftJoin(User, "u", "u.id::text = s.ownerUserId")
-    .addSelect("u.name", "ownerName")
-    .addSelect("u.email", "ownerEmail")
-    .where("s.sharedWithUserId = :userId", { userId })
-    .getRawAndEntities();
-
-  return result.entities.map((entity, i) => ({
-    id: entity.id,
-    ownerUserId: entity.ownerUserId,
-    ownerName: (result.raw[i]?.ownerName as string) ?? "",
-    path: entity.path,
-    isFolder: entity.isFolder,
-    permission: entity.permission,
+  return shares.map((share) => ({
+    id: share.id,
+    ownerUserId: share.ownerUserId,
+    ownerName: share.owner?.name ?? "",
+    path: share.path,
+    isFolder: share.isFolder,
+    permission: share.permission,
   }));
 }
 
@@ -100,10 +92,7 @@ export async function getSharedNotesForUser(
 export async function getAccessibleSharedPaths(
   userId: string,
 ): Promise<Array<{ ownerUserId: string; notePath: string; permission: string }>> {
-  const shareRepo = AppDataSource.getRepository(NoteShare);
-  const searchRepo = AppDataSource.getRepository(SearchIndex);
-
-  const shares = await shareRepo.find({
+  const shares = await prisma.noteShare.findMany({
     where: { sharedWithUserId: userId },
   });
 
@@ -119,13 +108,12 @@ export async function getAccessibleSharedPaths(
       });
     } else {
       // Folder share – expand into individual note paths via SearchIndex
-      const notesInFolder = await searchRepo
-        .createQueryBuilder("si")
-        .where("si.userId = :ownerUserId", { ownerUserId: share.ownerUserId })
-        .andWhere("POSITION(:folderPath IN si.notePath) = 1", {
-          folderPath: share.path,
-        })
-        .getMany();
+      const notesInFolder = await prisma.searchIndex.findMany({
+        where: {
+          userId: share.ownerUserId,
+          notePath: { startsWith: share.path },
+        },
+      });
 
       for (const note of notesInFolder) {
         paths.push({

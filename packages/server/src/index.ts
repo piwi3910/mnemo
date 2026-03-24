@@ -1,4 +1,3 @@
-import "reflect-metadata";
 import http from "http";
 import express, { Request, Response } from "express";
 import cors from "cors";
@@ -6,36 +5,31 @@ import cookieParser from "cookie-parser";
 import swaggerUi from "swagger-ui-express";
 import * as path from "path";
 import * as fs from "fs/promises";
-import { IsNull } from "typeorm";
-import { AppDataSource } from "./data-source";
-import { swaggerSpec } from "./swagger";
-import { authMiddleware, adminMiddleware, csrfCheck } from "./middleware/auth";
-import { createAuthRouter } from "./routes/auth";
-import { createAdminRouter } from "./routes/admin";
-import { createNotesRouter, createNotesRenameRouter, createSharedNotesRouter } from "./routes/notes";
-import { createFoldersRouter, createFoldersRenameRouter } from "./routes/folders";
-import { createSearchRouter } from "./routes/search";
-import { createGraphRouter } from "./routes/graph";
-import { createSettingsRouter } from "./routes/settings";
-import { createBacklinksRouter } from "./routes/backlinks";
-import { createTagsRouter } from "./routes/tags";
-import { createDailyRouter } from "./routes/daily";
-import { createTemplatesRouter } from "./routes/templates";
-import { createCanvasRouter } from "./routes/canvas";
-import { createSharesRouter, createAccessRequestsRouter } from "./routes/shares";
-import { createUsersRouter } from "./routes/users";
-import { cleanupOldNotes, getUserNotesDir } from "./services/userNotesDir";
-import { SearchIndex } from "./entities/SearchIndex";
-import { GraphEdge } from "./entities/GraphEdge";
-import { Settings } from "./entities/Settings";
-import { InstalledPlugin } from "./entities/InstalledPlugin";
-import { PluginEventBus } from "./plugins/PluginEventBus";
-import { PluginHealthMonitor } from "./plugins/PluginHealthMonitor";
-import { PluginRouter } from "./plugins/PluginRouter";
-import { PluginApiFactory } from "./plugins/PluginApiFactory";
-import { PluginManager } from "./plugins/PluginManager";
-import { PluginWebSocket } from "./plugins/PluginWebSocket";
-import { createPluginsRouter } from "./routes/plugins";
+import { prisma } from "./prisma.js";
+import { swaggerSpec } from "./swagger.js";
+import { authMiddleware, adminMiddleware, csrfCheck } from "./middleware/auth.js";
+import { createAuthRouter } from "./routes/auth.js";
+import { createAdminRouter } from "./routes/admin.js";
+import { createNotesRouter, createNotesRenameRouter, createSharedNotesRouter } from "./routes/notes.js";
+import { createFoldersRouter, createFoldersRenameRouter } from "./routes/folders.js";
+import { createSearchRouter } from "./routes/search.js";
+import { createGraphRouter } from "./routes/graph.js";
+import { createSettingsRouter } from "./routes/settings.js";
+import { createBacklinksRouter } from "./routes/backlinks.js";
+import { createTagsRouter } from "./routes/tags.js";
+import { createDailyRouter } from "./routes/daily.js";
+import { createTemplatesRouter } from "./routes/templates.js";
+import { createCanvasRouter } from "./routes/canvas.js";
+import { createSharesRouter, createAccessRequestsRouter } from "./routes/shares.js";
+import { createUsersRouter } from "./routes/users.js";
+import { cleanupOldNotes, getUserNotesDir } from "./services/userNotesDir.js";
+import { PluginEventBus } from "./plugins/PluginEventBus.js";
+import { PluginHealthMonitor } from "./plugins/PluginHealthMonitor.js";
+import { PluginRouter } from "./plugins/PluginRouter.js";
+import { PluginApiFactory } from "./plugins/PluginApiFactory.js";
+import { PluginManager } from "./plugins/PluginManager.js";
+import { PluginWebSocket } from "./plugins/PluginWebSocket.js";
+import { createPluginsRouter } from "./routes/plugins.js";
 
 const PORT = parseInt(process.env.PORT || "3001", 10);
 const NOTES_DIR = path.resolve(
@@ -45,7 +39,7 @@ const NOTES_DIR = path.resolve(
 async function main(): Promise<void> {
   // Initialize the database
   try {
-    await AppDataSource.initialize();
+    await prisma.$connect();
     console.log("Database connection established.");
   } catch (err) {
     console.error("Failed to connect to database:", err);
@@ -60,18 +54,21 @@ async function main(): Promise<void> {
 
   // Clean up orphaned DB rows from pre-multiuser era (defensive)
   try {
-    await AppDataSource.getRepository(SearchIndex).delete({ userId: "" });
-    await AppDataSource.getRepository(GraphEdge).delete({ userId: "" });
+    await prisma.searchIndex.deleteMany({ where: { userId: "" } });
+    await prisma.graphEdge.deleteMany({ where: { userId: "" } });
   } catch (err) {
     console.log("Orphan cleanup skipped (table may have been recreated):", err);
   }
 
   // Ensure registration_mode global setting exists
-  const settingsRepo = AppDataSource.getRepository(Settings);
-  const regMode = await settingsRepo.findOneBy({ key: "registration_mode", userId: IsNull() });
+  const GLOBAL_USER = "__global__";
+  const regMode = await prisma.settings.findUnique({
+    where: { key_userId: { key: "registration_mode", userId: GLOBAL_USER } },
+  });
   if (!regMode) {
-    const s = settingsRepo.create({ key: "registration_mode", value: "open", userId: null });
-    await settingsRepo.save(s);
+    await prisma.settings.create({
+      data: { key: "registration_mode", value: "open", userId: GLOBAL_USER },
+    });
     console.log("Created default registration_mode = open");
   }
 
@@ -104,8 +101,10 @@ async function main(): Promise<void> {
     onDisable: async (pluginId) => {
       console.warn(`[plugins] Auto-disabling plugin ${pluginId} due to excessive errors`);
       await managerRef.instance?.disablePlugin(pluginId);
-      const repo = AppDataSource.getRepository(InstalledPlugin);
-      await repo.update(pluginId, { enabled: false, state: "error", error: "Auto-disabled: too many errors" });
+      await prisma.installedPlugin.update({
+        where: { id: pluginId },
+        data: { enabled: false, state: "error", error: "Auto-disabled: too many errors" },
+      });
     },
   });
   const apiFactory = new PluginApiFactory({
@@ -120,7 +119,6 @@ async function main(): Promise<void> {
     pluginRouter,
     healthMonitor,
     apiFactory,
-    dataSource: AppDataSource,
   });
   managerRef.instance = pluginManager;
 

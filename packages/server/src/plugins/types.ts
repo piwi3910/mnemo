@@ -1,5 +1,4 @@
 import { RequestHandler } from "express";
-import { EntitySchema, Repository } from "typeorm";
 
 // --- Plugin Manifest (parsed from manifest.json) ---
 
@@ -105,11 +104,6 @@ export interface PluginAPI {
     set(key: string, value: unknown, userId?: string): Promise<void>;
     delete(key: string, userId?: string): Promise<void>;
     list(prefix?: string, userId?: string): Promise<StorageEntry[]>;
-  };
-
-  database: {
-    registerEntity(entity: EntitySchema): void;
-    getRepository(entity: EntitySchema): Repository<object>;
   };
 
   settings: {

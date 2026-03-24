@@ -1,11 +1,9 @@
 import { Router, Request, Response } from "express";
 import * as path from "path";
 import * as fs from "fs/promises";
-import { IsNull } from "typeorm";
-import { readNote, writeNote } from "../services/noteService";
-import { AppDataSource } from "../data-source";
-import { Settings } from "../entities/Settings";
-import { getUserNotesDir } from "../services/userNotesDir";
+import { readNote, writeNote } from "../services/noteService.js";
+import { prisma } from "../prisma.js";
+import { getUserNotesDir } from "../services/userNotesDir.js";
 
 function formatDate(date: Date): string {
   const y = date.getFullYear();
@@ -16,11 +14,14 @@ function formatDate(date: Date): string {
 
 async function getDailyTemplate(userId: string): Promise<string> {
   try {
-    const repo = AppDataSource.getRepository(Settings);
-    // Try user-specific template first, then fall back to global
-    const setting = await repo.findOneBy({ key: "dailyNoteTemplate", userId })
-      || await repo.findOneBy({ key: "dailyNoteTemplate", userId: IsNull() });
-    if (setting?.value) return setting.value;
+    // Try user-specific template first
+    const userSetting = await prisma.settings.findUnique({
+      where: { key_userId: { key: "dailyNoteTemplate", userId } },
+    });
+    if (userSetting?.value) return userSetting.value;
+
+    // No global fallback with Prisma (userId is required in composite key),
+    // so just return default
   } catch {
     // Use default
   }

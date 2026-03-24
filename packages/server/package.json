@@ -23,10 +23,8 @@
     "jsonwebtoken": "^9.0.3",
     "nodemailer": "^8.0.3",
     "pg": "^8.20.0",
-    "reflect-metadata": "^0.2.2",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",
-    "typeorm": "^0.3.28",
     "ws": "^8.20.0"
   },
   "devDependencies": {

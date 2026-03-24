@@ -1,15 +1,14 @@
 import path from "path";
 import fs from "fs";
 import { Router } from "express";
-import { PluginManager } from "../plugins/PluginManager";
-import { adminMiddleware } from "../middleware/auth";
+import { PluginManager } from "../plugins/PluginManager.js";
+import { adminMiddleware } from "../middleware/auth.js";
 import {
   fetchRegistry,
   downloadPlugin,
   checkForUpdates,
-} from "../services/pluginRegistryService";
-import { AppDataSource } from "../data-source";
-import { InstalledPlugin } from "../entities/InstalledPlugin";
+} from "../services/pluginRegistryService.js";
+import { prisma } from "../prisma.js";
 
 /**
  * @swagger
@@ -188,8 +187,7 @@ export function createPluginsRouter(pluginManager: PluginManager, pluginsDir: st
    */
   router.get("/updates", adminMiddleware, async (_req, res) => {
     try {
-      const repo = AppDataSource.getRepository(InstalledPlugin);
-      const installed = await repo.find();
+      const installed = await prisma.installedPlugin.findMany();
       const updates = await checkForUpdates(
         installed.map((p) => ({ id: p.id, version: p.version }))
       );
@@ -308,8 +306,7 @@ export function createPluginsRouter(pluginManager: PluginManager, pluginsDir: st
         fs.rmSync(pluginDir, { recursive: true, force: true });
       }
 
-      const repo = AppDataSource.getRepository(InstalledPlugin);
-      await repo.delete(id);
+      await prisma.installedPlugin.delete({ where: { id } });
 
       // Note: PluginStorage entries are intentionally kept to preserve user data
 
