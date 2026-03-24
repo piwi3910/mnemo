@@ -1,4 +1,4 @@
-import { MutableRefObject } from 'react';
+import { MutableRefObject, ComponentType } from 'react';
 import { Extension } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import { FileNode } from '../../lib/api';
@@ -19,6 +19,7 @@ interface EditModeViewProps {
   editorViewRef: MutableRefObject<EditorView | undefined>;
   previewRef: MutableRefObject<HTMLDivElement | null>;
   pluginExtensions?: Extension[];
+  getCodeFenceRenderer?: (language: string) => { component: ComponentType<{ content: string; notePath: string }> } | undefined;
   onSave: () => void;
   onCancel: () => void;
   onToggleStar: () => void;
@@ -34,6 +35,7 @@ export function EditModeView({
   activeNote, editContent, originalContent,
   isStarred, resolvedTheme, allNotes,
   editorViewRef, previewRef, pluginExtensions,
+  getCodeFenceRenderer,
   onSave, onCancel, onToggleStar, onPdfExport,
   onContentChange, onCursorStateChange,
   onNoteSelect, onLinkClick, onCreateNote,
@@ -113,6 +115,8 @@ export function EditModeView({
             onLinkClick={onLinkClick}
             allNotes={allNotes}
             onCreateNote={onCreateNote}
+            notePath={activeNote.path}
+            getCodeFenceRenderer={getCodeFenceRenderer}
           />
         </div>
       </div>

@@ -1,7 +1,7 @@
+import React, { useCallback, useEffect, useState, useMemo, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
-import { useCallback, useEffect, useState, useMemo, useRef } from 'react';
 import { api, FileNode } from '../../lib/api';
 
 interface PreviewProps {
@@ -9,6 +9,8 @@ interface PreviewProps {
   onLinkClick: (noteName: string) => void;
   allNotes?: FileNode[];
   onCreateNote?: (name: string) => void;
+  notePath?: string;
+  getCodeFenceRenderer?: (language: string) => { component: React.ComponentType<{ content: string; notePath: string }> } | undefined;
 }
 
 const IMAGE_EXTENSIONS = /\.(png|jpg|jpeg|gif|svg|webp|bmp)$/i;
@@ -193,7 +195,7 @@ function DataviewBlock({ query, onLinkClick }: { query: string; onLinkClick: (na
   );
 }
 
-export function Preview({ content, onLinkClick, allNotes, onCreateNote }: PreviewProps) {
+export function Preview({ content, onLinkClick, allNotes, onCreateNote, notePath = '', getCodeFenceRenderer }: PreviewProps) {
   const [embeddedNotes, setEmbeddedNotes] = useState<Record<string, string>>({});
 
   const existingNotes = useMemo(() => {
@@ -331,12 +333,30 @@ export function Preview({ content, onLinkClick, allNotes, onCreateNote }: Previe
     };
   }, []);
 
+  const codeComponent = useMemo(() => {
+    return function CodeBlock({ className, children, ...props }: React.HTMLAttributes<HTMLElement>) {
+      const match = className?.match(/language-(\w+)/);
+      const language = match?.[1];
+
+      if (language && getCodeFenceRenderer) {
+        const renderer = getCodeFenceRenderer(language);
+        if (renderer) {
+          const pluginContent = String(children).replace(/\n$/, '');
+          const RendererComponent = renderer.component;
+          return <RendererComponent content={pluginContent} notePath={notePath} />;
+        }
+      }
+
+      return <code className={className} {...props}>{children}</code>;
+    };
+  }, [getCodeFenceRenderer, notePath]);
+
   return (
     <div className="markdown-preview p-6 max-w-3xl mx-auto" onClick={handleClick}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[rehypeRaw]}
-        components={headingComponents}
+        components={{ ...headingComponents, code: codeComponent }}
       >
         {transformedContent}
       </ReactMarkdown>

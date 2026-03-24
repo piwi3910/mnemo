@@ -101,7 +101,7 @@ function AppContent() {
 
   useKeyboardShortcuts(shortcutActions);
 
-  const { editorExtensions } = usePluginSlots();
+  const { editorExtensions, getCodeFenceRenderer } = usePluginSlots();
 
   if (loading) {
     return (
@@ -169,6 +169,7 @@ function AppContent() {
                   editorViewRef={editorViewRef}
                   previewRef={previewRef}
                   pluginExtensions={editorExtensions}
+                  getCodeFenceRenderer={getCodeFenceRenderer}
                   onSave={saveEdit}
                   onCancel={cancelEdit}
                   onToggleStar={toggleActiveNoteStar}
@@ -192,6 +193,7 @@ function AppContent() {
                   onNoteSelect={handleNoteSelect}
                   onLinkClick={handleLinkClick}
                   onCreateNote={handleCreateNoteFromLink}
+                  getCodeFenceRenderer={getCodeFenceRenderer}
                 />
               )
             ) : (

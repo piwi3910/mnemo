@@ -1,4 +1,4 @@
-import { MutableRefObject } from 'react';
+import { MutableRefObject, ComponentType } from 'react';
 import { FileNode } from '../../lib/api';
 import { Preview } from '../Preview/Preview';
 import { OutgoingLinksPanel } from '../OutgoingLinks/OutgoingLinksPanel';
@@ -17,12 +17,13 @@ interface PreviewModeViewProps {
   onNoteSelect: (path: string) => void;
   onLinkClick: (name: string) => void;
   onCreateNote: (name: string) => void;
+  getCodeFenceRenderer?: (language: string) => { component: ComponentType<{ content: string; notePath: string }> } | undefined;
 }
 
 export function PreviewModeView({
   activeNote, isStarred, allNotes, previewRef,
   onEdit, onShare, onToggleStar, onPdfExport,
-  onNoteSelect, onLinkClick, onCreateNote,
+  onNoteSelect, onLinkClick, onCreateNote, getCodeFenceRenderer,
 }: PreviewModeViewProps) {
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
@@ -53,7 +54,14 @@ export function PreviewModeView({
         </div>
       </div>
       <div className="flex-1 overflow-y-auto" ref={previewRef}>
-        <Preview content={activeNote.content} onLinkClick={onLinkClick} allNotes={allNotes} onCreateNote={onCreateNote} />
+        <Preview
+          content={activeNote.content}
+          onLinkClick={onLinkClick}
+          allNotes={allNotes}
+          onCreateNote={onCreateNote}
+          notePath={activeNote.path}
+          getCodeFenceRenderer={getCodeFenceRenderer}
+        />
       </div>
       <OutgoingLinksPanel content={activeNote.content} allNotes={allNotes} onNoteSelect={onNoteSelect} onCreateNote={onCreateNote} />
       <BacklinksPanel notePath={activeNote.path} onNoteSelect={onNoteSelect} />
