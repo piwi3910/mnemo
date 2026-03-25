@@ -54,14 +54,22 @@
 - **Custom Mnemo logo** and branding
 
 ### Security
-- **JWT access tokens** (15min) + **SHA-256 hashed refresh tokens** (30 days) in httpOnly cookies
-- **CSRF protection** via `X-Requested-With` header
+- **Session-based auth** via better-auth with httpOnly cookies (7-day expiry, 5-min cache)
+- **Passkey / WebAuthn** support for passwordless login
+- **API keys** with SHA-256 hashed storage, scoped access, optional expiration
 - **Path traversal prevention** on all file routes
+- **Rate limiting** — per-IP for browser sessions, per-key for API access
 - **Password management** — change password, admin reset, forgot password via email (optional SMTP)
 
-### API
+### API & AI Agent Access
 - **Swagger/OpenAPI docs** at `/api/docs` — auto-generated from JSDoc annotations
-- **25+ REST endpoints** covering notes, search, graph, settings, sharing, auth, admin
+- **30+ REST endpoints** covering notes, search, graph, settings, sharing, auth, admin
+- **API Keys** — create scoped keys (read-only / read-write) for programmatic access
+- **Built-in MCP server** at `/api/mcp` — [Model Context Protocol](https://modelcontextprotocol.io/) for AI agents (Claude Code, Cursor, etc.)
+- **Dynamic tool discovery** — plugin routes with OpenAPI annotations are automatically exposed as MCP tools
+
+### Account Settings
+- **Unified settings page** — manage password, passkeys, and API keys in one place
 
 ---
 
@@ -70,11 +78,11 @@
 | Component | Technology |
 |-----------|------------|
 | Frontend | React 19, Vite 8, TypeScript 5.9, Tailwind CSS 4 |
-| Backend | Express 5, TypeORM, TypeScript 5.9 |
+| Backend | Express 5, Prisma 7, TypeScript 5.9 |
 | Database | PostgreSQL 16 |
 | Editor | CodeMirror 6 with Vim mode |
 | Graph | D3.js force-directed |
-| Auth | JWT, bcrypt, OAuth (Google/GitHub) |
+| Auth | better-auth (sessions, OAuth, passkeys) |
 | Runtime | Node.js 24 |
 
 ---
@@ -264,10 +272,12 @@ Access at http://localhost:3100
                        │ REST API
 ┌──────────────────────┴─────────────────────────────────────┐
 │  Express 5 Server (TypeScript)                              │
-│  ├── Auth (JWT + OAuth + CSRF)                              │
+│  ├── Auth (better-auth sessions + OAuth + passkeys)         │
 │  ├── Notes, Folders, Search, Graph, Tags                    │
 │  ├── Sharing & Access Requests                              │
 │  ├── Admin (users, invites, settings)                       │
+│  ├── API Keys (bearer auth, scoped access)                  │
+│  ├── MCP Server (AI agent access via Streamable HTTP)       │
 │  ├── Plugin system (server + client extensions)             │
 │  ├── WebSocket for real-time plugin communication           │
 │  └── Swagger API Docs                                       │
@@ -314,6 +324,10 @@ npm run test --workspace=packages/client  # Client only
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for setup instructions, code style, and PR process.
+
+## API Keys & AI Agent Access
+
+See [docs/API-ACCESS.md](docs/API-ACCESS.md) for how to create API keys, connect AI agents via MCP, and use the REST API programmatically.
 
 ## Plugin Development
 
