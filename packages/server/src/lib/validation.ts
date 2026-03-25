@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+// --- Note schemas ---
 export const createNoteSchema = z.object({
   path: z.string().min(1).max(500),
   content: z.string().max(1_000_000),
@@ -9,19 +10,70 @@ export const updateNoteSchema = z.object({
   content: z.string().max(1_000_000),
 });
 
+export const renameNoteSchema = z.object({
+  newPath: z.string().min(1).max(500),
+});
+
+// --- Folder schemas ---
 export const createFolderSchema = z.object({
   name: z.string().min(1).max(200),
 });
 
+export const renameFolderSchema = z.object({
+  newPath: z.string().min(1).max(500),
+});
+
+// --- Canvas schemas ---
+export const createCanvasSchema = z.object({
+  name: z.string().min(1).max(200),
+  content: z.unknown().optional(),
+});
+
+// --- Settings schemas ---
 export const updateSettingSchema = z.object({
   value: z.string(),
 });
 
+// --- Share schemas ---
 export const createShareSchema = z.object({
   path: z.string().min(1),
-  sharedWithEmail: z.string().email(),
-  permission: z.enum(["read", "read-write"]),
+  sharedWithUserId: z.string().min(1),
+  permission: z.enum(["read", "readwrite"]),
   isFolder: z.boolean().optional(),
+});
+
+export const updateShareSchema = z.object({
+  permission: z.enum(["read", "readwrite"]),
+});
+
+// --- Access request schemas ---
+export const createAccessRequestSchema = z.object({
+  ownerUserId: z.string().min(1),
+  notePath: z.string().min(1),
+  message: z.string().max(500).optional(),
+});
+
+export const updateAccessRequestSchema = z.object({
+  status: z.enum(["approved", "denied"]),
+  permission: z.enum(["read", "readwrite"]).optional(),
+});
+
+// --- Admin schemas ---
+export const updateUserSchema = z.object({
+  disabled: z.boolean().optional(),
+  role: z.enum(["user", "admin"]).optional(),
+});
+
+export const resetPasswordSchema = z.object({
+  newPassword: z.string().min(8).max(72),
+});
+
+export const createInviteSchema = z.object({
+  expiresAt: z.string().datetime().optional(),
+});
+
+export const registrationModeSchema = z.object({
+  mode: z.enum(["open", "invite-only"]),
 });
 
 // Helper to validate and return parsed body or send 400
