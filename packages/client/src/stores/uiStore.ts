@@ -24,6 +24,7 @@ interface UIState {
   showShareDialog: boolean;
   shareTarget: { path: string; isFolder: boolean } | null;
   showAccessRequests: boolean;
+  showAccountSettings: boolean;
 
   // Editor
   cursorState: { line: number; col: number; wordCount: number };
@@ -45,6 +46,7 @@ interface UIState {
   setShowShareDialog: SetState<boolean>;
   setShareTarget: SetState<{ path: string; isFolder: boolean } | null>;
   setShowAccessRequests: SetState<boolean>;
+  setShowAccountSettings: SetState<boolean>;
 
   // Compound actions
   enterEditMode: (content: string) => void;
@@ -77,6 +79,7 @@ export const useUIStore = create<UIState>((set, get) => ({
   showShareDialog: false,
   shareTarget: null,
   showAccessRequests: false,
+  showAccountSettings: false,
   cursorState: { line: 1, col: 1, wordCount: 0 },
 
   // Setters — all support updater functions
@@ -96,6 +99,7 @@ export const useUIStore = create<UIState>((set, get) => ({
   setShowShareDialog: (v) => set({ showShareDialog: resolve(v, get().showShareDialog) }),
   setShareTarget: (v) => set({ shareTarget: resolve(v, get().shareTarget) }),
   setShowAccessRequests: (v) => set({ showAccessRequests: resolve(v, get().showAccessRequests) }),
+  setShowAccountSettings: (v) => set({ showAccountSettings: resolve(v, get().showAccountSettings) }),
 
   enterEditMode: (content) => set({ editing: true, editContent: content, originalContent: content }),
   cancelEdit: () => set({ editing: false, editContent: null, originalContent: null }),
@@ -115,6 +119,7 @@ export const useUIStore = create<UIState>((set, get) => ({
     showShareDialog: false,
     shareTarget: null,
     showAccessRequests: false,
+    showAccountSettings: false,
     cursorState: { line: 1, col: 1, wordCount: 0 },
   }),
 }));
