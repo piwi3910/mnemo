@@ -14,8 +14,7 @@
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
-    "strictPropertyInitialization": false,
-    "types": ["vitest/globals", "node"]
+"types": ["vitest/globals", "node"]
   },
   "include": ["src"],
   "exclude": ["node_modules", "dist"]
