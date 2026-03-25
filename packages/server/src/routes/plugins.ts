@@ -49,7 +49,7 @@ export function createPluginsRouter(pluginManager: PluginManager, pluginsDir: st
     );
   });
 
-  router.get("/all", (_req, res) => {
+  router.get("/all", adminMiddleware, (_req, res) => {
     const all = pluginManager.listPlugins();
     res.json(
       all.map((p) => ({
