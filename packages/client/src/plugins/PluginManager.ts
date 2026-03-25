@@ -3,6 +3,18 @@ import { ClientPluginAPI, ClientPluginModule, ActivePluginInfo } from "./types";
 import { request } from "../lib/api";
 
 export class ClientPluginManager {
+  private onGraphUpdatedCallbacks: (() => void)[] = [];
+
+  /**
+   * Register a callback to be called when the server broadcasts a graph:updated event.
+   * Used to invalidate the graph query cache for real-time updates.
+   */
+  onGraphUpdated(callback: () => void): () => void {
+    this.onGraphUpdatedCallbacks.push(callback);
+    return () => {
+      this.onGraphUpdatedCallbacks = this.onGraphUpdatedCallbacks.filter((cb) => cb !== callback);
+    };
+  }
   private registry: PluginSlotRegistry;
   private loadedPlugins = new Map<string, ClientPluginModule>();
   private ws: WebSocket | null = null;
@@ -59,8 +71,12 @@ export class ClientPluginManager {
 
     this.ws.addEventListener("message", (event) => {
       try {
-        const { event: evtName, data } = JSON.parse(event.data as string) as { event: string; data: { id: string; client?: string } };
-        this.handlePluginEvent(evtName, data);
+        const { event: evtName, data } = JSON.parse(event.data as string) as { event: string; data: { id?: string; client?: string } };
+        if (evtName === "graph:updated") {
+          this.onGraphUpdatedCallbacks.forEach((cb) => cb());
+        } else {
+          this.handlePluginEvent(evtName, data as { id: string; client?: string });
+        }
       } catch (err) {
         console.warn("[plugins] Failed to parse WebSocket message:", err);
       }

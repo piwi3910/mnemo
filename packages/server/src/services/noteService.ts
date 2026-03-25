@@ -2,6 +2,18 @@ import * as fs from "fs/promises";
 import * as path from "path";
 import { indexNote, removeFromIndex, renameInIndex, extractTitle } from "./searchService.js";
 import { updateGraphCache, removeFromGraph, renameInGraph } from "./graphService.js";
+import type { PluginWebSocket } from "../plugins/PluginWebSocket.js";
+
+// Optional WebSocket instance for broadcasting graph updates
+let pluginWs: PluginWebSocket | null = null;
+
+/**
+ * Register the WebSocket instance to broadcast graph update events.
+ * Call this once from index.ts after creating PluginWebSocket.
+ */
+export function setGraphWebSocket(ws: PluginWebSocket): void {
+  pluginWs = ws;
+}
 import { prisma } from "../prisma.js";
 import { createLogger } from "../lib/logger.js";
 
@@ -117,6 +129,9 @@ export async function writeNote(
     indexNote(notePath, content, userId),
     updateGraphCache(notePath, content, userId),
   ]);
+
+  // Notify connected clients that the graph has changed
+  pluginWs?.broadcast("graph:updated", { notePath, userId });
 }
 
 /**

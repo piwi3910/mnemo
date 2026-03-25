@@ -107,7 +107,7 @@ function AppModals({
 }
 
 function AppContent() {
-  const state = useAppState();
+  const state = useAppState(pluginManager);
   const callbacks = useAppCallbacks(state);
 
   const {

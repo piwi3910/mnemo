@@ -1,4 +1,5 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { api, shareApi, FileNode, NoteData, GraphData, SharedWithMeData } from '../lib/api';
 
 // Notes tree
@@ -28,6 +29,20 @@ export function useGraphQuery(userId?: string, treeKey?: number) {
     enabled: !!userId,
     staleTime: 60_000,
   });
+}
+
+// Real-time graph refresh: invalidate graph query when server broadcasts graph:updated
+export function useGraphRealtimeUpdates(
+  pluginManager: import('../plugins/PluginManager').ClientPluginManager | null,
+  userId?: string
+): void {
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    if (!pluginManager || !userId) return;
+    return pluginManager.onGraphUpdated(() => {
+      queryClient.invalidateQueries({ queryKey: ['graph', userId] });
+    });
+  }, [pluginManager, userId, queryClient]);
 }
 
 // Starred notes

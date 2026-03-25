@@ -7,9 +7,9 @@ import { useNotes } from './useNotes';
 import { useAuth } from './useAuth';
 import { GraphData } from '../lib/api';
 import { useUIStore } from '../stores/uiStore';
-import { useGraphQuery, useStarredNotes, useSharedNotes } from './useNotesQuery';
+import { useGraphQuery, useStarredNotes, useSharedNotes, useGraphRealtimeUpdates } from './useNotesQuery';
 
-export function useAppState() {
+export function useAppState(pluginManager?: import('../plugins/PluginManager').ClientPluginManager | null) {
   const { user, loading } = useAuth();
   const themeCtx = useTheme();
   const notes = useNotes(user?.id);
@@ -64,6 +64,9 @@ export function useAppState() {
   // --- TanStack Query for server data (replaces useEffect fetches) ---
   const treeKey = notes.tree.length;
   const graphQuery = useGraphQuery(user?.id, treeKey);
+
+  // Invalidate graph query when server signals an update via WebSocket
+  useGraphRealtimeUpdates(pluginManager ?? null, user?.id);
   const graphData: GraphData | null = graphQuery.data ?? null;
   const graphLoading = graphQuery.isLoading;
 
