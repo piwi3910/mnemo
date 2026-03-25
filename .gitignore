@@ -7,6 +7,7 @@ notes/
 pgdata/
 .DS_Store
 .superpowers/
+.worktrees/
 *.tsbuildinfo
 
 # Installed plugins (downloaded from registry at runtime)
