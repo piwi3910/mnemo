@@ -3,8 +3,34 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkWikiLink from 'remark-wiki-link';
 import rehypeRaw from 'rehype-raw';
+import rehypeSanitize, { defaultSchema } from 'rehype-sanitize';
 import { api, FileNode } from '../../lib/api';
 import { rehypeWikiLinks } from '../../lib/rehype-wiki-links';
+
+const sanitizeSchema = {
+  ...defaultSchema,
+  tagNames: (defaultSchema.tagNames ?? []).filter(
+    (tag) => !['script', 'iframe', 'object', 'embed', 'form'].includes(tag),
+  ),
+  attributes: {
+    ...defaultSchema.attributes,
+    div: [...(defaultSchema.attributes?.div ?? []), 'className', 'class'],
+    span: [...(defaultSchema.attributes?.span ?? []), 'className', 'class'],
+    a: [...(defaultSchema.attributes?.a ?? []), 'className', 'class', 'dataWikiTarget', 'data-wiki-target'],
+    img: [...(defaultSchema.attributes?.img ?? []), 'className', 'class', 'src', 'alt'],
+    code: [...(defaultSchema.attributes?.code ?? []), 'className', 'class'],
+    pre: [...(defaultSchema.attributes?.pre ?? []), 'className', 'class'],
+  },
+};
+
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
 
 interface PreviewProps {
   content: string;
@@ -258,7 +284,7 @@ export function Preview({ content, onLinkClick, allNotes, onCreateNote, notePath
     .replace(
       /!\[\[([^\]]+\.(png|jpg|jpeg|gif|svg|webp|bmp))\]\]/gi,
       (_match, fileName: string) =>
-        `<div class="embed-image"><img src="/api/files/${encodeURIComponent(fileName)}" alt="${fileName}" /></div>`
+        `<div class="embed-image"><img src="/api/files/${encodeURIComponent(fileName)}" alt="${escapeHtml(fileName)}" /></div>`
     )
     // Note embeds: ![[Note Name]] → embedded content
     .replace(
@@ -267,10 +293,10 @@ export function Preview({ content, onLinkClick, allNotes, onCreateNote, notePath
         if (IMAGE_EXTENSIONS.test(noteName)) return _match;
         const noteContent = embeddedNotes[noteName];
         if (noteContent === undefined) {
-          return `<div class="embed-note embed-loading"><div class="embed-note-header">${noteName}</div><p class="embed-note-loading-text">Loading...</p></div>`;
+          return `<div class="embed-note embed-loading"><div class="embed-note-header">${escapeHtml(noteName)}</div><p class="embed-note-loading-text">Loading...</p></div>`;
         }
         const strippedContent = noteContent.replace(/^#\s+.+\n?/, '');
-        return `<div class="embed-note"><div class="embed-note-header"><a class="wiki-link" data-wiki-target="${noteName}" href="#">${noteName}</a></div>\n\n${strippedContent}\n\n</div>`;
+        return `<div class="embed-note"><div class="embed-note-header"><a class="wiki-link" data-wiki-target="${escapeHtml(noteName)}" href="#">${escapeHtml(noteName)}</a></div>\n\n${strippedContent}\n\n</div>`;
       }
     );
 
@@ -346,6 +372,7 @@ export function Preview({ content, onLinkClick, allNotes, onCreateNote, notePath
         ]}
         rehypePlugins={[
           rehypeRaw,
+          [rehypeSanitize, sanitizeSchema],
           [rehypeWikiLinks, { existingNotes }],
         ]}
         components={{ ...headingComponents, code: codeComponent }}
