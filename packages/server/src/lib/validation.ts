@@ -54,7 +54,7 @@ export const createAccessRequestSchema = z.object({
 });
 
 export const updateAccessRequestSchema = z.object({
-  status: z.enum(["approved", "denied"]),
+  action: z.enum(["approve", "deny"]),
   permission: z.enum(["read", "readwrite"]).optional(),
 });
 

@@ -445,7 +445,7 @@ export function createAccessRequestsRouter(): Router {
         res.status(400).json({ error: parsed.error });
         return;
       }
-      const { status: action, permission } = parsed.data;
+      const { action, permission } = parsed.data;
 
       const request = await prisma.accessRequest.findUnique({ where: { id } });
 
@@ -459,7 +459,7 @@ export function createAccessRequestsRouter(): Router {
         return;
       }
 
-      if (action === "approved") {
+      if (action === "approve") {
         if (!permission) {
           res.status(400).json({ error: "permission is required when approving" });
           return;
