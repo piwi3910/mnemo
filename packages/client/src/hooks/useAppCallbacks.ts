@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { api } from '../lib/api';
 import { exportNoteToPdf } from '../lib/exportPdf';
+import { useUIStore } from '../stores/uiStore';
 import { AppState } from './useAppState';
 
 export function useAppCallbacks(state: AppState) {
@@ -16,12 +17,15 @@ export function useAppCallbacks(state: AppState) {
     pendingTemplatePath,
   } = state;
 
+  const storeEnterEditMode = useUIStore((s) => s.enterEditMode);
+  const storeCancelEdit = useUIStore((s) => s.cancelEdit);
+
   const toggleStar = useCallback((path: string) => {
     setStarredPaths(prev => {
       const next = new Set(prev);
       if (next.has(path)) next.delete(path);
       else next.add(path);
-      api.updateSetting('starred', JSON.stringify(Array.from(next))).catch(() => {});
+      api.updateSetting('starred', JSON.stringify(Array.from(next))).catch((err) => console.error("[starred] Failed to persist:", err));
       return next;
     });
   }, [setStarredPaths]);
@@ -147,10 +151,8 @@ export function useAppCallbacks(state: AppState) {
 
   const enterEditMode = useCallback(() => {
     if (!notes.activeNote) return;
-    setOriginalContent(notes.activeNote.content);
-    setEditContent(notes.activeNote.content);
-    setEditing(true);
-  }, [notes.activeNote, setOriginalContent, setEditContent, setEditing]);
+    storeEnterEditMode(notes.activeNote.content);
+  }, [notes.activeNote, storeEnterEditMode]);
 
   const saveEdit = useCallback(async () => {
     if (!notes.activeNote || editContent === null) return;
@@ -164,10 +166,8 @@ export function useAppCallbacks(state: AppState) {
     if (originalContent !== null && notes.activeNote) {
       notes.setActiveNoteContent(originalContent);
     }
-    setEditing(false);
-    setEditContent(null);
-    setOriginalContent(null);
-  }, [originalContent, notes, setEditing, setEditContent, setOriginalContent]);
+    storeCancelEdit();
+  }, [originalContent, notes, storeCancelEdit]);
 
   const handleSidebarResize = useCallback((delta: number) => {
     setSidebarWidth(w => Math.max(180, Math.min(500, w + delta)));

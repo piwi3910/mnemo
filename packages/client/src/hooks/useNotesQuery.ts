@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { api, shareApi, FileNode, NoteData, GraphData, SharedWithMeData } from '../lib/api';
 
 // Notes tree
@@ -59,34 +59,3 @@ export function useSharedNotes(userId?: string) {
   });
 }
 
-// Mutation: update starred paths (optimistic)
-export function useUpdateStarred() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (starredPaths: Set<string>) => {
-      await api.updateSetting('starred', JSON.stringify(Array.from(starredPaths)));
-    },
-    onMutate: async (newStarred) => {
-      // Cancel outgoing refetches
-      await queryClient.cancelQueries({ queryKey: ['settings', 'starred'] });
-      // Snapshot previous value
-      const previous = queryClient.getQueryData<Set<string>>(['settings', 'starred']);
-      // Optimistically update - update all starred queries
-      queryClient.setQueriesData<Set<string>>(
-        { queryKey: ['settings', 'starred'] },
-        () => newStarred,
-      );
-      return { previous };
-    },
-    onError: (_err, _vars, context) => {
-      // Rollback on error
-      if (context?.previous) {
-        queryClient.setQueriesData<Set<string>>(
-          { queryKey: ['settings', 'starred'] },
-          () => context.previous,
-        );
-      }
-    },
-  });
-}
