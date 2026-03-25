@@ -81,9 +81,9 @@ function stripMarkdown(content: string): string {
     content
       // Remove headings markers
       .replace(/^#{1,6}\s+/gm, "")
-      // Remove bold/italic markers
-      .replace(/\*{1,3}([^*]+)\*{1,3}/g, "$1")
-      .replace(/_{1,3}([^_]+)_{1,3}/g, "$1")
+      // Remove bold/italic markers (lazy quantifiers to avoid ReDoS)
+      .replace(/\*{1,3}(.*?)\*{1,3}/g, "$1")
+      .replace(/_{1,3}(.*?)_{1,3}/g, "$1")
       // Remove wiki links but keep text
       .replace(/\[\[([^\]]+)\]\]/g, "$1")
       // Remove markdown links
@@ -244,7 +244,10 @@ export async function renameInIndex(
  * Get all tags across all notes with their counts.
  */
 export async function getAllTags(userId: string): Promise<{ tag: string; count: number }[]> {
-  const allNotes = await prisma.searchIndex.findMany({ where: { userId } });
+  const allNotes = await prisma.searchIndex.findMany({
+    where: { userId },
+    select: { notePath: true, title: true, tags: true },
+  });
 
   const tagCounts = new Map<string, number>();
   for (const note of allNotes) {
@@ -267,9 +270,12 @@ export async function getNotesByTag(
   tag: string,
   userId: string
 ): Promise<{ notePath: string; title: string }[]> {
-  const allNotes = await prisma.searchIndex.findMany({ where: { userId } });
+  const allNotes = await prisma.searchIndex.findMany({
+    where: { userId },
+    select: { notePath: true, title: true, tags: true },
+  });
 
-  return (allNotes as SearchIndexRow[])
+  return allNotes
     .filter((note) => note.tags.includes(tag))
     .map((note) => ({ notePath: note.notePath, title: note.title }));
 }
@@ -339,14 +345,20 @@ export async function search(query: string, userId: string): Promise<SearchResul
       .filter((r): r is SearchResult => r !== null);
   }
 
-  // 3. Shared notes — Prisma ILIKE (shared notes' owners may not have indices built)
+  // 3. Shared notes — single batched query instead of N per-share queries
   const shares = await prisma.noteShare.findMany({
     where: { sharedWithUserId: userId },
   });
 
-  const sharedResults: SearchResult[] = [];
+  let sharedResults: SearchResult[] = [];
 
-  for (const share of shares) {
+  if (shares.length > 0) {
+    const shareConditions = shares.map((s) =>
+      s.isFolder
+        ? { userId: s.ownerUserId, notePath: { startsWith: s.path } }
+        : { userId: s.ownerUserId, notePath: s.path }
+    );
+
     const queryFilter = query.trim()
       ? {
           OR: [
@@ -356,37 +368,25 @@ export async function search(query: string, userId: string): Promise<SearchResul
         }
       : {};
 
-    let matchingNotes;
+    const matchingNotes = await prisma.searchIndex.findMany({
+      where: {
+        AND: [
+          { OR: shareConditions },
+          queryFilter,
+        ],
+      },
+      select: { notePath: true, title: true, content: true, tags: true, modifiedAt: true, userId: true },
+    });
 
-    if (!share.isFolder) {
-      matchingNotes = await prisma.searchIndex.findMany({
-        where: {
-          notePath: share.path,
-          userId: share.ownerUserId,
-          ...queryFilter,
-        },
-      });
-    } else {
-      matchingNotes = await prisma.searchIndex.findMany({
-        where: {
-          notePath: { startsWith: share.path },
-          userId: share.ownerUserId,
-          ...queryFilter,
-        },
-      });
-    }
-
-    for (const r of matchingNotes) {
-      sharedResults.push({
-        path: r.notePath,
-        title: r.title,
-        snippet: createSnippet(r.content, query),
-        tags: r.tags,
-        modifiedAt: r.modifiedAt,
-        isShared: true,
-        ownerUserId: r.userId,
-      });
-    }
+    sharedResults = matchingNotes.map((r) => ({
+      path: r.notePath,
+      title: r.title,
+      snippet: createSnippet(r.content, query),
+      tags: r.tags,
+      modifiedAt: r.modifiedAt,
+      isShared: true,
+      ownerUserId: r.userId,
+    }));
   }
 
   // 4. Combine and deduplicate by path (own notes take priority)

@@ -1,4 +1,5 @@
 import { prisma } from "../prisma.js";
+import { hasAccess, getAccessibleSharedPaths } from "./shareService.js";
 
 const WIKI_LINK_REGEX = /\[\[([^\]]+)\]\]/g;
 
@@ -121,48 +122,65 @@ export async function getBacklinks(
   userId: string
 ): Promise<{ path: string; title: string }[]> {
   const noteId = noteIdFromPath(notePath);
-  const { hasAccess } = await import("../services/shareService.js");
 
   // Find all edges pointing to this note across ALL users
   const edges = await prisma.graphEdge.findMany({ where: { toNoteId: noteId } });
   if (edges.length === 0) return [];
 
-  const backlinks: { path: string; title: string }[] = [];
-  for (const edge of edges) {
-    if (edge.userId === userId) {
-      // Own note — always accessible
-      const note = await prisma.searchIndex.findUnique({
-        where: { notePath_userId: { notePath: edge.fromPath, userId } },
-      });
-      if (note) {
-        backlinks.push({ path: note.notePath, title: note.title });
-      }
+  // Pre-fetch all shares for this user to build an accessible set
+  const sharesWithMe = await prisma.noteShare.findMany({
+    where: { sharedWithUserId: userId },
+  });
+
+  // Build a fast access check: set of "ownerUserId:notePath" for file shares,
+  // and a list of folder prefixes per owner
+  const fileShareSet = new Set<string>();
+  const folderShares: { ownerUserId: string; path: string }[] = [];
+  for (const s of sharesWithMe) {
+    if (s.isFolder) {
+      folderShares.push({ ownerUserId: s.ownerUserId, path: s.path });
     } else {
-      // Another user's note — check if it's shared with the viewer
-      const access = await hasAccess(edge.userId, edge.fromPath, userId);
-      if (access.canRead) {
-        const note = await prisma.searchIndex.findUnique({
-          where: { notePath_userId: { notePath: edge.fromPath, userId: edge.userId } },
-        });
-        if (note) {
-          backlinks.push({ path: note.notePath, title: note.title });
-        }
-      }
+      fileShareSet.set(`${s.ownerUserId}:${s.path}`);
     }
   }
 
+  function canReadShared(ownerUserId: string, edgePath: string): boolean {
+    if (fileShareSet.has(`${ownerUserId}:${edgePath}`)) return true;
+    return folderShares.some(
+      (fs) => fs.ownerUserId === ownerUserId && edgePath.startsWith(fs.path)
+    );
+  }
+
+  // Determine which edges are accessible
+  const accessibleEdges = edges.filter((edge) =>
+    edge.userId === userId || canReadShared(edge.userId, edge.fromPath)
+  );
+
+  if (accessibleEdges.length === 0) return [];
+
+  // Batch fetch all search index entries for accessible edges
+  const lookupKeys = accessibleEdges.map((e) => ({
+    notePath: e.fromPath,
+    userId: e.userId,
+  }));
+
+  const notes = await prisma.searchIndex.findMany({
+    where: {
+      OR: lookupKeys,
+    },
+    select: { notePath: true, title: true },
+  });
+
   // Deduplicate by path
   const seen = new Set<string>();
-  return backlinks.filter((b) => {
-    if (seen.has(b.path)) return false;
-    seen.add(b.path);
+  return notes.filter((n) => {
+    if (seen.has(n.notePath)) return false;
+    seen.add(n.notePath);
     return true;
-  });
+  }).map((n) => ({ path: n.notePath, title: n.title }));
 }
 
 export async function getFullGraph(userId: string): Promise<GraphData> {
-  const { getAccessibleSharedPaths } = await import("../services/shareService.js");
-
   const [allNotes, allEdges, sharedPaths] = await Promise.all([
     prisma.searchIndex.findMany({ where: { userId } }),
     prisma.graphEdge.findMany({ where: { userId } }),
@@ -179,15 +197,29 @@ export async function getFullGraph(userId: string): Promise<GraphData> {
   const ownNodeIds = new Set(nodes.map((n) => n.id));
 
   // --- Shared nodes ---
-  // Fetch SearchIndex entries for each shared note (from the owner's data)
-  const sharedNoteEntries = await Promise.all(
-    sharedPaths.map(async (sp) => {
-      const note = await prisma.searchIndex.findUnique({
-        where: { notePath_userId: { notePath: sp.notePath, userId: sp.ownerUserId } },
-      });
-      return note ? { note, ownerUserId: sp.ownerUserId } : null;
-    }),
+  // Batch fetch SearchIndex entries for all shared notes (instead of N findUnique calls)
+  const sharedNoteLookups = sharedPaths.map((sp) => ({
+    notePath: sp.notePath,
+    userId: sp.ownerUserId,
+  }));
+
+  const sharedNoteRows = sharedNoteLookups.length > 0
+    ? await prisma.searchIndex.findMany({
+        where: { OR: sharedNoteLookups },
+        select: { notePath: true, title: true, userId: true },
+      })
+    : [];
+
+  // Map rows back to entries with ownerUserId
+  const sharedRowMap = new Map(
+    sharedNoteRows.map((r) => [`${r.userId}:${r.notePath}`, r])
   );
+
+  const sharedNoteEntries = sharedPaths
+    .map((sp) => {
+      const note = sharedRowMap.get(`${sp.ownerUserId}:${sp.notePath}`);
+      return note ? { note, ownerUserId: sp.ownerUserId } : null;
+    });
 
   // Build a lookup from owner's noteId to namespaced id
   const ownerNoteIdToNamespaced = new Map<string, string>();
