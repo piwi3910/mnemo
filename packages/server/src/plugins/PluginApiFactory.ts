@@ -12,6 +12,7 @@ import { prisma } from "../prisma.js";
 import { RequestHandler } from "express";
 import path from "path";
 import fs from "fs";
+import { validatePathWithinBase } from "../lib/pathUtils.js";
 
 interface PluginApiFactoryDeps {
   eventBus: PluginEventBus;
@@ -62,6 +63,7 @@ export class PluginApiFactory {
     return {
       async get(userId: string, notePath: string) {
         const fullPath = path.join(notesDir, userId, `${notePath}.md`);
+        validatePathWithinBase(fullPath, path.join(notesDir, userId));
         const content = await fs.promises.readFile(fullPath, "utf-8");
         const stat = await fs.promises.stat(fullPath);
         const title = notePath.split("/").pop() || notePath;
@@ -85,19 +87,23 @@ export class PluginApiFactory {
         const dir = folder
           ? path.join(notesDir, userId, folder)
           : path.join(notesDir, userId);
+        validatePathWithinBase(dir, path.join(notesDir, userId));
         return scanDir(dir, folder || "");
       },
       async create(userId: string, notePath: string, content: string) {
         const fullPath = path.join(notesDir, userId, `${notePath}.md`);
+        validatePathWithinBase(fullPath, path.join(notesDir, userId));
         await fs.promises.mkdir(path.dirname(fullPath), { recursive: true });
         await fs.promises.writeFile(fullPath, content, "utf-8");
       },
       async update(userId: string, notePath: string, content: string) {
         const fullPath = path.join(notesDir, userId, `${notePath}.md`);
+        validatePathWithinBase(fullPath, path.join(notesDir, userId));
         await fs.promises.writeFile(fullPath, content, "utf-8");
       },
       async delete(userId: string, notePath: string) {
         const fullPath = path.join(notesDir, userId, `${notePath}.md`);
+        validatePathWithinBase(fullPath, path.join(notesDir, userId));
         await fs.promises.unlink(fullPath);
       },
     };
