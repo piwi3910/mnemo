@@ -151,7 +151,7 @@ export function createSharesRouter(): Router {
         data: {
           ownerUserId: req.user!.id,
           path,
-          isFolder,
+          isFolder: isFolder ?? false,
           sharedWithUserId,
           permission,
         },
