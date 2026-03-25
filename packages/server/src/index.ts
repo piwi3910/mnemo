@@ -74,9 +74,9 @@ async function main(): Promise<void> {
   });
   if (!regMode) {
     await prisma.settings.create({
-      data: { key: "registration_mode", value: "open", userId: GLOBAL_USER },
+      data: { key: "registration_mode", value: "invite-only", userId: GLOBAL_USER },
     });
-    console.log("Created default registration_mode = open");
+    console.log("Created default registration_mode = invite-only");
   }
 
   // Note: per-user indexing is now handled during provisioning and login.
