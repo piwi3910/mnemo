@@ -253,3 +253,38 @@ export const sharedNoteApi = {
       method: 'PUT', body: JSON.stringify({ content }),
     }),
 };
+
+// API Key types
+export interface ApiKeyInfo {
+  id: string;
+  name: string;
+  keyPrefix: string;
+  scope: string;
+  expiresAt: string | null;
+  lastUsedAt: string | null;
+  createdAt: string;
+}
+
+export interface CreateApiKeyRequest {
+  name: string;
+  scope: "read-only" | "read-write";
+  expiresAt?: string;
+}
+
+export interface CreateApiKeyResponse extends ApiKeyInfo {
+  key: string;
+}
+
+export const apiKeyApi = {
+  list: (): Promise<ApiKeyInfo[]> =>
+    request<ApiKeyInfo[]>("/api-keys"),
+
+  create: (data: CreateApiKeyRequest): Promise<CreateApiKeyResponse> =>
+    request<CreateApiKeyResponse>("/api-keys", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  revoke: (id: string): Promise<void> =>
+    request<void>(`/api-keys/${id}`, { method: "DELETE" }),
+};
