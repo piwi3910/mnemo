@@ -140,7 +140,7 @@ export async function getBacklinks(
     if (s.isFolder) {
       folderShares.push({ ownerUserId: s.ownerUserId, path: s.path });
     } else {
-      fileShareSet.set(`${s.ownerUserId}:${s.path}`);
+      fileShareSet.add(`${s.ownerUserId}:${s.path}`);
     }
   }
 
