@@ -26,10 +26,10 @@ export function classifyError(err: unknown): AppError {
   if (err instanceof AppError) return err;
   if (err instanceof Error) {
     if (err.message.includes("ENOENT") || err.message.includes("no such file")) {
-      return new NotFoundError(err.message);
+      return new NotFoundError(); // Don't leak filesystem paths
     }
     if (err.message.includes("Invalid path")) {
-      return new ValidationError(err.message);
+      return new ValidationError("Invalid path");
     }
   }
   return new AppError("Internal server error", 500, "INTERNAL_ERROR");

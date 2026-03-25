@@ -111,7 +111,7 @@ export async function getAccessibleSharedPaths(
       const notesInFolder = await prisma.searchIndex.findMany({
         where: {
           userId: share.ownerUserId,
-          notePath: { startsWith: share.path },
+          notePath: { startsWith: share.path + "/" },
         },
       });
 

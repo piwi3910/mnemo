@@ -4,6 +4,8 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
 import { prisma } from "./prisma.js";
 import { createLogger } from "./lib/logger.js";
 import { GLOBAL_USER_ID } from "./lib/pathUtils.js";
+// Import env.ts to ensure dotenv loads before better-auth reads process.env
+import "./lib/env.js";
 
 const log = createLogger("auth");
 
@@ -13,6 +15,7 @@ const APP_URL = process.env.APP_URL || "http://localhost:5173";
 const pendingInviteCodes = new Map<string, string>(); // email -> inviteCode.id
 
 export const auth = betterAuth({
+  secret: process.env.BETTER_AUTH_SECRET,
   database: prismaAdapter(prisma, { provider: "postgresql" }),
   basePath: "/api/auth",
   baseURL: process.env.BETTER_AUTH_URL || "http://localhost:3001",

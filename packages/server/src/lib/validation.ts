@@ -36,8 +36,8 @@ export const updateSettingSchema = z.object({
 
 // --- Share schemas ---
 export const createShareSchema = z.object({
-  path: z.string().min(1),
-  sharedWithUserId: z.string().min(1),
+  path: z.string().min(1).max(500),
+  sharedWithUserId: z.string().min(1).max(100),
   permission: z.enum(["read", "readwrite"]),
   isFolder: z.boolean().optional(),
 });
@@ -48,8 +48,8 @@ export const updateShareSchema = z.object({
 
 // --- Access request schemas ---
 export const createAccessRequestSchema = z.object({
-  ownerUserId: z.string().min(1),
-  notePath: z.string().min(1),
+  ownerUserId: z.string().min(1).max(100),
+  notePath: z.string().min(1).max(500),
   message: z.string().max(500).optional(),
 });
 

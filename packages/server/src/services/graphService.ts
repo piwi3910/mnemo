@@ -147,7 +147,7 @@ export async function getBacklinks(
   function canReadShared(ownerUserId: string, edgePath: string): boolean {
     if (fileShareSet.has(`${ownerUserId}:${edgePath}`)) return true;
     return folderShares.some(
-      (fs) => fs.ownerUserId === ownerUserId && edgePath.startsWith(fs.path)
+      (fs) => fs.ownerUserId === ownerUserId && (edgePath === fs.path || edgePath.startsWith(fs.path + "/"))
     );
   }
 

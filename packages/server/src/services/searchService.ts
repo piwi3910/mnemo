@@ -373,7 +373,7 @@ export async function search(query: string, userId: string): Promise<SearchResul
   if (shares.length > 0) {
     const shareConditions = shares.map((s) =>
       s.isFolder
-        ? { userId: s.ownerUserId, notePath: { startsWith: s.path } }
+        ? { userId: s.ownerUserId, notePath: { startsWith: s.path + "/" } }
         : { userId: s.ownerUserId, notePath: s.path }
     );
 

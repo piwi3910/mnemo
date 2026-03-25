@@ -5,7 +5,7 @@ import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import { validateEnv } from "./lib/env.js";
 import { createLogger } from "./lib/logger.js";
-import { GLOBAL_USER_ID } from "./lib/pathUtils.js";
+import { GLOBAL_USER_ID, decodePathParam, validatePathWithinBase } from "./lib/pathUtils.js";
 import { errorHandler } from "./lib/errors.js";
 import { toNodeHandler } from "better-auth/node";
 import swaggerUi from "swagger-ui-express";
@@ -14,7 +14,7 @@ import * as fs from "fs/promises";
 import { prisma } from "./prisma.js";
 import { swaggerSpec } from "./swagger.js";
 import { auth } from "./auth.js";
-import { authMiddleware, adminMiddleware } from "./middleware/auth.js";
+import { authMiddleware, adminMiddleware, requireUser } from "./middleware/auth.js";
 import { createAdminRouter } from "./routes/admin.js";
 import { createNotesRouter, createNotesRenameRouter, createSharedNotesRouter } from "./routes/notes.js";
 import { createFoldersRouter, createFoldersRenameRouter } from "./routes/folders.js";
@@ -258,29 +258,29 @@ async function main(): Promise<void> {
    *         description: File not found
    */
   // Serve image files from notes directory (protected)
-  app.get("/api/files/{*path}", authMiddleware, async (req: Request, res: Response) => {
-    const filePath = decodeURIComponent(Array.isArray(req.params.path) ? req.params.path.join("/") : req.params.path as string);
-    const allowedExts = [".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".bmp"];
-    const ext = path.extname(filePath).toLowerCase();
-
-    if (!allowedExts.includes(ext)) {
-      res.status(403).json({ error: "File type not allowed" });
-      return;
-    }
-
-    const userDir = await getUserNotesDir(NOTES_DIR, req.user!.id);
-    const fullPath = path.resolve(path.join(userDir, filePath));
-    const resolvedBase = path.resolve(userDir);
-    if (!fullPath.startsWith(resolvedBase + path.sep) && fullPath !== resolvedBase) {
-      res.status(400).json({ error: "Invalid path" });
-      return;
-    }
-
+  app.get("/api/files/{*path}", authMiddleware, async (req: Request, res: Response, next) => {
     try {
+      const user = requireUser(req);
+      const filePath = decodePathParam(req.params.path);
+      const allowedExts = [".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".bmp"];
+      const ext = path.extname(filePath).toLowerCase();
+
+      if (!allowedExts.includes(ext)) {
+        res.status(403).json({ error: "File type not allowed" });
+        return;
+      }
+
+      const userDir = await getUserNotesDir(NOTES_DIR, user.id);
+      const fullPath = path.resolve(path.join(userDir, filePath));
+      validatePathWithinBase(fullPath, userDir);
+
       await fs.stat(fullPath);
+      // Prevent script execution in served files (especially SVG)
+      res.setHeader("Content-Security-Policy", "script-src 'none'");
+      res.setHeader("Content-Disposition", "inline");
       res.sendFile(fullPath);
-    } catch {
-      res.status(404).json({ error: "File not found" });
+    } catch (err) {
+      next(err);
     }
   });
 
