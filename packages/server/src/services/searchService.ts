@@ -23,9 +23,26 @@ interface IndexedDocument {
   notePath: string;
 }
 
+// LRU cache for per-user MiniSearch indices — evicts least-recently-used when full
+const MAX_CACHED_INDICES = 50;
 const userIndices = new Map<string, MiniSearch<IndexedDocument>>();
 // Track which users have had their index fully built from Prisma
 const builtIndices = new Set<string>();
+// LRU order — most recently accessed at the end
+const lruOrder: string[] = [];
+
+function touchLru(userId: string): void {
+  const idx = lruOrder.indexOf(userId);
+  if (idx !== -1) lruOrder.splice(idx, 1);
+  lruOrder.push(userId);
+
+  // Evict oldest entries if over limit
+  while (lruOrder.length > MAX_CACHED_INDICES) {
+    const evictId = lruOrder.shift()!;
+    userIndices.delete(evictId);
+    builtIndices.delete(evictId);
+  }
+}
 
 function getOrCreateIndex(userId: string): MiniSearch<IndexedDocument> {
   let index = userIndices.get(userId);
@@ -41,6 +58,7 @@ function getOrCreateIndex(userId: string): MiniSearch<IndexedDocument> {
     });
     userIndices.set(userId, index);
   }
+  touchLru(userId);
   return index;
 }
 

@@ -41,11 +41,16 @@ interface PreviewProps {
   onCreateNote?: (name: string) => void;
   notePath?: string;
   getCodeFenceRenderer?: (language: string) => { component: React.ComponentType<{ content: string; notePath: string }> } | undefined;
+  /** Current embed depth — used internally to prevent infinite recursion */
+  embedDepth?: number;
+  /** Set of note paths in the current embed chain — used to detect circular embeds */
+  embedChain?: Set<string>;
 }
 
 const IMAGE_EXTENSIONS = /\.(png|jpg|jpeg|gif|svg|webp|bmp)$/i;
+const MAX_EMBED_DEPTH = 3;
 
-export function Preview({ content, onLinkClick, allNotes, onCreateNote, notePath = '', getCodeFenceRenderer }: PreviewProps) {
+export function Preview({ content, onLinkClick, allNotes, onCreateNote, notePath = '', getCodeFenceRenderer, embedDepth = 0, embedChain }: PreviewProps) {
   const [embeddedNotes, setEmbeddedNotes] = useState<Record<string, string>>({});
 
   const existingNotes = useMemo(() => {
@@ -53,10 +58,20 @@ export function Preview({ content, onLinkClick, allNotes, onCreateNote, notePath
     return collectNoteNames(allNotes);
   }, [allNotes]);
 
-  // Find all note embeds (not images) in content
-  const noteEmbeds = Array.from(content.matchAll(/!\[\[([^\]]+)\]\]/g))
-    .map((m) => m[1])
-    .filter((name) => !IMAGE_EXTENSIONS.test(name));
+  // Build the current embed chain (for circular reference detection)
+  const currentChain = useMemo(() => {
+    const chain = new Set(embedChain);
+    if (notePath) chain.add(notePath);
+    return chain;
+  }, [embedChain, notePath]);
+
+  // Find all note embeds (not images) in content — skip if at max depth
+  const noteEmbeds = embedDepth >= MAX_EMBED_DEPTH
+    ? []
+    : Array.from(content.matchAll(/!\[\[([^\]]+)\]\]/g))
+        .map((m) => m[1])
+        .filter((name) => !IMAGE_EXTENSIONS.test(name))
+        .filter((name) => !currentChain.has(name) && !currentChain.has(name + '.md'));
 
   // Fetch embedded note content
   useEffect(() => {
@@ -113,6 +128,13 @@ export function Preview({ content, onLinkClick, allNotes, onCreateNote, notePath
       /!\[\[([^\]]+)\]\]/g,
       (_match, noteName: string) => {
         if (IMAGE_EXTENSIONS.test(noteName)) return _match;
+        // Depth or circular reference limit reached
+        if (embedDepth >= MAX_EMBED_DEPTH) {
+          return `<div class="embed-note embed-limited"><div class="embed-note-header"><a class="wiki-link" data-wiki-target="${escapeHtml(noteName)}" href="#">${escapeHtml(noteName)}</a></div><p><em>Embed depth limit reached</em></p></div>`;
+        }
+        if (currentChain.has(noteName) || currentChain.has(noteName + '.md')) {
+          return `<div class="embed-note embed-circular"><div class="embed-note-header"><a class="wiki-link" data-wiki-target="${escapeHtml(noteName)}" href="#">${escapeHtml(noteName)}</a></div><p><em>Circular embed detected</em></p></div>`;
+        }
         const noteContent = embeddedNotes[noteName];
         if (noteContent === undefined) {
           return `<div class="embed-note embed-loading"><div class="embed-note-header">${escapeHtml(noteName)}</div><p class="embed-note-loading-text">Loading...</p></div>`;
