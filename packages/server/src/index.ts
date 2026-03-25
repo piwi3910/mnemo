@@ -38,6 +38,7 @@ import { PluginWebSocket } from "./plugins/PluginWebSocket.js";
 import { createPluginsRouter } from "./routes/plugins.js";
 import { createApiKeysRouter } from "./routes/apiKeys.js";
 import { createMcpRouter } from "./mcp/mcpServer.js";
+import { setGraphWebSocket } from "./services/noteService.js";
 
 const log = createLogger("server");
 const PORT = parseInt(process.env.PORT || "3001", 10);
@@ -101,15 +102,20 @@ async function main(): Promise<void> {
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'"],
-        styleSrc: ["'self'", "'unsafe-inline'"],
+        // Allow inline theme detection script (sha256 of the script in index.html)
+        scriptSrc: ["'self'", "'sha256-2mWHaOgltDZJANC/lj7Lk9cZEONwp2osBnUNugvdbjc='"],
+        // Allow Google Fonts stylesheet
+        styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
         imgSrc: ["'self'", "data:", "blob:"],
-        fontSrc: ["'self'"],
+        // Allow Google Fonts files
+        fontSrc: ["'self'", "https://fonts.gstatic.com"],
         connectSrc: ["'self'", "ws:", "wss:"],
         frameAncestors: ["'self'"],
         objectSrc: ["'none'"],
         baseUri: ["'self'"],
         formAction: ["'self'"],
+        // Disable upgrade-insecure-requests — breaks plain HTTP deployments
+        upgradeInsecureRequests: null,
       },
     },
   }));
@@ -324,6 +330,7 @@ async function main(): Promise<void> {
   // Start server — create an explicit http.Server so WebSocket can attach to it
   const httpServer = http.createServer(app);
   const pluginWebSocket = new PluginWebSocket(httpServer);
+  setGraphWebSocket(pluginWebSocket);
   pluginManager.setPluginWebSocket(pluginWebSocket);
 
   httpServer.listen(PORT, () => {
