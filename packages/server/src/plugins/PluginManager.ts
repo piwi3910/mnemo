@@ -1,5 +1,5 @@
 import path from "path";
-import fs from "fs";
+import fs from "fs/promises";
 import { createRequire } from "module";
 
 const require = createRequire(import.meta.url);
@@ -87,7 +87,7 @@ export class PluginManager {
     const pluginDir = path.join(this.deps.pluginsDir, pluginId);
     const manifestPath = path.join(pluginDir, "manifest.json");
 
-    const manifestRaw = fs.readFileSync(manifestPath, "utf-8");
+    const manifestRaw = await fs.readFile(manifestPath, "utf-8");
     const manifest: PluginManifest = JSON.parse(manifestRaw);
 
     const instance: PluginInstance = {
@@ -224,13 +224,21 @@ export class PluginManager {
   }
 
   async discoverAndLoadPlugins(): Promise<void> {
-    if (!fs.existsSync(this.deps.pluginsDir)) return;
+    try {
+      await fs.access(this.deps.pluginsDir);
+    } catch {
+      return; // Plugins directory does not exist
+    }
 
-    const entries = fs.readdirSync(this.deps.pluginsDir, { withFileTypes: true });
+    const entries = await fs.readdir(this.deps.pluginsDir, { withFileTypes: true });
     for (const entry of entries) {
       if (!entry.isDirectory()) continue;
       const manifestPath = path.join(this.deps.pluginsDir, entry.name, "manifest.json");
-      if (!fs.existsSync(manifestPath)) continue;
+      try {
+        await fs.access(manifestPath);
+      } catch {
+        continue; // No manifest.json in this directory
+      }
       try {
         await this.loadPlugin(entry.name);
       } catch (err) {
