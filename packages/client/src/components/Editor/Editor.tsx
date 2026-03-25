@@ -8,6 +8,7 @@ import { oneDark } from '@codemirror/theme-one-dark';
 import { autocompletion, CompletionContext, CompletionResult } from '@codemirror/autocomplete';
 import { search as cmSearch, searchKeymap } from '@codemirror/search';
 import { FileNode } from '../../lib/api';
+import { collectNotePaths } from '../../lib/noteTreeUtils';
 
 export interface EditorCursorState {
   line: number;
@@ -23,19 +24,6 @@ interface EditorProps {
   onCursorStateChange?: (state: EditorCursorState) => void;
   viewRef?: React.MutableRefObject<EditorView | undefined>;
   pluginExtensions?: Extension[];
-}
-
-function collectNotePaths(nodes: FileNode[]): string[] {
-  const paths: string[] = [];
-  for (const node of nodes) {
-    if (node.type === 'file') {
-      paths.push(node.path.replace(/\.md$/, ''));
-    }
-    if (node.children) {
-      paths.push(...collectNotePaths(node.children));
-    }
-  }
-  return paths;
 }
 
 function countWords(text: string): number {
