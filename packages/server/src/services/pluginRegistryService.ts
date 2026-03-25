@@ -142,6 +142,8 @@ async function downloadDirRecursive(
       await downloadDirRecursive(entry.url, destDir, repoBasePath);
     } else if (entry.type === "file") {
       if (!entry.download_url) continue;
+      // Skip TypeScript source files — only download built JS, JSON, etc.
+      if (entry.name.endsWith(".ts") && !entry.name.endsWith(".d.ts")) continue;
       fs.mkdirSync(path.dirname(localPath), { recursive: true });
       const bytes = await downloadFileBytes(entry.download_url);
       fs.writeFileSync(localPath, bytes);
