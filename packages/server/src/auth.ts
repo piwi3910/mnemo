@@ -3,6 +3,7 @@ import { passkey } from "@better-auth/passkey";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { prisma } from "./prisma.js";
 import { createLogger } from "./lib/logger.js";
+import { GLOBAL_USER_ID } from "./lib/pathUtils.js";
 
 const log = createLogger("auth");
 
@@ -113,9 +114,8 @@ export const auth = betterAuth({
 
           // Invite code validation for invite-only mode
           if (userCount > 0) {
-            const GLOBAL_USER = "__global__";
             const regMode = await prisma.settings.findUnique({
-              where: { key_userId: { key: "registration_mode", userId: GLOBAL_USER } },
+              where: { key_userId: { key: "registration_mode", userId: GLOBAL_USER_ID } },
             });
 
             if (regMode?.value === "invite-only") {

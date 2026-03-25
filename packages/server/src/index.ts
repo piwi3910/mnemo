@@ -5,6 +5,7 @@ import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import { validateEnv } from "./lib/env.js";
 import { createLogger } from "./lib/logger.js";
+import { GLOBAL_USER_ID } from "./lib/pathUtils.js";
 import { errorHandler } from "./lib/errors.js";
 import { toNodeHandler } from "better-auth/node";
 import swaggerUi from "swagger-ui-express";
@@ -70,13 +71,12 @@ async function main(): Promise<void> {
   }
 
   // Ensure registration_mode global setting exists
-  const GLOBAL_USER = "__global__";
   const regMode = await prisma.settings.findUnique({
-    where: { key_userId: { key: "registration_mode", userId: GLOBAL_USER } },
+    where: { key_userId: { key: "registration_mode", userId: GLOBAL_USER_ID } },
   });
   if (!regMode) {
     await prisma.settings.create({
-      data: { key: "registration_mode", value: "invite-only", userId: GLOBAL_USER },
+      data: { key: "registration_mode", value: "invite-only", userId: GLOBAL_USER_ID },
     });
     log.info("Created default registration_mode = invite-only");
   }

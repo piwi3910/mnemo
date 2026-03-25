@@ -13,7 +13,7 @@ import { prisma } from "../prisma.js";
 import { RequestHandler } from "express";
 import path from "path";
 import fs from "fs";
-import { validatePathWithinBase, ensureExtension } from "../lib/pathUtils.js";
+import { validatePathWithinBase, ensureExtension, GLOBAL_USER_ID } from "../lib/pathUtils.js";
 import { createLogger } from "../lib/logger.js";
 
 interface PluginApiFactoryDeps {
@@ -154,9 +154,9 @@ export class PluginApiFactory {
           if (userSetting) return JSON.parse(userSetting.value);
         }
 
-        // Fall back to admin default (using empty string as global sentinel)
+        // Fall back to admin default (global sentinel)
         const adminSetting = await prisma.settings.findUnique({
-          where: { key_userId: { key: settingsKey, userId: "" } },
+          where: { key_userId: { key: settingsKey, userId: GLOBAL_USER_ID } },
         });
         if (adminSetting) return JSON.parse(adminSetting.value);
 

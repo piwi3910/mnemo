@@ -586,8 +586,7 @@ export function createAdminRouter(): Router {
         const rows = await prisma.settings.findMany({
           where: { key: "registration_mode" },
         });
-        // Find the global row (empty userId used as global sentinel)
-        const row = rows.find((r) => r.userId === "" || r.userId === GLOBAL_USER_ID) ?? rows[0];
+        const row = rows.find((r) => r.userId === GLOBAL_USER_ID) ?? rows[0];
         const mode = row?.value ?? "open";
         res.json({ mode });
       } catch (err) {
