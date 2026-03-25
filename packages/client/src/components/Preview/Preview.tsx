@@ -1,8 +1,10 @@
 import React, { useCallback, useEffect, useState, useMemo, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import remarkWikiLink from 'remark-wiki-link';
 import rehypeRaw from 'rehype-raw';
 import { api, FileNode } from '../../lib/api';
+import { rehypeWikiLinks } from '../../lib/rehype-wiki-links';
 
 interface PreviewProps {
   content: string;
@@ -250,15 +252,8 @@ export function Preview({ content, onLinkClick, allNotes, onCreateNote, notePath
     processedContent = processedContent.replace(dvMatch[0], `<div data-dataview-id="${id}"></div>`);
   }
 
-  // Protect inline code from wiki-link replacement
-  const codeBlocks: string[] = [];
-  processedContent = processedContent.replace(/`([^`]+)`/g, (_match, _code: string) => {
-    codeBlocks.push(_match);
-    return `%%CODE${codeBlocks.length - 1}%%`;
-  });
-
-  // Transform content: handle embeds and wiki-links
-  let transformedContent = processedContent
+  // Transform content: handle embeds (remark-wiki-link handles [[...]] links)
+  const transformedContent = processedContent
     // Image embeds: ![[image.png]] → <img>
     .replace(
       /!\[\[([^\]]+\.(png|jpg|jpeg|gif|svg|webp|bmp))\]\]/gi,
@@ -277,23 +272,7 @@ export function Preview({ content, onLinkClick, allNotes, onCreateNote, notePath
         const strippedContent = noteContent.replace(/^#\s+.+\n?/, '');
         return `<div class="embed-note"><div class="embed-note-header"><a class="wiki-link" data-wiki-target="${noteName}" href="#">${noteName}</a></div>\n\n${strippedContent}\n\n</div>`;
       }
-    )
-    // Regular wiki-links: [[Note]] → clickable link with broken detection
-    .replace(
-      /\[\[([^\]]+)\]\]/g,
-      (_, linkText: string) => {
-        const isBroken = allNotes && !existingNotes.has(linkText.toLowerCase());
-        const classes = isBroken ? 'wiki-link wiki-link-broken' : 'wiki-link';
-        const escapedText = linkText.replace(/"/g, '&quot;');
-        const title = isBroken ? `Note &quot;${escapedText}&quot; not found — click to create` : escapedText;
-        return `<a class="${classes}" data-wiki-target="${escapedText}" data-broken="${isBroken ? 'true' : 'false'}" href="#" title="${title}">${linkText}</a>`;
-      }
     );
-
-  // Restore inline code blocks
-  transformedContent = transformedContent.replace(/%%CODE(\d+)%%/g, (_match, idx: string) => {
-    return codeBlocks[parseInt(idx, 10)];
-  });
 
   const handleClick = useCallback((e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
@@ -354,8 +333,21 @@ export function Preview({ content, onLinkClick, allNotes, onCreateNote, notePath
   return (
     <div className="markdown-preview p-6 max-w-3xl mx-auto" onClick={handleClick}>
       <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
-        rehypePlugins={[rehypeRaw]}
+        remarkPlugins={[
+          remarkGfm,
+          [remarkWikiLink, {
+            permalinks: Array.from(existingNotes),
+            pageResolver: (name: string) => [name],
+            hrefTemplate: (permalink: string) => `/${permalink}`,
+            wikiLinkClassName: 'internal',
+            newClassName: 'new',
+            aliasDivider: '|',
+          }],
+        ]}
+        rehypePlugins={[
+          rehypeRaw,
+          [rehypeWikiLinks, { existingNotes }],
+        ]}
         components={{ ...headingComponents, code: codeComponent }}
       >
         {transformedContent}
