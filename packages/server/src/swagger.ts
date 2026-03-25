@@ -12,6 +12,25 @@ const options: swaggerJsdoc.Options = {
     servers: [
       { url: '/api', description: 'API server' },
     ],
+    components: {
+      securitySchemes: {
+        cookieAuth: {
+          type: 'apiKey',
+          in: 'cookie',
+          name: 'better-auth.session_token',
+          description: 'Session cookie set by the authentication system',
+        },
+        bearerAuth: {
+          type: 'http',
+          scheme: 'bearer',
+          description: 'API key with mnemo_ prefix (e.g. mnemo_a1b2c3d4...)',
+        },
+      },
+    },
+    security: [
+      { cookieAuth: [] },
+      { bearerAuth: [] },
+    ],
   },
   apis: [
     path.join(import.meta.dirname, 'routes', '*.ts'),
