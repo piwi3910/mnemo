@@ -6,7 +6,7 @@ const options: swaggerJsdoc.Options = {
     openapi: '3.0.0',
     info: {
       title: 'Mnemo API',
-      version: '3.1.0',
+      version: '3.2.0',
       description: 'API for Mnemo - a personal knowledge base with wiki-style linking, graph visualization, and markdown editing.',
     },
     servers: [
