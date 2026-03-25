@@ -1,0 +1,10 @@
+.git
+.env
+.env.*
+node_modules
+*.md
+docs/
+logos/
+.github/
+.vscode/
+.editorconfig
