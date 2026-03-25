@@ -48,16 +48,45 @@ export async function updateGraphCache(
   const links = parseLinks(content);
   if (links.length === 0) return;
 
-  const edges = links.map((link) => {
-    const toPath = linkToPath(link);
-    return {
-      fromPath: notePath,
-      toPath,
-      fromNoteId: noteIdFromPath(notePath),
-      toNoteId: noteIdFromPath(toPath),
-      userId,
-    };
-  });
+  // Build edges, resolving short wiki-links (e.g. [[truenas]]) to full paths
+  // by searching the SearchIndex for a matching filename.
+  // This implements Obsidian-style shortest-path resolution.
+  const edges = await Promise.all(
+    links.map(async (link) => {
+      let toPath = linkToPath(link);
+      const toNoteId = noteIdFromPath(toPath);
+
+      // If the link has no folder separator, try to resolve by filename across all notes
+      if (!link.includes("/")) {
+        const filename = link.endsWith(".md") ? link : `${link}.md`;
+        const basename = filename.replace(/\.md$/, "");
+
+        // Search SearchIndex for a note whose path ends with /filename or equals filename
+        const match = await prisma.searchIndex.findFirst({
+          where: {
+            userId,
+            OR: [
+              { notePath: filename },
+              { notePath: { endsWith: `/${filename}` } },
+            ],
+          },
+          select: { notePath: true },
+        });
+
+        if (match) {
+          toPath = match.notePath;
+        }
+      }
+
+      return {
+        fromPath: notePath,
+        toPath,
+        fromNoteId: noteIdFromPath(notePath),
+        toNoteId: noteIdFromPath(toPath),
+        userId,
+      };
+    })
+  );
 
   await prisma.graphEdge.createMany({ data: edges });
 }
@@ -289,5 +318,15 @@ export async function getFullGraph(userId: string): Promise<GraphData> {
     }
   }
 
-  return { nodes, edges };
+  // Build nodeId -> path lookup for edge enrichment
+  const nodeIdToPath = new Map<string, string>(nodes.map((n) => [n.id, n.path]));
+
+  // Enrich edges with fromPath/toPath for consumers that need them
+  const enrichedEdges = edges.map((e) => ({
+    ...e,
+    fromPath: nodeIdToPath.get(e.fromNoteId) ?? null,
+    toPath: nodeIdToPath.get(e.toNoteId) ?? null,
+  }));
+
+  return { nodes, edges: enrichedEdges };
 }
