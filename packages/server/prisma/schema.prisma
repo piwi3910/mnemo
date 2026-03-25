@@ -39,6 +39,7 @@ model User {
   searchIndices           SearchIndex[]
   graphEdges              GraphEdge[]
   pluginStorage           PluginStorage[]
+  apiKeys                 ApiKey[]
 }
 
 model Session {
@@ -195,4 +196,20 @@ model InstalledPlugin {
   enabled     Boolean  @default(true)
   installedAt DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model ApiKey {
+  id          String    @id @default(uuid())
+  userId      String
+  name        String
+  keyHash     String    @unique
+  keyPrefix   String
+  scope       String    @default("read-only")
+  expiresAt   DateTime?
+  lastUsedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([keyHash])
 }
