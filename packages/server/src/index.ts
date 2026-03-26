@@ -41,6 +41,7 @@ import { createApiKeysRouter } from "./routes/apiKeys.js";
 import { createMcpRouter } from "./mcp/mcpServer.js";
 import { setGraphWebSocket } from "./services/noteService.js";
 import { createTrashRouter, createTrashEmptyRouter, purgeOldTrash } from "./routes/trash.js";
+import { createHistoryRouter, createHistoryTimestampRouter, createHistoryRestoreRouter } from "./routes/history.js";
 
 const log = createLogger("server");
 const PORT = parseInt(process.env.PORT || "3001", 10);
@@ -274,6 +275,9 @@ async function main(): Promise<void> {
   app.use("/api/mcp", createMcpRouter());
   app.use("/api/trash-empty", authMiddleware, createTrashEmptyRouter(NOTES_DIR));
   app.use("/api/trash", authMiddleware, createTrashRouter(NOTES_DIR));
+  app.use("/api/history-restore", authMiddleware, createHistoryRestoreRouter(NOTES_DIR));
+  app.use("/api/history-version", authMiddleware, createHistoryTimestampRouter(NOTES_DIR));
+  app.use("/api/history", authMiddleware, createHistoryRouter(NOTES_DIR));
 
   /**
    * @swagger

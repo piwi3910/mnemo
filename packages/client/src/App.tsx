@@ -279,6 +279,7 @@ function AppContent() {
                   onNoteSelect={handleNoteSelect}
                   onLinkClick={handleLinkClick}
                   onCreateNote={handleCreateNoteFromLink}
+                  onRestored={() => notes.openNote(notes.activeNote!.path)}
                   getCodeFenceRenderer={getCodeFenceRenderer}
                 />
               )

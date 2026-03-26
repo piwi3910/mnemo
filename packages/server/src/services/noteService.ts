@@ -3,6 +3,7 @@ import * as path from "path";
 import { indexNote, removeFromIndex, renameInIndex, extractTitle } from "./searchService.js";
 import { updateGraphCache, removeFromGraph, renameInGraph } from "./graphService.js";
 import { moveToTrash } from "../routes/trash.js";
+import { saveHistorySnapshot } from "../routes/history.js";
 import type { PluginWebSocket } from "../plugins/PluginWebSocket.js";
 
 // Optional WebSocket instance for broadcasting graph updates
@@ -121,6 +122,14 @@ export async function writeNote(
   // Ensure parent directory exists
   const dir = path.dirname(fullPath);
   await fs.mkdir(dir, { recursive: true });
+
+  // Save the current content as a history snapshot before overwriting
+  try {
+    const existing = await fs.readFile(fullPath, "utf-8");
+    await saveHistorySnapshot(notesDir, notePath, existing);
+  } catch {
+    // File doesn't exist yet (new note) — no history to save
+  }
 
   // Ensure path ends with .md
   await fs.writeFile(fullPath, content, "utf-8");

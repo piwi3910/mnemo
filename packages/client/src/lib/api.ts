@@ -121,6 +121,18 @@ export interface TrashItem {
   trashedAt: string;
 }
 
+export interface NoteVersion {
+  timestamp: number;
+  date: string;
+  size: number;
+}
+
+export interface NoteVersionContent {
+  content: string;
+  timestamp: number;
+  date: string;
+}
+
 const BASE = '/api';
 
 export async function request<T>(url: string, options?: RequestInit): Promise<T> {
@@ -204,6 +216,14 @@ export const api = {
     request<{ message: string }>(`/trash/${encodeURIComponent(notePath)}`, { method: 'DELETE' }),
   emptyTrash: () =>
     request<{ message: string }>('/trash-empty', { method: 'DELETE' }),
+
+  // History
+  listVersions: (notePath: string) =>
+    request<{ versions: NoteVersion[] }>(`/history/${encodeURIComponent(notePath)}`),
+  getVersion: (notePath: string, timestamp: number) =>
+    request<NoteVersionContent>(`/history-version/${encodeURIComponent(notePath)}?ts=${timestamp}`),
+  restoreVersion: (notePath: string, timestamp: number) =>
+    request<{ restored: boolean }>(`/history-restore/${encodeURIComponent(notePath)}?ts=${timestamp}`, { method: 'POST' }),
 
   // Files
   uploadFile: (file: File): Promise<{ path: string; url: string }> => {
