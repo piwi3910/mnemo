@@ -13,6 +13,11 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [registrationMode, setRegistrationMode] = useState<string>('open');
 
+  // 2FA state — shown after successful password auth when 2FA is required
+  const [twoFactorRequired, setTwoFactorRequired] = useState(false);
+  const [totpCode, setTotpCode] = useState('');
+  const [useBackupCode, setUseBackupCode] = useState(false);
+
   const [googleEnabled, setGoogleEnabled] = useState(false);
   const [githubEnabled, setGithubEnabled] = useState(false);
 
@@ -45,9 +50,35 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
     try {
-      await login(email, password);
+      const result = await login(email, password);
+      if (result.twoFactorRequired) {
+        setTwoFactorRequired(true);
+        setTotpCode('');
+        setUseBackupCode(false);
+      }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Login failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleTwoFactorVerify = async (e: FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    try {
+      let result;
+      if (useBackupCode) {
+        result = await authClient.twoFactor.verifyBackupCode({ code: totpCode });
+      } else {
+        result = await authClient.twoFactor.verifyTotp({ code: totpCode });
+      }
+      if (result.error) {
+        setError(result.error.message || 'Invalid code. Please try again.');
+      }
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Verification failed');
     } finally {
       setLoading(false);
     }
@@ -107,6 +138,8 @@ export default function LoginPage() {
   const switchTab = (t: Tab) => {
     setTab(t);
     setError('');
+    setTwoFactorRequired(false);
+    setTotpCode('');
   };
 
   return (
@@ -152,8 +185,59 @@ export default function LoginPage() {
             </div>
           )}
 
+          {/* 2FA verification step */}
+          {tab === 'signin' && twoFactorRequired && (
+            <form onSubmit={handleTwoFactorVerify} className="space-y-4">
+              <div className="text-center mb-2">
+                <p className="text-sm text-gray-300 font-medium">Two-Factor Authentication</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  {useBackupCode
+                    ? 'Enter one of your backup recovery codes.'
+                    : 'Enter the 6-digit code from your authenticator app.'}
+                </p>
+              </div>
+              <div>
+                <input
+                  type="text"
+                  inputMode={useBackupCode ? 'text' : 'numeric'}
+                  pattern={useBackupCode ? undefined : '[0-9]*'}
+                  maxLength={useBackupCode ? 20 : 6}
+                  value={totpCode}
+                  onChange={e => setTotpCode(useBackupCode ? e.target.value : e.target.value.replace(/\D/g, ''))}
+                  required
+                  autoFocus
+                  placeholder={useBackupCode ? 'Enter backup code' : '000000'}
+                  className={`w-full rounded-lg border border-gray-700/50 bg-surface-950 px-3 py-2 text-sm text-gray-100 placeholder-gray-500 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500 ${useBackupCode ? '' : 'tracking-widest text-center text-lg'}`}
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={loading || totpCode.length < (useBackupCode ? 1 : 6)}
+                className="w-full rounded-lg bg-violet-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-violet-600 active:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {loading ? 'Verifying...' : 'Verify'}
+              </button>
+              <div className="flex justify-between items-center">
+                <button
+                  type="button"
+                  onClick={() => { setUseBackupCode(v => !v); setTotpCode(''); setError(''); }}
+                  className="text-xs text-violet-400 hover:text-violet-300"
+                >
+                  {useBackupCode ? 'Use authenticator code' : 'Use backup code instead'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setTwoFactorRequired(false); setTotpCode(''); setError(''); }}
+                  className="text-xs text-gray-500 hover:text-gray-300"
+                >
+                  Back
+                </button>
+              </div>
+            </form>
+          )}
+
           {/* Sign In form */}
-          {tab === 'signin' && (
+          {tab === 'signin' && !twoFactorRequired && (
             <form onSubmit={handleSignIn} className="space-y-4">
               <div>
                 <label htmlFor="signin-email" className="block text-sm font-medium text-gray-300 mb-1">
@@ -219,7 +303,7 @@ export default function LoginPage() {
           )}
 
           {/* Forgot password form */}
-          {tab === 'signin' && forgotMode && (
+          {tab === 'signin' && forgotMode && !twoFactorRequired && (
             <div className="mt-4 p-4 border border-gray-700/50 rounded-lg">
               <h4 className="text-sm font-medium text-gray-200 mb-2">Reset Password</h4>
               {forgotSent ? (

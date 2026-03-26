@@ -6,7 +6,7 @@ import type { AuthUser } from '../lib/api';
 interface AuthContextType {
   user: AuthUser | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<{ twoFactorRequired?: boolean }>;
   register: (email: string, password: string, name: string, inviteCode?: string) => Promise<void>;
   loginWithGoogle: (inviteCode?: string) => void;
   loginWithGithub: (inviteCode?: string) => void;
@@ -31,11 +31,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, [session.data]);
 
-  const login = useCallback(async (email: string, password: string) => {
+  const login = useCallback(async (email: string, password: string): Promise<{ twoFactorRequired?: boolean }> => {
     const result = await authClient.signIn.email({ email, password });
     if (result.error) {
       throw new Error(String(result.error.message) || 'Login failed');
     }
+    // better-auth sets twoFactorRedirect on the data when 2FA is required
+    const data = result.data as Record<string, unknown> | null | undefined;
+    if (data?.twoFactorRedirect) {
+      return { twoFactorRequired: true };
+    }
+    return {};
   }, []);
 
   const register = useCallback(async (email: string, password: string, name: string, inviteCode?: string) => {

@@ -15,19 +15,21 @@ datasource db {
 // ---------------------------------------------------------------------------
 
 model User {
-  id            String   @id
-  name          String
-  email         String   @unique
-  emailVerified Boolean  @default(false)
-  image         String?
-  role          String   @default("user")
-  disabled      Boolean  @default(false)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id               String   @id
+  name             String
+  email            String   @unique
+  emailVerified    Boolean  @default(false)
+  image            String?
+  role             String   @default("user")
+  disabled         Boolean  @default(false)
+  twoFactorEnabled Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
-  sessions Session[]
-  accounts Account[]
-  passkeys Passkey[]
+  sessions   Session[]
+  accounts   Account[]
+  passkeys   Passkey[]
+  twoFactors TwoFactor[]
 
   // Domain relations
   noteShares              NoteShare[]    @relation("owner")
@@ -94,6 +96,16 @@ model Passkey {
   transports   String?
   createdAt    DateTime @default(now())
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model TwoFactor {
+  id          String @id
+  secret      String
+  backupCodes String
+  userId      String
+  user        User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 // ---------------------------------------------------------------------------

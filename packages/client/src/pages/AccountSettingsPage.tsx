@@ -1,15 +1,17 @@
 import { useState, useCallback, FormEvent } from 'react';
-import { Settings, User, Fingerprint, Key, X } from 'lucide-react';
+import { Settings, User, Fingerprint, Key, Shield, X } from 'lucide-react';
 import { authApi } from '../lib/api';
 import { PasskeyManagerContent } from '../components/Security/PasskeyManager';
 import { ApiKeyManager } from '../components/ApiKeys/ApiKeyManager';
+import { TwoFactorManager } from '../components/Security/TwoFactorManager';
 
-type Tab = 'profile' | 'passkeys' | 'api-keys';
+type Tab = 'profile' | 'passkeys' | 'api-keys' | '2fa';
 
 const TABS: { key: Tab; label: string; icon: typeof User }[] = [
   { key: 'profile', label: 'Profile', icon: User },
   { key: 'passkeys', label: 'Passkeys', icon: Fingerprint },
   { key: 'api-keys', label: 'API Keys', icon: Key },
+  { key: '2fa', label: '2FA', icon: Shield },
 ];
 
 function ProfileSection() {
@@ -96,7 +98,7 @@ function ProfileSection() {
 }
 
 export default function AccountSettingsPage({ onClose }: { onClose: () => void }) {
-  const [tab, setTab] = useState<Tab>('api-keys');
+  const [tab, setTab] = useState<Tab>('profile');
 
   return (
     <div
@@ -144,6 +146,7 @@ export default function AccountSettingsPage({ onClose }: { onClose: () => void }
           {tab === 'profile' && <ProfileSection />}
           {tab === 'passkeys' && <PasskeyManagerContent />}
           {tab === 'api-keys' && <ApiKeyManager />}
+          {tab === '2fa' && <TwoFactorManager />}
         </div>
       </div>
     </div>

@@ -1,0 +1,301 @@
+import { useState, useEffect, useCallback, FormEvent } from 'react';
+import { Shield, ShieldCheck, Copy, Check } from 'lucide-react';
+import QRCode from 'qrcode';
+import { authClient } from '../../lib/auth-client';
+
+type SetupStep = 'idle' | 'confirm-password' | 'scan-qr' | 'verify' | 'backup-codes';
+
+export function TwoFactorManager() {
+  const session = authClient.useSession();
+  const twoFactorEnabled = !!(session.data?.user as Record<string, unknown> | undefined)?.twoFactorEnabled;
+
+  const [step, setStep] = useState<SetupStep>('idle');
+  const [password, setPassword] = useState('');
+  const [totpCode, setTotpCode] = useState('');
+  const [totpURI, setTotpURI] = useState('');
+  const [qrDataUrl, setQrDataUrl] = useState('');
+  const [backupCodes, setBackupCodes] = useState<string[]>([]);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [copiedCodes, setCopiedCodes] = useState(false);
+
+  // Disable 2FA flow
+  const [disablePassword, setDisablePassword] = useState('');
+  const [showDisableConfirm, setShowDisableConfirm] = useState(false);
+
+  useEffect(() => {
+    if (totpURI) {
+      QRCode.toDataURL(totpURI, { width: 200, margin: 1 })
+        .then(setQrDataUrl)
+        .catch(() => setQrDataUrl(''));
+    }
+  }, [totpURI]);
+
+  const handleStartSetup = useCallback(() => {
+    setError('');
+    setPassword('');
+    setTotpCode('');
+    setStep('confirm-password');
+  }, []);
+
+  const handleConfirmPassword = useCallback(async (e: FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    try {
+      const result = await authClient.twoFactor.enable({ password });
+      if (result.error) {
+        setError(result.error.message || 'Failed to start 2FA setup');
+        return;
+      }
+      const { totpURI: uri, backupCodes: codes } = result.data!;
+      setTotpURI(uri);
+      setBackupCodes(codes);
+      setStep('scan-qr');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to start 2FA setup');
+    } finally {
+      setLoading(false);
+    }
+  }, [password]);
+
+  const handleVerifyTOTP = useCallback(async (e: FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    try {
+      const result = await authClient.twoFactor.verifyTotp({ code: totpCode });
+      if (result.error) {
+        setError(result.error.message || 'Invalid code. Please try again.');
+        return;
+      }
+      setStep('backup-codes');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Verification failed');
+    } finally {
+      setLoading(false);
+    }
+  }, [totpCode]);
+
+  const handleDisable = useCallback(async (e: FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    try {
+      const result = await authClient.twoFactor.disable({ password: disablePassword });
+      if (result.error) {
+        setError(result.error.message || 'Failed to disable 2FA');
+        return;
+      }
+      setShowDisableConfirm(false);
+      setDisablePassword('');
+      await session.refetch();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to disable 2FA');
+    } finally {
+      setLoading(false);
+    }
+  }, [disablePassword, session]);
+
+  const handleCopyBackupCodes = useCallback(() => {
+    navigator.clipboard.writeText(backupCodes.join('\n'));
+    setCopiedCodes(true);
+    setTimeout(() => setCopiedCodes(false), 2000);
+  }, [backupCodes]);
+
+  const handleFinish = useCallback(async () => {
+    setStep('idle');
+    setTotpURI('');
+    setQrDataUrl('');
+    setBackupCodes([]);
+    setPassword('');
+    setTotpCode('');
+    await session.refetch();
+  }, [session]);
+
+  const inputClass = "w-full bg-surface-800 border border-gray-700/50 rounded-lg px-3 py-2 text-sm text-gray-100 focus:outline-none focus:ring-2 focus:ring-violet-500/50";
+  const btnPrimary = "flex-1 bg-violet-500 text-white rounded-lg py-2 text-sm font-medium hover:bg-violet-600 transition-colors disabled:opacity-50";
+  const btnSecondary = "px-4 py-2 text-sm text-gray-400 hover:text-gray-200 transition-colors";
+
+  return (
+    <div className="max-w-sm space-y-4">
+      <div>
+        <h3 className="text-sm font-medium text-gray-200 mb-1 flex items-center gap-2">
+          {twoFactorEnabled
+            ? <><ShieldCheck size={16} className="text-green-400" /> Two-Factor Authentication</>
+            : <><Shield size={16} className="text-gray-400" /> Two-Factor Authentication</>
+          }
+        </h3>
+        <p className="text-xs text-gray-500">
+          {twoFactorEnabled
+            ? 'Your account is protected with TOTP two-factor authentication.'
+            : 'Add an extra layer of security using an authenticator app.'}
+        </p>
+      </div>
+
+      {error && <div className="text-red-400 text-xs">{error}</div>}
+
+      {/* Idle state */}
+      {step === 'idle' && !twoFactorEnabled && (
+        <button onClick={handleStartSetup} className="bg-violet-500 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-violet-600 transition-colors">
+          Enable 2FA
+        </button>
+      )}
+
+      {step === 'idle' && twoFactorEnabled && !showDisableConfirm && (
+        <button
+          onClick={() => { setShowDisableConfirm(true); setError(''); setDisablePassword(''); }}
+          className="border border-red-500/50 text-red-400 rounded-lg px-4 py-2 text-sm font-medium hover:bg-red-500/10 transition-colors"
+        >
+          Disable 2FA
+        </button>
+      )}
+
+      {/* Disable confirm */}
+      {showDisableConfirm && (
+        <form onSubmit={handleDisable} className="space-y-3">
+          <p className="text-xs text-yellow-400">Enter your password to confirm disabling 2FA.</p>
+          <div>
+            <label className="block text-xs text-gray-400 mb-1">Password</label>
+            <input
+              type="password"
+              value={disablePassword}
+              onChange={e => setDisablePassword(e.target.value)}
+              required
+              autoFocus
+              className={inputClass}
+            />
+          </div>
+          <div className="flex gap-2">
+            <button type="submit" disabled={loading} className={btnPrimary}>
+              {loading ? 'Disabling...' : 'Confirm Disable'}
+            </button>
+            <button type="button" onClick={() => setShowDisableConfirm(false)} className={btnSecondary}>
+              Cancel
+            </button>
+          </div>
+        </form>
+      )}
+
+      {/* Step 1: Confirm password to get TOTP URI */}
+      {step === 'confirm-password' && (
+        <form onSubmit={handleConfirmPassword} className="space-y-3">
+          <p className="text-xs text-gray-400">Enter your password to begin setup.</p>
+          <div>
+            <label className="block text-xs text-gray-400 mb-1">Password</label>
+            <input
+              type="password"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              required
+              autoFocus
+              className={inputClass}
+            />
+          </div>
+          <div className="flex gap-2">
+            <button type="submit" disabled={loading} className={btnPrimary}>
+              {loading ? 'Generating...' : 'Continue'}
+            </button>
+            <button type="button" onClick={() => setStep('idle')} className={btnSecondary}>
+              Cancel
+            </button>
+          </div>
+        </form>
+      )}
+
+      {/* Step 2: Scan QR code */}
+      {step === 'scan-qr' && (
+        <div className="space-y-3">
+          <p className="text-xs text-gray-400">
+            Scan this QR code with your authenticator app (Google Authenticator, Authy, etc.).
+          </p>
+          {qrDataUrl ? (
+            <div className="bg-white p-3 rounded-lg inline-block">
+              <img src={qrDataUrl} alt="TOTP QR Code" width={200} height={200} />
+            </div>
+          ) : (
+            <div className="bg-surface-800 rounded-lg p-3 text-xs text-gray-400 break-all">
+              {totpURI}
+            </div>
+          )}
+          <p className="text-xs text-gray-500">
+            Can't scan? Manually enter the secret key from the URI above into your app.
+          </p>
+          <button
+            onClick={() => { setStep('verify'); setError(''); }}
+            className="w-full bg-violet-500 text-white rounded-lg py-2 text-sm font-medium hover:bg-violet-600 transition-colors"
+          >
+            I've scanned it — Continue
+          </button>
+          <button type="button" onClick={() => setStep('idle')} className="w-full text-center text-xs text-gray-500 hover:text-gray-300">
+            Cancel
+          </button>
+        </div>
+      )}
+
+      {/* Step 3: Verify TOTP code */}
+      {step === 'verify' && (
+        <form onSubmit={handleVerifyTOTP} className="space-y-3">
+          <p className="text-xs text-gray-400">
+            Enter the 6-digit code from your authenticator app to confirm setup.
+          </p>
+          <div>
+            <label className="block text-xs text-gray-400 mb-1">Authentication Code</label>
+            <input
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              maxLength={6}
+              value={totpCode}
+              onChange={e => setTotpCode(e.target.value.replace(/\D/g, ''))}
+              required
+              autoFocus
+              placeholder="000000"
+              className={inputClass + " tracking-widest text-center text-lg"}
+            />
+          </div>
+          <div className="flex gap-2">
+            <button type="submit" disabled={loading || totpCode.length !== 6} className={btnPrimary}>
+              {loading ? 'Verifying...' : 'Verify & Enable'}
+            </button>
+            <button type="button" onClick={() => setStep('scan-qr')} className={btnSecondary}>
+              Back
+            </button>
+          </div>
+        </form>
+      )}
+
+      {/* Step 4: Backup codes */}
+      {step === 'backup-codes' && (
+        <div className="space-y-3">
+          <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3">
+            <p className="text-xs text-yellow-300 font-medium mb-1">Save your backup codes</p>
+            <p className="text-xs text-yellow-400/80">
+              Store these in a safe place. Each code can only be used once to recover access if you lose your authenticator.
+            </p>
+          </div>
+          <div className="bg-surface-800 rounded-lg p-3 grid grid-cols-2 gap-1.5">
+            {backupCodes.map((code, i) => (
+              <span key={i} className="font-mono text-xs text-gray-200 text-center py-1 bg-surface-950 rounded px-2">
+                {code}
+              </span>
+            ))}
+          </div>
+          <button
+            onClick={handleCopyBackupCodes}
+            className="flex items-center gap-2 text-xs text-violet-400 hover:text-violet-300 transition-colors"
+          >
+            {copiedCodes ? <Check size={14} /> : <Copy size={14} />}
+            {copiedCodes ? 'Copied!' : 'Copy all codes'}
+          </button>
+          <button
+            onClick={handleFinish}
+            className="w-full bg-violet-500 text-white rounded-lg py-2 text-sm font-medium hover:bg-violet-600 transition-colors"
+          >
+            Done — 2FA is enabled
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}

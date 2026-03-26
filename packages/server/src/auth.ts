@@ -1,5 +1,6 @@
 import { betterAuth } from "better-auth";
 import { passkey } from "@better-auth/passkey";
+import { twoFactor } from "better-auth/plugins";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { prisma } from "./prisma.js";
 import { createLogger } from "./lib/logger.js";
@@ -91,6 +92,16 @@ export const auth = betterAuth({
       rpName: "Mnemo",
       rpID: process.env.WEBAUTHN_RP_ID || "localhost",
       origin: APP_URL,
+    }),
+    twoFactor({
+      issuer: "Mnemo",
+      totpOptions: {
+        period: 30,
+        digits: 6,
+      },
+      backupCodes: {
+        amount: 10,
+      },
     }),
   ],
 
