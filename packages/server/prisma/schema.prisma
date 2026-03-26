@@ -7,7 +7,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
 }
 
 // ---------------------------------------------------------------------------
@@ -125,7 +125,7 @@ model SearchIndex {
   userId     String
   title      String
   content    String
-  tags       String[]
+  tags       String    @default("")
   modifiedAt DateTime
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 

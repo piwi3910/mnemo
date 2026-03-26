@@ -5,7 +5,7 @@ COPY packages/client/package*.json packages/client/
 COPY packages/server/package*.json packages/server/
 RUN npm install
 COPY . .
-RUN npx prisma generate --schema=packages/server/prisma/schema.prisma
+RUN npx prisma generate
 RUN npm run build
 # tsc with moduleResolution:"bundler" emits extensionless relative imports,
 # but Node ESM requires .js extensions. Patch all compiled .js files.
@@ -19,10 +19,11 @@ COPY --from=builder /app/packages/server/prisma ./prisma
 COPY --from=builder /app/packages/client/dist ./public
 RUN npm install --omit=dev
 RUN addgroup -S app && adduser -S app -G app
-RUN mkdir -p /notes && chown -R app:app /app /notes
+RUN mkdir -p /notes /data && chown -R app:app /app /notes /data
 COPY --chown=app:app packages/server/prisma.config.mjs ./prisma.config.mjs
 COPY --chown=app:app entrypoint.sh ./entrypoint.sh
 USER app
 ENV PORT=3000
+ENV DATABASE_URL=file:/data/mnemo.db
 EXPOSE 3000
 ENTRYPOINT ["./entrypoint.sh"]

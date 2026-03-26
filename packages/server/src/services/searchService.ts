@@ -7,8 +7,19 @@ interface SearchIndexRow {
   userId: string;
   title: string;
   content: string;
-  tags: string[];
+  tags: string; // JSON array string, e.g. '["tag1","tag2"]'
   modifiedAt: Date;
+}
+
+/** Parse tags from DB string (JSON array) to string[] */
+function parseTags(tags: string): string[] {
+  if (!tags) return [];
+  try { return JSON.parse(tags); } catch { return []; }
+}
+
+/** Serialize string[] tags to DB string */
+function serializeTags(tags: string[]): string {
+  return JSON.stringify(tags);
 }
 
 // ---------------------------------------------------------------------------
@@ -76,7 +87,7 @@ async function buildIndex(userId: string): Promise<void> {
     id: r.notePath,
     title: r.title,
     content: r.content,
-    tags: r.tags.join(" "),
+    tags: parseTags(r.tags).join(" "),
     notePath: r.notePath,
   }));
 
@@ -269,13 +280,13 @@ export async function indexNote(
       userId,
       title,
       content: plainContent,
-      tags,
+      tags: serializeTags(tags),
       modifiedAt: new Date(),
     },
     update: {
       title,
       content: plainContent,
-      tags,
+      tags: serializeTags(tags),
       modifiedAt: new Date(),
     },
   });
@@ -349,7 +360,7 @@ export async function renameInIndex(
           id: newPath,
           title: entry.title,
           content: entry.content,
-          tags: entry.tags.join(" "),
+          tags: parseTags(entry.tags).join(" "),
           notePath: newPath,
         });
       }
@@ -368,7 +379,7 @@ export async function getAllTags(userId: string): Promise<{ tag: string; count: 
 
   const tagCounts = new Map<string, number>();
   for (const note of allNotes) {
-    for (const tag of note.tags) {
+    for (const tag of parseTags(note.tags)) {
       if (tag) {
         tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1);
       }
@@ -393,7 +404,7 @@ export async function getNotesByTag(
   });
 
   return allNotes
-    .filter((note) => note.tags.includes(tag))
+    .filter((note) => parseTags(note.tags).includes(tag))
     .map((note) => ({ notePath: note.notePath, title: note.title }));
 }
 
@@ -430,7 +441,7 @@ export async function search(query: string, userId: string): Promise<SearchResul
       path: r.notePath,
       title: r.title,
       snippet: r.content.substring(0, 150).trim() + (r.content.length > 150 ? "..." : ""),
-      tags: r.tags,
+      tags: parseTags(r.tags),
       modifiedAt: r.modifiedAt,
     }));
   } else {
@@ -455,7 +466,7 @@ export async function search(query: string, userId: string): Promise<SearchResul
           path: row.notePath,
           title: row.title,
           snippet: createSnippet(row.content, query),
-          tags: row.tags,
+          tags: parseTags(row.tags),
           modifiedAt: row.modifiedAt,
         };
       })
@@ -479,8 +490,8 @@ export async function search(query: string, userId: string): Promise<SearchResul
     const queryFilter = query.trim()
       ? {
           OR: [
-            { title: { contains: query, mode: "insensitive" as const } },
-            { content: { contains: query, mode: "insensitive" as const } },
+            { title: { contains: query } },
+            { content: { contains: query } },
           ],
         }
       : {};
@@ -499,7 +510,7 @@ export async function search(query: string, userId: string): Promise<SearchResul
       path: r.notePath,
       title: r.title,
       snippet: createSnippet(r.content, query),
-      tags: r.tags,
+      tags: parseTags(r.tags),
       modifiedAt: r.modifiedAt,
       isShared: true,
       ownerUserId: r.userId,

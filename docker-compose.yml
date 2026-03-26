@@ -1,30 +1,18 @@
-version: '3.8'
 services:
   mnemo:
     build: .
     ports:
       - "3000:3000"
     volumes:
-      - ./notes:/app/notes
+      - ./notes:/notes
+      - mnemo-data:/data
     environment:
-      - DATABASE_URL=postgresql://postgres:postgres@db:5432/mnemo
+      - DATABASE_URL=file:/data/mnemo.db
       # Required: generate with: openssl rand -hex 32
       - BETTER_AUTH_SECRET=change-me-use-openssl-rand-hex-32
       # Optional: set to your public URL for OAuth/passkey support
-      - APP_URL=http://localhost:3100
-      - BETTER_AUTH_URL=http://localhost:3100
-    depends_on:
-      - db
-
-  db:
-    image: postgres:16-alpine
-    environment:
-      - POSTGRES_DB=mnemo
-      - POSTGRES_PASSWORD=postgres
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
+      - APP_URL=http://localhost:3000
+      - BETTER_AUTH_URL=http://localhost:3000
 
 volumes:
-  pgdata:
+  mnemo-data:

@@ -175,13 +175,13 @@ export class PluginApiFactory {
             userId,
             title: fields.title,
             content: fields.content,
-            tags: fields.tags || [],
+            tags: JSON.stringify(fields.tags || []),
             modifiedAt: new Date(),
           },
           update: {
             title: fields.title,
             content: fields.content,
-            tags: fields.tags || [],
+            tags: JSON.stringify(fields.tags || []),
             modifiedAt: new Date(),
           },
         });
@@ -191,8 +191,8 @@ export class PluginApiFactory {
           where: {
             userId,
             OR: [
-              { title: { contains: queryStr, mode: "insensitive" } },
-              { content: { contains: queryStr, mode: "insensitive" } },
+              { title: { contains: queryStr } },
+              { content: { contains: queryStr } },
             ],
           },
         });
