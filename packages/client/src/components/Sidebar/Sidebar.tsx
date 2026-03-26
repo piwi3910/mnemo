@@ -5,6 +5,7 @@ import { FileText, Folder, FolderOpen, ChevronRight, Plus, FolderPlus, MoreHoriz
 import { TagPane } from '../Tags/TagPane';
 import { ResizeHandle } from '../Layout/ResizeHandle';
 import { TrashPane } from './TrashPane';
+import { FavoritesPane } from './FavoritesPane';
 
 interface SharedNote {
   id: string;
@@ -55,6 +56,9 @@ export function Sidebar({
   const [renaming, setRenaming] = useState<{ path: string; type: 'file' | 'folder' } | null>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; node: FileNode } | null>(null);
   const [newName, setNewName] = useState('');
+  const [draggedPath, setDraggedPath] = useState<string | null>(null);
+  const [draggedType, setDraggedType] = useState<'file' | 'folder' | null>(null);
+  const [dragOverPath, setDragOverPath] = useState<string | null>(null);
   const [sharedCollapsed, setSharedCollapsed] = useState(false);
   const [tagPaneHeight, setTagPaneHeight] = useState(180);
   const [trashItems, setTrashItems] = useState<TrashItem[]>([]);
@@ -162,18 +166,6 @@ export function Sidebar({
       document.removeEventListener('mousedown', handler);
     };
   }, [contextMenu]);
-
-  // Collect starred notes that exist in the tree
-  const starredNotes: FileNode[] = [];
-  function findStarredNotes(nodes: FileNode[]) {
-    for (const node of nodes) {
-      if (node.type === 'file' && starredPaths.has(node.path)) {
-        starredNotes.push(node);
-      }
-      if (node.children) findStarredNotes(node.children);
-    }
-  }
-  findStarredNotes(tree);
 
   const renderNode = (node: FileNode, depth: number) => {
     const isActive = node.type === 'file' && node.path === activeNotePath;
@@ -324,34 +316,12 @@ export function Sidebar({
         </div>
       </div>
 
-      {/* Starred section */}
-      {starredNotes.length > 0 && (
-        <div className="border-b">
-          <div className="px-3 py-1.5">
-            <span className="text-xs font-semibold text-yellow-600 dark:text-yellow-500 uppercase tracking-wider flex items-center gap-1">
-              <Star size={11} fill="currentColor" />
-              Starred
-            </span>
-          </div>
-          <div className="pb-1">
-            {starredNotes.map((node) => (
-              <div
-                key={`starred-${node.path}`}
-                className={`group flex items-center gap-1 px-2 py-1 cursor-pointer text-sm rounded-md mx-1 transition-colors duration-100
-                  ${node.path === activeNotePath
-                    ? 'bg-violet-500/10 text-violet-600 dark:text-violet-400 font-medium'
-                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-200/60 dark:hover:bg-gray-700/40'
-                  }`}
-                style={{ paddingLeft: '8px' }}
-                onClick={() => onSelect(node.path)}
-              >
-                <Star size={13} className="flex-shrink-0 text-yellow-500" fill="currentColor" />
-                <span className="flex-1 truncate">{node.name.replace(/\.md$/, '')}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* Favorites section */}
+      <FavoritesPane
+        starredPaths={starredPaths}
+        onSelect={onSelect}
+        onToggleStar={onToggleStar}
+      />
 
       {/* File tree */}
       <div className="flex-1 overflow-y-auto py-1">
