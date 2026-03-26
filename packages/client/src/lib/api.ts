@@ -205,6 +205,23 @@ export const api = {
   emptyTrash: () =>
     request<{ message: string }>('/trash-empty', { method: 'DELETE' }),
 
+  // Files
+  uploadFile: (file: File): Promise<{ path: string; url: string }> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return fetch(`${BASE}/files`, {
+      method: 'POST',
+      credentials: 'include',
+      body: formData,
+    }).then(async (res) => {
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: res.statusText }));
+        throw new Error(err.error || res.statusText);
+      }
+      return res.json();
+    });
+  },
+
   // Plugins
   getActivePlugins: () => request<ActivePluginInfo[]>('/plugins/active'),
   getAllPlugins: () => request<unknown[]>('/plugins/all'),

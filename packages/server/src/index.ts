@@ -1,6 +1,7 @@
 import http from "http";
 import express, { Request, Response } from "express";
 import cors from "cors";
+import multer from "multer";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import { validateEnv } from "./lib/env.js";
@@ -273,6 +274,80 @@ async function main(): Promise<void> {
   app.use("/api/mcp", createMcpRouter());
   app.use("/api/trash-empty", authMiddleware, createTrashEmptyRouter(NOTES_DIR));
   app.use("/api/trash", authMiddleware, createTrashRouter(NOTES_DIR));
+
+  /**
+   * @swagger
+   * /files:
+   *   post:
+   *     summary: Upload an image attachment to the notes directory
+   *     tags: [Files]
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         multipart/form-data:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               file:
+   *                 type: string
+   *                 format: binary
+   *     responses:
+   *       200:
+   *         description: Upload successful
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 path:
+   *                   type: string
+   *                 url:
+   *                   type: string
+   *       400:
+   *         description: No file provided or file type not allowed
+   *       413:
+   *         description: File too large
+   */
+  const uploadStorage = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
+  });
+
+  app.post("/api/files", authMiddleware, uploadStorage.single("file"), async (req: Request, res: Response, next) => {
+    try {
+      const user = requireUser(req);
+      if (!req.file) {
+        res.status(400).json({ error: "No file provided" });
+        return;
+      }
+
+      const allowedExts = [".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp"];
+      const ext = path.extname(req.file.originalname).toLowerCase();
+      if (!allowedExts.includes(ext)) {
+        res.status(400).json({ error: "File type not allowed" });
+        return;
+      }
+
+      const timestamp = Date.now();
+      const safeOriginalName = req.file.originalname.replace(/[^a-zA-Z0-9._-]/g, "_");
+      const filename = `${timestamp}-${safeOriginalName}`;
+
+      const userDir = await getUserNotesDir(NOTES_DIR, user.id);
+      const attachmentsDir = path.join(userDir, "attachments");
+      await fs.mkdir(attachmentsDir, { recursive: true });
+
+      const destPath = path.join(attachmentsDir, filename);
+      validatePathWithinBase(destPath, userDir);
+      await fs.writeFile(destPath, req.file.buffer);
+
+      res.json({
+        path: `attachments/${filename}`,
+        url: `/api/files/attachments/${filename}`,
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
 
   /**
    * @swagger

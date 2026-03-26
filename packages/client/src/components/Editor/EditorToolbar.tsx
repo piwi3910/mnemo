@@ -1,13 +1,14 @@
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import { EditorView } from '@codemirror/view';
 import { undo, redo } from '@codemirror/commands';
 import {
-  Bold, Italic, Strikethrough, Code, Link, Image,
+  Bold, Italic, Strikethrough, Code, Link, Image, ImagePlus,
   Heading1, Heading2, Heading3,
   List, ListOrdered, CheckSquare,
   Quote, Minus, Table,
   Undo2, Redo2,
 } from 'lucide-react';
+import { api } from '../../lib/api';
 
 interface EditorToolbarProps {
   viewRef: React.MutableRefObject<EditorView | undefined>;
@@ -30,6 +31,8 @@ function ToolbarSep() {
 }
 
 export function EditorToolbar({ viewRef }: EditorToolbarProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const wrapSelection = useCallback((before: string, after: string) => {
     const view = viewRef.current;
     if (!view) return;
@@ -94,6 +97,23 @@ export function EditorToolbar({ viewRef }: EditorToolbarProps) {
     view.focus();
   }, [viewRef]);
 
+  const handleImageUpload = useCallback(async (file: File) => {
+    try {
+      const result = await api.uploadFile(file);
+      const view = viewRef.current;
+      if (!view) return;
+      const { from } = view.state.selection.main;
+      const markdown = `![image](${result.path})`;
+      view.dispatch({
+        changes: { from, to: from, insert: markdown },
+        selection: { anchor: from + markdown.length },
+      });
+      view.focus();
+    } catch (err) {
+      console.error('Image upload failed:', err);
+    }
+  }, [viewRef]);
+
   const insertTable = useCallback(() => {
     const view = viewRef.current;
     if (!view) return;
@@ -122,6 +142,17 @@ export function EditorToolbar({ viewRef }: EditorToolbarProps) {
 
   return (
     <div className="flex items-center gap-0.5 px-2 py-1 border-b border-gray-700/50 bg-surface-900/80 flex-shrink-0 flex-wrap">
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) handleImageUpload(file);
+          e.target.value = '';
+        }}
+      />
       <ToolbarButton icon={Undo2} title="Undo (Ctrl+Z)" onClick={handleUndo} />
       <ToolbarButton icon={Redo2} title="Redo (Ctrl+Shift+Z)" onClick={handleRedo} />
       <ToolbarSep />
@@ -136,6 +167,7 @@ export function EditorToolbar({ viewRef }: EditorToolbarProps) {
       <ToolbarSep />
       <ToolbarButton icon={Link} title="Wiki link" onClick={insertLink} />
       <ToolbarButton icon={Image} title="Image" onClick={insertImage} />
+      <ToolbarButton icon={ImagePlus} title="Upload image" onClick={() => fileInputRef.current?.click()} />
       <ToolbarSep />
       <ToolbarButton icon={List} title="Bullet list" onClick={() => insertAtLineStart('- ')} />
       <ToolbarButton icon={ListOrdered} title="Numbered list" onClick={() => insertAtLineStart('1. ')} />
