@@ -42,6 +42,7 @@ import { createMcpRouter } from "./mcp/mcpServer.js";
 import { setGraphWebSocket } from "./services/noteService.js";
 import { createTrashRouter, createTrashEmptyRouter, purgeOldTrash } from "./routes/trash.js";
 import { createHistoryRouter, createHistoryTimestampRouter, createHistoryRestoreRouter } from "./routes/history.js";
+import { createSyncRouter } from "./routes/sync.js";
 
 const log = createLogger("server");
 const PORT = parseInt(process.env.PORT || "3001", 10);
@@ -102,6 +103,12 @@ async function main(): Promise<void> {
   } catch (err) {
     log.error("Trash auto-purge failed:", err);
   }
+
+  // Clean up old sync deletion records (older than 90 days)
+  await prisma.syncDeletion.deleteMany({
+    where: { deletedAt: { lt: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000) } },
+  });
+  log.info("Sync deletion cleanup complete.");
 
   // Note: per-user indexing is now handled during provisioning and login.
   log.info("Startup complete — per-user notes are indexed on demand.");
@@ -207,6 +214,14 @@ async function main(): Promise<void> {
     keyGenerator: (req) => req.apiKey?.id || req.ip || "unknown",
     message: { error: "Too many API requests, please try again later" },
   });
+
+  const syncLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 40,
+    keyGenerator: (req) => req.apiKey?.id || req.user?.id || req.ip || "unknown",
+    message: { error: "Sync rate limit exceeded" },
+  });
+  app.use("/api/sync", authMiddleware, syncLimiter, createSyncRouter(NOTES_DIR));
 
   app.use("/api/auth", authLimiter);
   app.use("/api", (req, res, next) => {
