@@ -10,8 +10,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useEffect } from "react";
-import { database } from "../../../src/db";
-import Note from "../../../src/db/models/Note";
+import { getDatabase, NoteRow } from "../../../src/db";
 import {
   colors,
   fontSize,
@@ -49,7 +48,7 @@ function parseTagsField(tagsJson: string): string[] {
   return [];
 }
 
-function computeTags(notes: Note[]): TagEntry[] {
+function computeTags(notes: NoteRow[]): TagEntry[] {
   const tagMap = new Map<string, number>();
 
   for (const note of notes) {
@@ -66,7 +65,7 @@ function computeTags(notes: Note[]): TagEntry[] {
     .sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag));
 }
 
-function getNotesForTag(notes: Note[], tag: string): TaggedNote[] {
+function getNotesForTag(notes: NoteRow[], tag: string): TaggedNoteRow[] {
   return notes
     .filter((note) => {
       const fieldTags = parseTagsField(note.tags ?? "");
@@ -84,20 +83,22 @@ function getNotesForTag(notes: Note[], tag: string): TaggedNote[] {
 export default function TagsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const [allNotes, setAllNotes] = useState<Note[]>([]);
+  const [allNotes, setAllNotes] = useState<NoteRow[]>([]);
   const [tags, setTags] = useState<TagEntry[]>([]);
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
-  const [filteredNotes, setFilteredNotes] = useState<TaggedNote[]>([]);
+  const [filteredNotes, setFilteredNotes] = useState<TaggedNoteRow[]>([]);
   const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    const col = database.get<Note>("notes");
-    const subscription = col.query().observe().subscribe((notes) => {
-      setAllNotes(notes);
-      setTags(computeTags(notes));
-    });
-    return () => subscription.unsubscribe();
+  const loadNotes = useCallback(() => {
+    const db = getDatabase();
+    const notes = db.getAllSync<NoteRow>("SELECT * FROM notes WHERE _status != 'deleted'");
+    setAllNotes(notes);
+    setTags(computeTags(notes));
   }, []);
+
+  useEffect(() => {
+    loadNotes();
+  }, [loadNotes]);
 
   useEffect(() => {
     if (selectedTag) {

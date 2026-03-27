@@ -4,8 +4,7 @@ import WebView, { WebViewMessageEvent } from "react-native-webview";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useEffect } from "react";
-import { database } from "../../../src/db";
-import Note from "../../../src/db/models/Note";
+import { getDatabase, NoteRow } from "../../../src/db";
 import { colors, fontSize, spacing } from "../../../src/lib/theme";
 
 interface GraphNode {
@@ -31,7 +30,7 @@ function parseWikiLinks(content: string): string[] {
   });
 }
 
-function buildGraph(notes: Note[]): GraphData {
+function buildGraph(notes: NoteRow[]): GraphData {
   const nodeMap = new Map<string, GraphNode>();
 
   // Add all notes as nodes (use path as id)
@@ -343,19 +342,21 @@ export default function GraphScreen() {
   const pendingGraphRef = useRef<GraphData | null>(null);
   const [graph, setGraph] = useState<GraphData | null>(null);
 
-  useEffect(() => {
-    const col = database.get<Note>("notes");
-    const subscription = col.query().observe().subscribe((notes) => {
-      const g = buildGraph(notes);
-      setGraph(g);
-      if (isReadyRef.current) {
-        webViewRef.current?.postMessage(JSON.stringify({ type: "updateGraph", graph: g }));
-      } else {
-        pendingGraphRef.current = g;
-      }
-    });
-    return () => subscription.unsubscribe();
+  const loadGraph = useCallback(() => {
+    const db = getDatabase();
+    const notes = db.getAllSync<NoteRow>("SELECT * FROM notes WHERE _status != 'deleted'");
+    const g = buildGraph(notes);
+    setGraph(g);
+    if (isReadyRef.current) {
+      webViewRef.current?.postMessage(JSON.stringify({ type: "updateGraph", graph: g }));
+    } else {
+      pendingGraphRef.current = g;
+    }
   }, []);
+
+  useEffect(() => {
+    loadGraph();
+  }, [loadGraph]);
 
   const handleWebViewReady = useCallback(() => {
     isReadyRef.current = true;
