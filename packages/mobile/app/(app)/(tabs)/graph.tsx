@@ -69,10 +69,18 @@ function buildGraph(notes: NoteRow[]): GraphData {
   for (const note of notes) {
     const links = parseWikiLinks(note.content ?? "");
     for (const link of links) {
-      // Try to find a note whose path ends with the link target
-      const target = Array.from(nodeMap.keys()).find(
-        (p) => p === link || p.endsWith(`/${link}`) || p.endsWith(`/${link}.md`)
-      );
+      // Try to find a note matching the link target
+      const linkMd = link.endsWith(".md") ? link : `${link}.md`;
+      const linkLower = linkMd.toLowerCase();
+      const target = Array.from(nodeMap.keys()).find((p) => {
+        const pLower = p.toLowerCase();
+        return (
+          pLower === linkLower ||
+          pLower === link.toLowerCase() ||
+          pLower.endsWith(`/${linkLower}`) ||
+          pLower.endsWith(`/${link.toLowerCase()}`)
+        );
+      });
       if (target && target !== note.path) {
         edges.push({ source: note.path, target });
       }
@@ -210,8 +218,8 @@ function buildGraphHTML(): string {
     ctx.clearRect(0, 0, W, H);
 
     // Edges
-    ctx.strokeStyle = 'rgba(100, 116, 139, 0.3)';
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = 'rgba(148, 163, 184, 0.5)';
+    ctx.lineWidth = 1.5;
     edges.forEach(function(e) {
       ctx.beginPath();
       ctx.moveTo(e.source.x, e.source.y);
