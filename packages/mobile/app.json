@@ -24,8 +24,7 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.mnemo.app",
-      "usesCleartextTraffic": true
+      "package": "com.mnemo.app"
     },
     "web": {
       "favicon": "./assets/favicon.png",

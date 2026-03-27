@@ -6,6 +6,7 @@
     "packages/*"
   ],
   "overrides": {
+    "react": "19.2.0",
     "lucide-react": {
       "react": "$react"
     }
@@ -19,5 +20,8 @@
     "test": "npm run test --workspaces",
     "test:server": "npm run test --workspace=packages/server",
     "test:client": "npm run test --workspace=packages/client"
+  },
+  "dependencies": {
+    "react": "19.2.0"
   }
 }

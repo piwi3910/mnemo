@@ -9,16 +9,10 @@
       "distribution": "internal"
     },
     "preview": {
-      "distribution": "internal",
-      "env": {
-        "EXPO_USE_METRO_WORKSPACE_ROOT": "1"
-      }
+      "distribution": "internal"
     },
     "production": {
-      "autoIncrement": true,
-      "env": {
-        "EXPO_USE_METRO_WORKSPACE_ROOT": "1"
-      }
+      "autoIncrement": true
     }
   },
   "submit": {
