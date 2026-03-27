@@ -46,9 +46,9 @@ export function FavoritesPane({ starredPaths, onSelect, onToggleStar }: Favorite
               const dirPath = parts.length > 1 ? parts.slice(0, -1).join('/') : null;
 
               return (
-                <div
+                <button
                   key={path}
-                  className="group flex items-center gap-1.5 px-2 py-1 mx-1 rounded-md cursor-pointer text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-200/60 dark:hover:bg-gray-700/40 transition-colors duration-100"
+                  className="group w-full flex items-center gap-1.5 px-2 py-1 mx-1 rounded-md text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-200/60 dark:hover:bg-gray-700/40 transition-colors duration-100 text-left"
                   onClick={() => onSelect(path)}
                 >
                   <Star size={13} className="flex-shrink-0 text-yellow-500" fill="currentColor" />
@@ -70,7 +70,7 @@ export function FavoritesPane({ starredPaths, onSelect, onToggleStar }: Favorite
                   >
                     <Star size={13} fill="currentColor" />
                   </button>
-                </div>
+                </button>
               );
             })
           )}

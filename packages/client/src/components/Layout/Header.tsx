@@ -48,6 +48,7 @@ export function Header({
           rel="noopener noreferrer"
           className="btn-ghost px-2 py-1 text-xs font-medium hidden md:inline-flex"
           title="API Docs"
+          aria-label="API Documentation (opens in new tab)"
         >
           API
         </a>

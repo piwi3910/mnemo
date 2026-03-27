@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo, memo } from 'react';
 import { createPortal } from 'react-dom';
 import { FileNode, TrashItem, api } from '../../lib/api';
 import { FileText, Folder, FolderOpen, ChevronRight, Plus, FolderPlus, MoreHorizontal, Pencil, Trash2, Calendar, LayoutTemplate, Star, Share2 } from 'lucide-react';
@@ -59,6 +59,7 @@ export function Sidebar({
   const [draggedPath, setDraggedPath] = useState<string | null>(null);
   const [draggedType, setDraggedType] = useState<'file' | 'folder' | null>(null);
   const [dragOverPath, setDragOverPath] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<FileNode | null>(null);
   const [sharedCollapsed, setSharedCollapsed] = useState(false);
   const [tagPaneHeight, setTagPaneHeight] = useState(180);
   const [trashItems, setTrashItems] = useState<TrashItem[]>([]);
@@ -135,9 +136,8 @@ export function Sidebar({
     setNewName('');
   }, [renaming, newName, onRenameNote, onRenameFolder]);
 
-  const handleDelete = useCallback(async (node: FileNode) => {
-    const confirmed = window.confirm(`Delete "${node.name}"?`);
-    if (!confirmed) return;
+  const handleDeleteConfirmed = useCallback(async (node: FileNode) => {
+    setPendingDelete(null);
     if (node.type === 'file') {
       await onDeleteNote(node.path);
       refreshTrash();
@@ -244,7 +244,20 @@ export function Sidebar({
     setDragOverPath(null);
   }, []);
 
-  const renderNode = (node: FileNode, depth: number) => {
+  // Group shared notes by owner (memoized to avoid re-computation on every render)
+  const sharedNotesByOwner = useMemo(() => {
+    if (!sharedNotes || sharedNotes.length === 0) return [] as [string, SharedNote[]][];
+    const byOwner = new Map<string, SharedNote[]>();
+    for (const note of sharedNotes) {
+      const existing = byOwner.get(note.ownerUserId);
+      if (existing) existing.push(note);
+      else byOwner.set(note.ownerUserId, [note]);
+    }
+    return Array.from(byOwner.entries());
+  }, [sharedNotes]);
+
+  // SidebarNode is memoized to prevent O(n) DOM reconstruction on every render
+  const SidebarNode = useMemo(() => memo(function SidebarNode({ node, depth }: { node: FileNode; depth: number }) {
     const isActive = node.type === 'file' && node.path === activeNotePath;
     const isExpanded = expanded.has(node.path);
     const isRenaming = renaming?.path === node.path;
@@ -254,10 +267,13 @@ export function Sidebar({
     const displayName = node.type === 'file' ? node.name.replace(/\.md$/, '') : node.name;
 
     return (
-      <div key={node.path}>
-        <div
+      <div>
+        <button
           draggable
-          className={`group flex items-center gap-1 px-2 py-1 cursor-pointer text-sm rounded-md mx-1 transition-colors duration-100
+          role="treeitem"
+          aria-expanded={node.type === 'folder' ? isExpanded : undefined}
+          tabIndex={0}
+          className={`group w-full flex items-center gap-1 px-2 py-1 text-sm rounded-md mx-1 transition-colors duration-100
             ${isDragging ? 'opacity-50' : ''}
             ${isDragOver
               ? 'bg-violet-500/10 border border-violet-500/30 text-violet-600 dark:text-violet-400'
@@ -281,18 +297,19 @@ export function Sidebar({
             <>
               <ChevronRight
                 size={14}
+                aria-hidden="true"
                 className={`flex-shrink-0 text-gray-400 transition-transform duration-150 ${isExpanded ? 'rotate-90' : ''}`}
               />
               {isExpanded ? (
-                <FolderOpen size={15} className="flex-shrink-0 text-violet-500/70" />
+                <FolderOpen size={15} aria-hidden="true" className="flex-shrink-0 text-violet-500/70" />
               ) : (
-                <Folder size={15} className="flex-shrink-0 text-gray-400 dark:text-gray-500" />
+                <Folder size={15} aria-hidden="true" className="flex-shrink-0 text-gray-400 dark:text-gray-500" />
               )}
             </>
           ) : (
             <>
               <span className="w-3.5" />
-              <FileText size={15} className={`flex-shrink-0 ${isActive ? 'text-violet-500' : 'text-gray-400 dark:text-gray-500'}`} />
+              <FileText size={15} aria-hidden="true" className={`flex-shrink-0 ${isActive ? 'text-violet-500' : 'text-gray-400 dark:text-gray-500'}`} />
             </>
           )}
           {isRenaming ? (
@@ -324,7 +341,7 @@ export function Sidebar({
               }`}
               title={isStarred ? 'Unstar' : 'Star'}
             >
-              <Star size={13} fill={isStarred ? 'currentColor' : 'none'} />
+              <Star size={13} aria-hidden="true" fill={isStarred ? 'currentColor' : 'none'} />
             </button>
           )}
           <button
@@ -333,10 +350,11 @@ export function Sidebar({
               setContextMenu({ x: e.currentTarget.getBoundingClientRect().right, y: e.currentTarget.getBoundingClientRect().top, node });
             }}
             className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-gray-300/50 dark:hover:bg-gray-600/50 transition-opacity"
+            aria-label="More options"
           >
-            <MoreHorizontal size={14} />
+            <MoreHorizontal size={14} aria-hidden="true" />
           </button>
-        </div>
+        </button>
         {node.type === 'folder' && isExpanded && node.children && (
           <div>
             {creating && creating.parentPath === node.path && (
@@ -356,12 +374,17 @@ export function Sidebar({
                 />
               </div>
             )}
-            {node.children.map((child) => renderNode(child, depth + 1))}
+            {node.children.map((child) => (
+              <SidebarNode key={child.path} node={child} depth={depth + 1} />
+            ))}
           </div>
         )}
       </div>
     );
-  };
+  }), [activeNotePath, expanded, renaming, starredPaths, draggedPath, dragOverPath, newName,
+      toggleExpand, onSelect, handleContextMenu, handleDragStart, handleDragEnd, handleDragOver,
+      handleDragLeave, handleDrop, handleRename, onToggleStar, creating, submitCreate, setContextMenu,
+      setRenaming, setNewName, setCreating]);
 
   return (
     <div className="h-full flex flex-col" onClick={() => setContextMenu(null)}>
@@ -430,11 +453,13 @@ export function Sidebar({
             />
           </div>
         )}
-        {tree.map((node) => renderNode(node, 0))}
+        {tree.map((node) => (
+          <SidebarNode key={node.path} node={node} depth={0} />
+        ))}
       </div>
 
       {/* Shared section */}
-      {sharedNotes && sharedNotes.length > 0 && (
+      {sharedNotesByOwner.length > 0 && (
         <div className="border-t">
           <button
             onClick={() => setSharedCollapsed(prev => !prev)}
@@ -451,45 +476,37 @@ export function Sidebar({
           </button>
           {!sharedCollapsed && (
             <div className="pb-1">
-              {(() => {
-                const byOwner = new Map<string, SharedNote[]>();
-                for (const note of sharedNotes) {
-                  const existing = byOwner.get(note.ownerUserId);
-                  if (existing) existing.push(note);
-                  else byOwner.set(note.ownerUserId, [note]);
-                }
-                return Array.from(byOwner.entries()).map(([ownerUserId, notes]) => (
-                  <div key={ownerUserId}>
-                    <div className="px-3 py-0.5">
-                      <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        {notes[0].ownerName}
-                      </span>
-                    </div>
-                    {notes.map((note) => {
-                      const sharedId = `shared:${note.ownerUserId}:${note.path}`;
-                      const fileName = note.path.split('/').pop()?.replace(/\.md$/, '') || note.path;
-                      return (
-                        <div
-                          key={sharedId}
-                          className={`group flex items-center gap-1 px-2 py-1 cursor-pointer text-sm rounded-md mx-1 transition-colors duration-100
-                            ${sharedId === activeNotePath
-                              ? 'bg-violet-500/10 text-violet-600 dark:text-violet-400 font-medium'
-                              : 'text-gray-700 dark:text-gray-300 hover:bg-gray-200/60 dark:hover:bg-gray-700/40'
-                            }`}
-                          style={{ paddingLeft: '20px' }}
-                          onClick={() => onSelect(sharedId)}
-                        >
-                          <Share2 size={13} className="flex-shrink-0 text-amber-500" />
-                          <span className="flex-1 truncate">{fileName}</span>
-                          <span className="text-[10px] text-gray-400 dark:text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity">
-                            {note.permission}
-                          </span>
-                        </div>
-                      );
-                    })}
+              {sharedNotesByOwner.map(([ownerUserId, notes]) => (
+                <div key={ownerUserId}>
+                  <div className="px-3 py-0.5">
+                    <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      {notes[0].ownerName}
+                    </span>
                   </div>
-                ));
-              })()}
+                  {notes.map((note) => {
+                    const sharedId = `shared:${note.ownerUserId}:${note.path}`;
+                    const fileName = note.path.split('/').pop()?.replace(/\.md$/, '') || note.path;
+                    return (
+                      <button
+                        key={sharedId}
+                        className={`group w-full flex items-center gap-1 px-2 py-1 text-sm rounded-md mx-1 transition-colors duration-100
+                          ${sharedId === activeNotePath
+                            ? 'bg-violet-500/10 text-violet-600 dark:text-violet-400 font-medium'
+                            : 'text-gray-700 dark:text-gray-300 hover:bg-gray-200/60 dark:hover:bg-gray-700/40'
+                          }`}
+                        style={{ paddingLeft: '20px' }}
+                        onClick={() => onSelect(sharedId)}
+                      >
+                        <Share2 size={13} className="flex-shrink-0 text-amber-500" />
+                        <span className="flex-1 truncate">{fileName}</span>
+                        <span className="text-[10px] text-gray-400 dark:text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                          {note.permission}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              ))}
             </div>
           )}
         </div>
@@ -573,12 +590,32 @@ export function Sidebar({
           >
             <Pencil size={14} /> Rename
           </button>
-          <button
-            onClick={() => { handleDelete(contextMenu.node); setContextMenu(null); }}
-            className="w-full flex items-center gap-2 px-3 py-1.5 text-sm hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400"
-          >
-            <Trash2 size={14} /> Delete
-          </button>
+          {pendingDelete?.path === contextMenu.node.path ? (
+            <div className="px-3 py-1.5">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Delete &quot;{contextMenu.node.name}&quot;?</p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => { handleDeleteConfirmed(contextMenu.node); setContextMenu(null); }}
+                  className="flex-1 text-xs bg-red-500 text-white rounded px-2 py-1 hover:bg-red-600 transition-colors"
+                >
+                  Delete
+                </button>
+                <button
+                  onClick={() => setPendingDelete(null)}
+                  className="flex-1 text-xs border rounded px-2 py-1 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => { setPendingDelete(contextMenu.node); }}
+              className="w-full flex items-center gap-2 px-3 py-1.5 text-sm hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400"
+            >
+              <Trash2 size={14} /> Delete
+            </button>
+          )}
         </div>,
         document.body
       )}

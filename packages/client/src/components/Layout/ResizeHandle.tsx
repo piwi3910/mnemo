@@ -47,6 +47,9 @@ export function ResizeHandle({ direction, onResize, onResizeEnd }: ResizeHandleP
 
   return (
     <div
+      role="separator"
+      aria-orientation={isHorizontal ? 'vertical' : 'horizontal'}
+      tabIndex={0}
       onMouseDown={handleMouseDown}
       className={`
         ${isHorizontal

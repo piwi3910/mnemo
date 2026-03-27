@@ -14,14 +14,15 @@ interface EditorToolbarProps {
   viewRef: React.MutableRefObject<EditorView | undefined>;
 }
 
-function ToolbarButton({ icon: Icon, title, onClick }: { icon: React.ComponentType<{ size?: number }>; title: string; onClick: () => void }) {
+function ToolbarButton({ icon: Icon, title, onClick }: { icon: React.ComponentType<{ size?: number; 'aria-hidden'?: boolean }>; title: string; onClick: () => void }) {
   return (
     <button
       onClick={onClick}
       className="p-1.5 rounded text-gray-400 hover:text-gray-200 hover:bg-gray-700/50 transition-colors"
       title={title}
+      aria-label={title}
     >
-      <Icon size={15} />
+      <Icon size={15} aria-hidden={true} />
     </button>
   );
 }

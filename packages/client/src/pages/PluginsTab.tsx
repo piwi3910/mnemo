@@ -27,8 +27,8 @@ interface SettingDecl {
   perUser: boolean;
 }
 
-// Mnemo app version — bump here when the server version changes
-const MNEMO_VERSION = '1.0.0';
+// Mnemo app version — bump here when the server version changes (currently v3.2.0)
+const MNEMO_VERSION = '3.2.0';
 
 function semverGt(a: string, b: string): boolean {
   const pa = a.split('.').map(Number);

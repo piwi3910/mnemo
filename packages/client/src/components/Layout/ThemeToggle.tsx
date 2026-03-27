@@ -1,4 +1,4 @@
-import { Sun, Moon, Monitor } from 'lucide-react';
+import { Sun, Moon, Monitor, Check } from 'lucide-react';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 
@@ -97,7 +97,7 @@ export function ThemeToggle({ theme, setTheme }: ThemeToggleProps) {
             >
               {opt.icon}
               {opt.label}
-              {theme === opt.value && <span className="ml-auto text-violet-500">✓</span>}
+              {theme === opt.value && <Check size={14} className="ml-auto text-violet-500" aria-hidden="true" />}
             </button>
           ))}
         </div>,

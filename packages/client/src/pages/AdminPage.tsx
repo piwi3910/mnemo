@@ -34,12 +34,15 @@ export default function AdminPage({ onClose }: { onClose: () => void }) {
       onClick={onClose}
     >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="admin-panel-title"
         className="bg-surface-900 rounded-xl shadow-2xl w-[90vw] max-w-4xl max-h-[85vh] overflow-hidden flex flex-col"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-700/50">
-          <h2 className="text-lg font-semibold text-white">Admin Panel</h2>
+          <h2 id="admin-panel-title" className="text-lg font-semibold text-white">Admin Panel</h2>
           <button
             onClick={onClose}
             className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-700/50 transition-colors"

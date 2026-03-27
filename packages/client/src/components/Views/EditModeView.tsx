@@ -159,7 +159,8 @@ export function EditModeView({
         <BacklinksPanel notePath={activeNote.path} onNoteSelect={onNoteSelect} />
       </div>
       <div className="hidden md:flex md:w-1/2 flex-col overflow-hidden">
-        <div className="flex items-center justify-between px-4 border-b bg-gray-50/50 dark:bg-surface-900/50" style={{ minHeight: '39px' }}>
+        {/* min-h-[39px] matches the editor toolbar height to keep the split-view header row aligned */}
+        <div className="flex items-center justify-between px-4 border-b bg-gray-50/50 dark:bg-surface-900/50 min-h-[39px]">
           <div className="flex items-center">
             <BookOpen size={14} className="text-gray-400 mr-2" />
             <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">Preview</span>

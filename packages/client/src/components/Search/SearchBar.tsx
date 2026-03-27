@@ -76,13 +76,25 @@ export function SearchBar({ onSelect, inputRef: externalRef }: SearchBarProps) {
     }
   }, [open, results, selectedIndex, handleSelect]);
 
-  // Update dropdown position when open
-  useEffect(() => {
-    if (open && containerRef.current) {
+  // Update dropdown position when open (and keep it updated on resize/scroll)
+  const updateDropdownPos = useCallback(() => {
+    if (containerRef.current) {
       const rect = containerRef.current.getBoundingClientRect();
       setDropdownPos({ top: rect.bottom + 4, left: rect.left, width: rect.width });
     }
-  }, [open]);
+  }, []);
+
+  useEffect(() => {
+    if (open) {
+      updateDropdownPos();
+      window.addEventListener('resize', updateDropdownPos);
+      window.addEventListener('scroll', updateDropdownPos, true);
+      return () => {
+        window.removeEventListener('resize', updateDropdownPos);
+        window.removeEventListener('scroll', updateDropdownPos, true);
+      };
+    }
+  }, [open, updateDropdownPos]);
 
   // Close dropdown on outside click
   useEffect(() => {

@@ -237,7 +237,7 @@ export default function LoginPage() {
           )}
 
           {/* Sign In form */}
-          {tab === 'signin' && !twoFactorRequired && (
+          {tab === 'signin' && !twoFactorRequired && !forgotMode && (
             <form onSubmit={handleSignIn} className="space-y-4">
               <div>
                 <label htmlFor="signin-email" className="block text-sm font-medium text-gray-300 mb-1">

@@ -51,8 +51,9 @@ function ProfileSection() {
       </div>
       <form onSubmit={handlePasswordChange} className="space-y-3">
         <div>
-          <label className="block text-xs text-gray-400 mb-1">Current Password</label>
+          <label htmlFor="current-password" className="block text-xs text-gray-400 mb-1">Current Password</label>
           <input
+            id="current-password"
             type="password"
             value={currentPw}
             onChange={e => setCurrentPw(e.target.value)}
@@ -61,8 +62,9 @@ function ProfileSection() {
           />
         </div>
         <div>
-          <label className="block text-xs text-gray-400 mb-1">New Password</label>
+          <label htmlFor="new-password" className="block text-xs text-gray-400 mb-1">New Password</label>
           <input
+            id="new-password"
             type="password"
             value={newPw}
             onChange={e => setNewPw(e.target.value)}
@@ -72,8 +74,9 @@ function ProfileSection() {
           />
         </div>
         <div>
-          <label className="block text-xs text-gray-400 mb-1">Confirm New Password</label>
+          <label htmlFor="confirm-password" className="block text-xs text-gray-400 mb-1">Confirm New Password</label>
           <input
+            id="confirm-password"
             type="password"
             value={confirmPw}
             onChange={e => setConfirmPw(e.target.value)}
@@ -106,6 +109,9 @@ export default function AccountSettingsPage({ onClose }: { onClose: () => void }
       onClick={onClose}
     >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="account-settings-title"
         className="bg-surface-900 rounded-xl shadow-2xl w-[90vw] max-w-2xl max-h-[85vh] overflow-hidden flex flex-col"
         onClick={e => e.stopPropagation()}
       >
@@ -113,7 +119,7 @@ export default function AccountSettingsPage({ onClose }: { onClose: () => void }
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-700/50">
           <div className="flex items-center gap-2">
             <Settings size={18} className="text-violet-400" />
-            <h2 className="text-lg font-semibold text-white">Account Settings</h2>
+            <h2 id="account-settings-title" className="text-lg font-semibold text-white">Account Settings</h2>
           </div>
           <button
             onClick={onClose}

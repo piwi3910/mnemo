@@ -156,8 +156,9 @@ export function TwoFactorManager() {
         <form onSubmit={handleDisable} className="space-y-3">
           <p className="text-xs text-yellow-400">Enter your password to confirm disabling 2FA.</p>
           <div>
-            <label className="block text-xs text-gray-400 mb-1">Password</label>
+            <label htmlFor="2fa-disable-password" className="block text-xs text-gray-400 mb-1">Password</label>
             <input
+              id="2fa-disable-password"
               type="password"
               value={disablePassword}
               onChange={e => setDisablePassword(e.target.value)}
@@ -182,8 +183,9 @@ export function TwoFactorManager() {
         <form onSubmit={handleConfirmPassword} className="space-y-3">
           <p className="text-xs text-gray-400">Enter your password to begin setup.</p>
           <div>
-            <label className="block text-xs text-gray-400 mb-1">Password</label>
+            <label htmlFor="2fa-confirm-password" className="block text-xs text-gray-400 mb-1">Password</label>
             <input
+              id="2fa-confirm-password"
               type="password"
               value={password}
               onChange={e => setPassword(e.target.value)}
@@ -240,8 +242,9 @@ export function TwoFactorManager() {
             Enter the 6-digit code from your authenticator app to confirm setup.
           </p>
           <div>
-            <label className="block text-xs text-gray-400 mb-1">Authentication Code</label>
+            <label htmlFor="2fa-totp-code" className="block text-xs text-gray-400 mb-1">Authentication Code</label>
             <input
+              id="2fa-totp-code"
               type="text"
               inputMode="numeric"
               pattern="[0-9]*"

@@ -64,6 +64,9 @@ export function OutlinePane({ content, onJumpToLine }: OutlinePaneProps) {
     return true;
   });
 
+  // Build realIdxMap before the render loop to avoid O(n²) indexOf calls
+  const realIdxMap = new Map<Heading, number>(headings.map((h, i) => [h, i]));
+
   return (
     <div className="h-full flex flex-col">
       <div className="flex items-center gap-2 px-3 py-2.5 border-b">
@@ -77,7 +80,7 @@ export function OutlinePane({ content, onJumpToLine }: OutlinePaneProps) {
           </div>
         ) : (
           visibleHeadings.map((heading, idx) => {
-            const realIdx = headings.indexOf(heading);
+            const realIdx = realIdxMap.get(heading) ?? 0;
             const hasKids = (() => {
               for (let i = realIdx + 1; i < headings.length; i++) {
                 if (headings[i].level <= heading.level) break;
@@ -88,9 +91,9 @@ export function OutlinePane({ content, onJumpToLine }: OutlinePaneProps) {
             const isCollapsed = collapsed.has(heading.line);
 
             return (
-              <div
+              <button
                 key={`${heading.line}-${idx}`}
-                className="flex items-center gap-1 px-2 py-1 mx-1 rounded-md cursor-pointer text-sm hover:bg-gray-200/60 dark:hover:bg-gray-700/40 text-gray-700 dark:text-gray-300 transition-colors duration-100"
+                className="w-full flex items-center gap-1 px-2 py-1 mx-1 rounded-md text-sm hover:bg-gray-200/60 dark:hover:bg-gray-700/40 text-gray-700 dark:text-gray-300 transition-colors duration-100 text-left"
                 style={{ paddingLeft: `${(heading.level - 1) * 16 + 8}px` }}
                 onClick={() => onJumpToLine(heading.line)}
               >
@@ -113,7 +116,7 @@ export function OutlinePane({ content, onJumpToLine }: OutlinePaneProps) {
                 <span className={`truncate ${heading.level === 1 ? 'font-semibold' : heading.level === 2 ? 'font-medium' : ''}`}>
                   {heading.text}
                 </span>
-              </div>
+              </button>
             );
           })
         )}

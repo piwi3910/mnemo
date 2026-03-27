@@ -18,6 +18,9 @@ export function MobileGraphOverlay({
 
   return (
     <div
+      role="button"
+      aria-label="Open graph view"
+      tabIndex={expanded ? -1 : 0}
       className={`
         md:hidden fixed z-20 transition-all duration-300 ease-in-out
         ${expanded
@@ -27,6 +30,7 @@ export function MobileGraphOverlay({
         bg-surface-900/95 backdrop-blur-sm border border-gray-700/50 shadow-lg overflow-hidden
       `}
       onClick={() => !expanded && setExpanded(true)}
+      onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && !expanded) setExpanded(true); }}
     >
       {/* Header - only visible when expanded */}
       {expanded && (

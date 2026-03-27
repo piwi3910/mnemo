@@ -205,26 +205,30 @@ export function Preview({ content, onLinkClick, allNotes, onCreateNote, notePath
     };
   }, [getCodeFenceRenderer, notePath]);
 
+  const remarkPlugins = useMemo(() => [
+    remarkGfm,
+    [remarkWikiLink, {
+      permalinks: Array.from(existingNotes),
+      pageResolver: (name: string) => [name],
+      hrefTemplate: (permalink: string) => `/${permalink}`,
+      wikiLinkClassName: 'internal',
+      newClassName: 'new',
+      aliasDivider: '|',
+    }],
+  ] as Parameters<typeof ReactMarkdown>[0]['remarkPlugins'], [existingNotes]);
+
+  const rehypePlugins = useMemo(() => [
+    rehypeRaw,
+    [rehypeSanitize, sanitizeSchema],
+    [rehypeWikiLinks, { existingNotes }],
+  ] as Parameters<typeof ReactMarkdown>[0]['rehypePlugins'], [existingNotes]);
+
   return (
     <div className="markdown-preview p-6 max-w-3xl mx-auto" onClick={handleClick}>
       {frontmatter && <FrontmatterBlock frontmatter={frontmatter} />}
       <ReactMarkdown
-        remarkPlugins={[
-          remarkGfm,
-          [remarkWikiLink, {
-            permalinks: Array.from(existingNotes),
-            pageResolver: (name: string) => [name],
-            hrefTemplate: (permalink: string) => `/${permalink}`,
-            wikiLinkClassName: 'internal',
-            newClassName: 'new',
-            aliasDivider: '|',
-          }],
-        ]}
-        rehypePlugins={[
-          rehypeRaw,
-          [rehypeSanitize, sanitizeSchema],
-          [rehypeWikiLinks, { existingNotes }],
-        ]}
+        remarkPlugins={remarkPlugins}
+        rehypePlugins={rehypePlugins}
         components={{ ...headingComponents, code: codeComponent }}
       >
         {transformedContent}

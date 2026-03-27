@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { FileText, Search } from 'lucide-react';
 import { FileNode } from '../../lib/api';
 
@@ -31,15 +31,20 @@ function fuzzyMatch(query: string, text: string): boolean {
   return qi === q.length;
 }
 
+const LISTBOX_ID = 'quick-switcher-listbox';
+
 export function QuickSwitcher({ notes, onSelect, onClose }: QuickSwitcherProps) {
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const allFiles = collectFiles(notes);
-  const filtered = query.trim()
-    ? allFiles.filter(f => fuzzyMatch(query, f.name) || fuzzyMatch(query, f.path))
-    : allFiles;
+  const allFiles = useMemo(() => collectFiles(notes), [notes]);
+  const filtered = useMemo(
+    () => query.trim()
+      ? allFiles.filter(f => fuzzyMatch(query, f.name) || fuzzyMatch(query, f.path))
+      : allFiles,
+    [allFiles, query],
+  );
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -66,6 +71,8 @@ export function QuickSwitcher({ notes, onSelect, onClose }: QuickSwitcherProps) 
     }
   }, [filtered, selectedIndex, onSelect, onClose]);
 
+  const activeOptionId = filtered.length > 0 ? `qs-option-${selectedIndex}` : undefined;
+
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh]" onClick={onClose}>
       <div className="absolute inset-0 bg-black/50" />
@@ -74,10 +81,15 @@ export function QuickSwitcher({ notes, onSelect, onClose }: QuickSwitcherProps) 
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center gap-2 px-3 border-b">
-          <Search size={16} className="text-gray-400 flex-shrink-0" />
+          <Search size={16} className="text-gray-400 flex-shrink-0" aria-hidden="true" />
           <input
             ref={inputRef}
             type="text"
+            role="combobox"
+            aria-expanded={filtered.length > 0}
+            aria-controls={LISTBOX_ID}
+            aria-activedescendant={activeOptionId}
+            aria-autocomplete="list"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -85,13 +97,16 @@ export function QuickSwitcher({ notes, onSelect, onClose }: QuickSwitcherProps) 
             className="w-full py-3 bg-transparent text-sm outline-none placeholder:text-gray-400 dark:placeholder:text-gray-500"
           />
         </div>
-        <div className="max-h-72 overflow-y-auto">
+        <div id={LISTBOX_ID} role="listbox" className="max-h-72 overflow-y-auto">
           {filtered.length === 0 ? (
             <div className="px-3 py-4 text-sm text-gray-400 text-center">No notes found</div>
           ) : (
             filtered.map((file, idx) => (
               <button
                 key={file.path}
+                id={`qs-option-${idx}`}
+                role="option"
+                aria-selected={idx === selectedIndex}
                 onClick={() => { onSelect(file.path); onClose(); }}
                 onMouseEnter={() => setSelectedIndex(idx)}
                 className={`w-full flex items-center gap-2 px-3 py-2 text-left transition-colors ${
@@ -100,7 +115,7 @@ export function QuickSwitcher({ notes, onSelect, onClose }: QuickSwitcherProps) 
                     : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'
                 }`}
               >
-                <FileText size={15} className="text-gray-400 flex-shrink-0" />
+                <FileText size={15} className="text-gray-400 flex-shrink-0" aria-hidden="true" />
                 <div className="min-w-0 flex-1">
                   <div className="text-sm font-medium truncate">{file.name}</div>
                   <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{file.path}</div>

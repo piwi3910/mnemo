@@ -11,6 +11,7 @@ interface UserMenuProps {
 
 export function UserMenu({ onAdminClick, onAccessRequestsClick }: UserMenuProps) {
   const { user, logout } = useAuth();
+  const setShowAccountSettings = useUIStore(s => s.setShowAccountSettings);
   const [open, setOpen] = useState(false);
   const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0 });
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -123,7 +124,7 @@ export function UserMenu({ onAdminClick, onAccessRequestsClick }: UserMenuProps)
             Access Requests
           </button>
           <button
-            onClick={() => { useUIStore.getState().setShowAccountSettings(true); setOpen(false); }}
+            onClick={() => { setShowAccountSettings(true); setOpen(false); }}
             className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-100 hover:bg-gray-700 transition-colors"
           >
             <Settings size={14} />
