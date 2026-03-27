@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { TreeNode } from "../hooks/useNotes";
 import { colors, spacing, fontSize } from "../lib/theme";
@@ -27,8 +28,12 @@ function TreeNodeItem({ node, depth }: TreeNodeItemProps) {
           onPress={() => setExpanded((prev) => !prev)}
           activeOpacity={0.7}
         >
-          <Text style={styles.folderIcon}>{expanded ? "▾" : "▸"}</Text>
-          <Text style={styles.folderIcon}>📁</Text>
+          <Ionicons
+            name={expanded ? "chevron-down" : "chevron-forward"}
+            size={14}
+            color={colors.textMuted}
+          />
+          <Ionicons name="folder" size={16} color={colors.textSecondary} />
           <Text style={styles.folderName} numberOfLines={1}>
             {node.name}
           </Text>
@@ -50,7 +55,7 @@ function TreeNodeItem({ node, depth }: TreeNodeItemProps) {
       }
       activeOpacity={0.7}
     >
-      <Text style={styles.fileIcon}>📄</Text>
+      <Ionicons name="document-text-outline" size={16} color={colors.textMuted} />
       <Text style={styles.fileName} numberOfLines={1}>
         {node.name.replace(/\.md$/, "")}
       </Text>
@@ -92,18 +97,11 @@ const styles = StyleSheet.create({
     paddingRight: spacing.lg,
     gap: spacing.xs,
   },
-  folderIcon: {
-    fontSize: fontSize.md,
-    color: colors.textSecondary,
-  },
   folderName: {
     color: colors.text,
     fontSize: fontSize.md,
     fontWeight: "500",
     flex: 1,
-  },
-  fileIcon: {
-    fontSize: fontSize.md,
   },
   fileName: {
     color: colors.textSecondary,

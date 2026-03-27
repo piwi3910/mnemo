@@ -10,6 +10,7 @@ import {
   TextInput,
   SafeAreaView,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { database } from "../../src/db";
 import Note from "../../src/db/models/Note";
@@ -83,7 +84,7 @@ export default function TemplatesScreen() {
       setModalVisible(false);
       setSelectedTemplate(null);
       setNewNoteName("");
-      router.push(`/note/${path}`);
+      router.push(`/(app)/note/${path}`);
     } catch (err) {
       Alert.alert(
         "Error",
@@ -95,8 +96,12 @@ export default function TemplatesScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Text style={styles.backText}>← Back</Text>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.backButton}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Ionicons name="chevron-back" size={24} color={colors.primary} />
         </TouchableOpacity>
         <Text style={styles.title}>Templates</Text>
       </View>
@@ -200,10 +205,6 @@ const styles = StyleSheet.create({
   },
   backButton: {
     paddingVertical: spacing.xs,
-  },
-  backText: {
-    color: colors.primary,
-    fontSize: fontSize.md,
   },
   title: {
     color: colors.text,

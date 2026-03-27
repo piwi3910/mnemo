@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -7,9 +7,10 @@ import {
   TouchableOpacity,
   StyleSheet,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { getDatabase, NoteRow } from "../../../src/db";
+import { getDatabase } from "../../../src/db";
 import {
   colors,
   fontSize,
@@ -24,7 +25,14 @@ interface SearchResult {
   snippet: string;
 }
 
-function rowToResult(row: NoteRow): SearchResult {
+interface SearchRow {
+  id: string;
+  title: string | null;
+  path: string;
+  content: string | null;
+}
+
+function rowToResult(row: SearchRow): SearchResult {
   const snippet = (row.content ?? "").slice(0, 100).replace(/\n/g, " ");
   return {
     id: row.id,
@@ -36,22 +44,32 @@ function rowToResult(row: NoteRow): SearchResult {
 
 export default function SearchScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+
     if (!query.trim()) {
       setResults([]);
       return;
     }
 
-    const term = `%${query.trim()}%`;
-    const db = getDatabase();
-    const rows = db.getAllSync<NoteRow>(
-      "SELECT * FROM notes WHERE _status != 'deleted' AND (title LIKE ? OR content LIKE ?)",
-      [term, term]
-    );
-    setResults(rows.map(rowToResult));
+    debounceRef.current = setTimeout(async () => {
+      const term = `%${query.trim()}%`;
+      const db = getDatabase();
+      const rows = await db.getAllAsync<SearchRow>(
+        "SELECT id, title, path, substr(content, 1, 200) as content FROM notes WHERE _status != 'deleted' AND (title LIKE ? OR content LIKE ?)",
+        [term, term]
+      );
+      setResults(rows.map(rowToResult));
+    }, 300);
+
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
   }, [query]);
 
   const handlePress = useCallback(
@@ -63,7 +81,7 @@ export default function SearchScreen() {
   );
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Search bar */}
       <View style={styles.searchBar}>
         <Ionicons
@@ -133,7 +151,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
-    paddingTop: spacing.xl + spacing.md,
   },
   searchBar: {
     flexDirection: "row",

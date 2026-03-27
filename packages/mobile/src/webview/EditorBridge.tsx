@@ -106,19 +106,10 @@ export default function EditorBridge({
   const webViewRef = useRef<WebView>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isInitializedRef = useRef(false);
+  const contentRef = useRef(content);
 
-  // Inject initial content once the WebView is ready
-  const injectedJavaScript = `
-    (function() {
-      var editor = document.getElementById('editor');
-      if (editor) {
-        editor.value = ${JSON.stringify(content)};
-        editor.style.height = 'auto';
-        editor.style.height = editor.scrollHeight + 'px';
-      }
-      true;
-    })();
-  `;
+  // Keep contentRef current so onLoadEnd can capture the latest value
+  contentRef.current = content;
 
   const handleMessage = useCallback(
     (event: WebViewMessageEvent) => {
@@ -163,12 +154,15 @@ export default function EditorBridge({
       ref={webViewRef}
       source={{ html: buildEditorHTML(darkMode) }}
       style={styles.webview}
-      injectedJavaScript={injectedJavaScript}
       onMessage={handleMessage}
       scrollEnabled={true}
       keyboardDisplayRequiresUserAction={false}
       onLoadEnd={() => {
         isInitializedRef.current = true;
+        // Send initial content via postMessage bridge
+        webViewRef.current?.postMessage(
+          JSON.stringify({ type: "setContent", content: contentRef.current })
+        );
       }}
       javaScriptEnabled={true}
       domStorageEnabled={true}

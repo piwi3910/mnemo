@@ -112,7 +112,7 @@ const styles = StyleSheet.create({
   },
   logoText: {
     color: colors.text,
-    fontSize: 42,
+    fontSize: fontSize.display,
     fontWeight: "800",
     letterSpacing: -1,
     marginBottom: spacing.sm,

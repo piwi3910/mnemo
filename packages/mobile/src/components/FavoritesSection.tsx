@@ -9,6 +9,11 @@ interface FavoriteItem {
   name: string;
 }
 
+interface FavoritesSectionProps {
+  /** Optional refresh counter — increment to force a re-fetch of favorites */
+  refresh?: number;
+}
+
 function parseFavorites(setting: SettingRow | null): FavoriteItem[] {
   if (!setting) return [];
   try {
@@ -22,7 +27,7 @@ function parseFavorites(setting: SettingRow | null): FavoriteItem[] {
   }
 }
 
-export function FavoritesSection() {
+export function FavoritesSection({ refresh }: FavoritesSectionProps = {}) {
   const router = useRouter();
   const [favorites, setFavorites] = useState<FavoriteItem[]>([]);
 
@@ -33,7 +38,7 @@ export function FavoritesSection() {
     );
     const starredSetting = rows.find((r) => r.key === "starred") ?? null;
     setFavorites(parseFavorites(starredSetting));
-  }, []);
+  }, [refresh]);
 
   if (favorites.length === 0) return null;
 

@@ -56,8 +56,8 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.sm,
     alignItems: "center",
     justifyContent: "center",
-    minWidth: 36,
-    minHeight: 36,
+    minWidth: 44,
+    minHeight: 44,
   },
   icon: {
     fontSize: 20,

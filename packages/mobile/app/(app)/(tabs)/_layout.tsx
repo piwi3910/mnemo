@@ -1,6 +1,6 @@
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { colors } from "../../../src/lib/theme";
+import { colors, fontSize } from "../../../src/lib/theme";
 
 type IoniconName = React.ComponentProps<typeof Ionicons>["name"];
 
@@ -57,7 +57,7 @@ export default function TabsLayout() {
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textMuted,
         tabBarLabelStyle: {
-          fontSize: 11,
+          fontSize: fontSize.xs,
           fontWeight: "500",
         },
       }}

@@ -10,6 +10,7 @@ import {
   ActionSheetIOS,
   Platform,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useEffect } from "react";
@@ -26,6 +27,7 @@ type Mode = "preview" | "edit";
 export default function NoteScreen() {
   const params = useLocalSearchParams<{ path: string | string[] }>();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   // path param can be a string or array (catch-all route)
   const rawPath = Array.isArray(params.path)
@@ -139,7 +141,7 @@ export default function NoteScreen() {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
         <TouchableOpacity
           onPress={() => router.back()}
           style={styles.headerButton}
@@ -210,7 +212,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: colors.surface,
     paddingHorizontal: spacing.md,
-    paddingTop: spacing.xl + spacing.md, // safe area approximation
     paddingBottom: spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,

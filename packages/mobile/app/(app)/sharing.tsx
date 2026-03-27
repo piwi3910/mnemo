@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   SafeAreaView,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { database } from "../../src/db";
 import NoteShareModel from "../../src/db/models/NoteShareModel";
@@ -86,8 +87,12 @@ export default function SharingScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Text style={styles.backText}>← Back</Text>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.backButton}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Ionicons name="chevron-back" size={24} color={colors.primary} />
         </TouchableOpacity>
         <Text style={styles.title}>Sharing</Text>
       </View>
@@ -117,8 +122,9 @@ export default function SharingScreen() {
                     {share.isFolder ? "Folder" : "Note"} •{" "}
                     {permissionLabel(share.permission)}
                   </Text>
+                  {/* TODO: Resolve user ID to display name via user lookup API */}
                   <Text style={styles.shareWith}>
-                    Shared with: {share.sharedWithUserId}
+                    Shared with: {share.sharedWithUserId.slice(0, 8)}…
                   </Text>
                 </View>
               </View>
@@ -144,8 +150,9 @@ export default function SharingScreen() {
                     {share.isFolder ? "Folder" : "Note"} •{" "}
                     {permissionLabel(share.permission)}
                   </Text>
+                  {/* TODO: Resolve user ID to display name via user lookup API */}
                   <Text style={styles.shareWith}>
-                    From: {share.ownerUserId}
+                    From: {share.ownerUserId.slice(0, 8)}…
                   </Text>
                 </View>
                 <TouchableOpacity
@@ -213,10 +220,6 @@ const styles = StyleSheet.create({
   },
   backButton: {
     paddingVertical: spacing.xs,
-  },
-  backText: {
-    color: colors.primary,
-    fontSize: fontSize.md,
   },
   title: {
     color: colors.text,

@@ -2,12 +2,13 @@ import { useState, useEffect } from "react";
 import {
   View,
   Text,
-  ScrollView,
+  FlatList,
   TouchableOpacity,
   StyleSheet,
   Alert,
   SafeAreaView,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { database } from "../../src/db";
 import Note from "../../src/db/models/Note";
@@ -88,11 +89,11 @@ export default function DailyScreen() {
       }
     }
 
-    router.push(`/note/${todayPath}`);
+    router.push(`/(app)/note/${todayPath}`);
   }
 
   function handleOpenNote(path: string) {
-    router.push(`/note/${path}`);
+    router.push(`/(app)/note/${path}`);
   }
 
   const todayPath = getTodayPath();
@@ -102,57 +103,66 @@ export default function DailyScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Text style={styles.backText}>← Back</Text>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.backButton}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Ionicons name="chevron-back" size={24} color={colors.primary} />
         </TouchableOpacity>
         <Text style={styles.title}>Daily Notes</Text>
       </View>
 
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
-        <View style={styles.todayCard}>
-          <Text style={styles.dateLabel}>{formatTodayDisplay()}</Text>
-          {todayExists && (
-            <Text style={styles.existsLabel}>Today's note exists</Text>
-          )}
-          <TouchableOpacity
-            style={styles.openTodayButton}
-            onPress={handleOpenToday}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.openTodayText}>
-              {todayExists ? "Open Today's Note" : "Create Today's Note"}
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {recentNotes.length > 0 && (
-          <View style={styles.recentSection}>
-            <Text style={styles.sectionLabel}>Recent Daily Notes</Text>
-            {recentNotes.map((note) => (
+      <FlatList
+        style={styles.scroll}
+        contentContainerStyle={styles.content}
+        data={recentNotes}
+        keyExtractor={(item) => item.id}
+        ListHeaderComponent={
+          <>
+            <View style={styles.todayCard}>
+              <Text style={styles.dateLabel}>{formatTodayDisplay()}</Text>
+              {todayExists && (
+                <Text style={styles.existsLabel}>Today's note exists</Text>
+              )}
               <TouchableOpacity
-                key={note.id}
-                style={styles.noteRow}
-                onPress={() => handleOpenNote(note.path)}
-                activeOpacity={0.7}
+                style={styles.openTodayButton}
+                onPress={handleOpenToday}
+                activeOpacity={0.8}
               >
-                <Text style={styles.noteTitle}>{note.title}</Text>
-                <Text style={styles.noteTime}>
-                  {timeAgo(note.modifiedAt.getTime())}
+                <Text style={styles.openTodayText}>
+                  {todayExists ? "Open Today's Note" : "Create Today's Note"}
                 </Text>
               </TouchableOpacity>
-            ))}
-          </View>
-        )}
-
-        {dailyNotes.length === 0 && (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>No daily notes yet.</Text>
-            <Text style={styles.emptySubtext}>
-              Create your first daily note above.
+            </View>
+            {recentNotes.length > 0 && (
+              <Text style={styles.sectionLabel}>Recent Daily Notes</Text>
+            )}
+          </>
+        }
+        renderItem={({ item }) => (
+          <TouchableOpacity
+            style={styles.noteRow}
+            onPress={() => handleOpenNote(item.path)}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.noteTitle}>{item.title}</Text>
+            <Text style={styles.noteTime}>
+              {timeAgo(item.modifiedAt.getTime())}
             </Text>
-          </View>
+          </TouchableOpacity>
         )}
-      </ScrollView>
+        ListEmptyComponent={
+          dailyNotes.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyText}>No daily notes yet.</Text>
+              <Text style={styles.emptySubtext}>
+                Create your first daily note above.
+              </Text>
+            </View>
+          ) : null
+        }
+      />
     </SafeAreaView>
   );
 }
@@ -173,10 +183,6 @@ const styles = StyleSheet.create({
   },
   backButton: {
     paddingVertical: spacing.xs,
-  },
-  backText: {
-    color: colors.primary,
-    fontSize: fontSize.md,
   },
   title: {
     color: colors.text,

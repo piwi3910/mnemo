@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
-  ScrollView,
+  FlatList,
   TouchableOpacity,
   StyleSheet,
   Alert,
@@ -10,11 +10,85 @@ import {
   Modal,
   SafeAreaView,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { api, NoteVersion, NoteVersionContent } from "../../../src/lib/api";
 import { useNetworkStatus } from "../../../src/hooks/useNetworkStatus";
 import { colors, fontSize, spacing, borderRadius } from "../../../src/lib/theme";
 import { timeAgo } from "../../../src/lib/utils";
+
+interface VersionRowProps {
+  version: NoteVersion;
+  onPreview: (version: NoteVersion) => void;
+  onRestore: (version: NoteVersion) => void;
+  formatSize: (bytes: number) => string;
+}
+
+const VersionRow = React.memo(function VersionRow({
+  version,
+  onPreview,
+  onRestore,
+  formatSize,
+}: VersionRowProps) {
+  return (
+    <View style={versionRowStyles.row}>
+      <View style={versionRowStyles.info}>
+        <Text style={versionRowStyles.time}>{timeAgo(version.timestamp)}</Text>
+        <Text style={versionRowStyles.date}>{version.date}</Text>
+        <Text style={versionRowStyles.size}>{formatSize(version.size)}</Text>
+      </View>
+      <View style={versionRowStyles.actions}>
+        <TouchableOpacity
+          style={versionRowStyles.previewButton}
+          onPress={() => onPreview(version)}
+          activeOpacity={0.8}
+        >
+          <Text style={versionRowStyles.previewText}>Preview</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={versionRowStyles.restoreButton}
+          onPress={() => onRestore(version)}
+          activeOpacity={0.8}
+        >
+          <Text style={versionRowStyles.restoreText}>Restore</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+});
+
+const versionRowStyles = StyleSheet.create({
+  row: {
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    gap: spacing.md,
+  },
+  info: { gap: spacing.xs },
+  time: { color: colors.text, fontSize: fontSize.md, fontWeight: "600" },
+  date: { color: colors.textSecondary, fontSize: fontSize.sm },
+  size: { color: colors.textMuted, fontSize: fontSize.sm },
+  actions: { flexDirection: "row", gap: spacing.sm },
+  previewButton: {
+    flex: 1,
+    paddingVertical: spacing.sm,
+    alignItems: "center",
+    borderRadius: borderRadius.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  previewText: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: "600" },
+  restoreButton: {
+    flex: 1,
+    paddingVertical: spacing.sm,
+    alignItems: "center",
+    borderRadius: borderRadius.sm,
+    backgroundColor: colors.primary,
+  },
+  restoreText: { color: "#fff", fontSize: fontSize.sm, fontWeight: "600" },
+});
 
 export default function HistoryScreen() {
   const router = useRouter();
@@ -105,8 +179,12 @@ export default function HistoryScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <Text style={styles.backText}>← Back</Text>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={styles.backButton}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Ionicons name="chevron-back" size={24} color={colors.primary} />
           </TouchableOpacity>
           <Text style={styles.title}>History</Text>
         </View>
@@ -140,51 +218,36 @@ export default function HistoryScreen() {
           <Text style={styles.loadingText}>Loading versions...</Text>
         </View>
       ) : (
-        <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
-          {versions.length === 0 ? (
+        <FlatList
+          style={styles.scroll}
+          contentContainerStyle={styles.content}
+          data={versions}
+          keyExtractor={(item) => String(item.timestamp)}
+          ListHeaderComponent={
+            versions.length > 0 ? (
+              <Text style={styles.sectionLabel}>
+                {versions.length} version{versions.length !== 1 ? "s" : ""}
+              </Text>
+            ) : null
+          }
+          renderItem={({ item: version }) => (
+            <VersionRow
+              version={version}
+              onPreview={handlePreview}
+              onRestore={handleRestore}
+              formatSize={formatSize}
+            />
+          )}
+          ItemSeparatorComponent={() => <View style={styles.rowSeparator} />}
+          ListEmptyComponent={
             <View style={styles.emptyState}>
               <Text style={styles.emptyText}>No version history</Text>
               <Text style={styles.emptySubtext}>
                 Versions are saved automatically as you edit.
               </Text>
             </View>
-          ) : (
-            <View style={styles.list}>
-              <Text style={styles.sectionLabel}>
-                {versions.length} version{versions.length !== 1 ? "s" : ""}
-              </Text>
-              {versions.map((version) => (
-                <View key={version.timestamp} style={styles.versionRow}>
-                  <View style={styles.versionInfo}>
-                    <Text style={styles.versionTime}>
-                      {timeAgo(version.timestamp)}
-                    </Text>
-                    <Text style={styles.versionDate}>{version.date}</Text>
-                    <Text style={styles.versionSize}>
-                      {formatSize(version.size)}
-                    </Text>
-                  </View>
-                  <View style={styles.versionActions}>
-                    <TouchableOpacity
-                      style={styles.previewButton}
-                      onPress={() => handlePreview(version)}
-                      activeOpacity={0.8}
-                    >
-                      <Text style={styles.previewText}>Preview</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.restoreButton}
-                      onPress={() => handleRestore(version)}
-                      activeOpacity={0.8}
-                    >
-                      <Text style={styles.restoreText}>Restore</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              ))}
-            </View>
-          )}
-        </ScrollView>
+          }
+        />
       )}
 
       <Modal
@@ -244,9 +307,8 @@ const styles = StyleSheet.create({
   backButton: {
     paddingVertical: spacing.xs,
   },
-  backText: {
-    color: colors.primary,
-    fontSize: fontSize.md,
+  rowSeparator: {
+    height: spacing.sm,
   },
   headerText: {
     flex: 1,

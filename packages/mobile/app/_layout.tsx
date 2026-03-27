@@ -1,9 +1,79 @@
-import { useEffect } from "react";
-import { View, ActivityIndicator, StyleSheet } from "react-native";
+import { useEffect, Component, ReactNode } from "react";
+import { View, Text, TouchableOpacity, ActivityIndicator, StyleSheet } from "react-native";
 import { Slot, useRouter, useSegments } from "expo-router";
+import { StatusBar } from "expo-status-bar";
 import Toast from "react-native-toast-message";
 import { AuthProvider, useAuthContext } from "../src/contexts/AuthContext";
-import { colors } from "../src/lib/theme";
+import { colors, fontSize, spacing, borderRadius } from "../src/lib/theme";
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+}
+
+class RootErrorBoundary extends Component<{ children: ReactNode }, ErrorBoundaryState> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error };
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <View style={errorStyles.container}>
+          <Text style={errorStyles.title}>Something went wrong</Text>
+          <Text style={errorStyles.message}>
+            {this.state.error?.message ?? "An unexpected error occurred"}
+          </Text>
+          <TouchableOpacity
+            style={errorStyles.button}
+            onPress={() => this.setState({ hasError: false, error: null })}
+          >
+            <Text style={errorStyles.buttonText}>Try again</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+const errorStyles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: spacing.xl,
+    gap: spacing.md,
+  },
+  title: {
+    color: colors.text,
+    fontSize: fontSize.xl,
+    fontWeight: "700",
+  },
+  message: {
+    color: colors.textSecondary,
+    fontSize: fontSize.md,
+    textAlign: "center",
+  },
+  button: {
+    backgroundColor: colors.primary,
+    borderRadius: borderRadius.md,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
+    marginTop: spacing.sm,
+  },
+  buttonText: {
+    color: "#fff",
+    fontSize: fontSize.md,
+    fontWeight: "600",
+  },
+});
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading, serverUrl, twoFactorRequired } =
@@ -62,12 +132,15 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
 
 export default function RootLayout() {
   return (
-    <AuthProvider>
-      <AuthGuard>
-        <Slot />
-      </AuthGuard>
-      <Toast />
-    </AuthProvider>
+    <RootErrorBoundary>
+      <AuthProvider>
+        <StatusBar style="light" />
+        <AuthGuard>
+          <Slot />
+        </AuthGuard>
+        <Toast />
+      </AuthProvider>
+    </RootErrorBoundary>
   );
 }
 

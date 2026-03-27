@@ -7,6 +7,7 @@ import {
   StyleSheet,
   RefreshControl,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useEffect } from "react";
 import { database } from "../../../src/db";
@@ -82,6 +83,7 @@ function getNotesForTag(notes: Note[], tag: string): TaggedNote[] {
 
 export default function TagsScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [allNotes, setAllNotes] = useState<Note[]>([]);
   const [tags, setTags] = useState<TagEntry[]>([]);
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
@@ -128,7 +130,7 @@ export default function TagsScreen() {
 
   if (selectedTag) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { paddingTop: insets.top }]}>
         <View style={styles.header}>
           <TouchableOpacity onPress={handleBack} style={styles.backButton}>
             <Text style={styles.backText}>Tags</Text>
@@ -168,7 +170,7 @@ export default function TagsScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Tags</Text>
       </View>
@@ -214,7 +216,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
-    paddingTop: spacing.xl + spacing.md,
   },
   header: {
     flexDirection: "row",

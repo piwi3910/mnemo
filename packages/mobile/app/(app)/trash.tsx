@@ -1,13 +1,14 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
-  ScrollView,
+  FlatList,
   TouchableOpacity,
   StyleSheet,
   Alert,
   SafeAreaView,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { database } from "../../src/db";
 import TrashItemModel from "../../src/db/models/TrashItemModel";
@@ -21,6 +22,98 @@ interface TrashRecord {
   originalPath: string;
   trashedAt: Date;
 }
+
+interface TrashRowProps {
+  item: TrashRecord;
+  onRestore: (item: TrashRecord) => void;
+  onDelete: (item: TrashRecord) => void;
+}
+
+const TrashRow = React.memo(function TrashRow({ item, onRestore, onDelete }: TrashRowProps) {
+  return (
+    <View style={trashRowStyles.row}>
+      <View style={trashRowStyles.info}>
+        <Text style={trashRowStyles.path}>{item.originalPath}</Text>
+        <Text style={trashRowStyles.time}>
+          Deleted {timeAgo(item.trashedAt.getTime())}
+        </Text>
+      </View>
+      <View style={trashRowStyles.actions}>
+        <TouchableOpacity
+          style={trashRowStyles.restoreButton}
+          onPress={() => onRestore(item)}
+          activeOpacity={0.8}
+        >
+          <Text style={trashRowStyles.restoreText}>Restore</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={trashRowStyles.deleteButton}
+          onPress={() => onDelete(item)}
+          activeOpacity={0.8}
+        >
+          <Text style={trashRowStyles.deleteText}>Delete</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+});
+
+const trashRowStyles = StyleSheet.create({
+  row: {
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    gap: spacing.md,
+  },
+  info: {
+    gap: spacing.xs,
+  },
+  path: {
+    color: colors.text,
+    fontSize: fontSize.md,
+    fontWeight: "500",
+  },
+  time: {
+    color: colors.textMuted,
+    fontSize: fontSize.sm,
+  },
+  actions: {
+    flexDirection: "row",
+    gap: spacing.sm,
+  },
+  restoreButton: {
+    flex: 1,
+    paddingVertical: spacing.md,
+    alignItems: "center",
+    borderRadius: borderRadius.sm,
+    backgroundColor: colors.primary + "22",
+    borderWidth: 1,
+    borderColor: colors.primary + "66",
+    minHeight: 44,
+  },
+  restoreText: {
+    color: colors.primary,
+    fontSize: fontSize.sm,
+    fontWeight: "600",
+  },
+  deleteButton: {
+    flex: 1,
+    paddingVertical: spacing.md,
+    alignItems: "center",
+    borderRadius: borderRadius.sm,
+    backgroundColor: colors.error + "22",
+    borderWidth: 1,
+    borderColor: colors.error + "66",
+    minHeight: 44,
+  },
+  deleteText: {
+    color: colors.error,
+    fontSize: fontSize.sm,
+    fontWeight: "600",
+  },
+});
 
 export default function TrashScreen() {
   const router = useRouter();
@@ -135,8 +228,12 @@ export default function TrashScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Text style={styles.backText}>← Back</Text>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.backButton}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Ionicons name="chevron-back" size={24} color={colors.primary} />
         </TouchableOpacity>
         <Text style={styles.title}>Trash</Text>
       </View>
@@ -149,48 +246,35 @@ export default function TrashScreen() {
         </View>
       )}
 
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
-        {trashItems.length === 0 ? (
+      <FlatList
+        style={styles.scroll}
+        contentContainerStyle={styles.content}
+        data={trashItems}
+        keyExtractor={(item) => item.id}
+        ListHeaderComponent={
+          trashItems.length > 0 ? (
+            <Text style={styles.sectionLabel}>
+              {trashItems.length} item{trashItems.length !== 1 ? "s" : ""}
+            </Text>
+          ) : null
+        }
+        renderItem={({ item }) => (
+          <TrashRow
+            item={item}
+            onRestore={handleRestore}
+            onDelete={handleDeletePermanently}
+          />
+        )}
+        ItemSeparatorComponent={() => <View style={styles.rowSeparator} />}
+        ListEmptyComponent={
           <View style={styles.emptyState}>
             <Text style={styles.emptyText}>Trash is empty</Text>
             <Text style={styles.emptySubtext}>
               Deleted notes will appear here.
             </Text>
           </View>
-        ) : (
-          <View style={styles.list}>
-            <Text style={styles.sectionLabel}>
-              {trashItems.length} item{trashItems.length !== 1 ? "s" : ""}
-            </Text>
-            {trashItems.map((item) => (
-              <View key={item.id} style={styles.trashRow}>
-                <View style={styles.trashInfo}>
-                  <Text style={styles.trashPath}>{item.originalPath}</Text>
-                  <Text style={styles.trashTime}>
-                    Deleted {timeAgo(item.trashedAt.getTime())}
-                  </Text>
-                </View>
-                <View style={styles.trashActions}>
-                  <TouchableOpacity
-                    style={styles.restoreButton}
-                    onPress={() => handleRestore(item)}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={styles.restoreText}>Restore</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.deleteButton}
-                    onPress={() => handleDeletePermanently(item)}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={styles.deleteText}>Delete</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            ))}
-          </View>
-        )}
-      </ScrollView>
+        }
+      />
 
       {trashItems.length > 0 && (
         <View style={styles.footer}>
@@ -223,10 +307,6 @@ const styles = StyleSheet.create({
   },
   backButton: {
     paddingVertical: spacing.xs,
-  },
-  backText: {
-    color: colors.primary,
-    fontSize: fontSize.md,
   },
   title: {
     color: colors.text,
@@ -339,6 +419,10 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
     paddingVertical: spacing.md,
     alignItems: "center",
+    minHeight: 44,
+  },
+  rowSeparator: {
+    height: spacing.sm,
   },
   emptyTrashText: {
     color: "#fff",

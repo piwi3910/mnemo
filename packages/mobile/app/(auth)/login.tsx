@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   Platform,
   ScrollView,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useAuth } from "../../src/hooks/useAuth";
 import { colors, spacing, fontSize, borderRadius } from "../../src/lib/theme";
@@ -22,10 +23,12 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // If 2FA is required, redirect
-  if (twoFactorRequired) {
-    router.replace("/(auth)/two-factor");
-  }
+  // If 2FA is required, redirect (in useEffect to avoid render-phase navigation)
+  useEffect(() => {
+    if (twoFactorRequired) {
+      router.replace("/(auth)/two-factor");
+    }
+  }, [twoFactorRequired, router]);
 
   async function handleSignIn() {
     if (!email.trim() || !password) {
@@ -46,10 +49,11 @@ export default function LoginScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={styles.flex}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
+    <SafeAreaView style={styles.flex}>
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
       <ScrollView
         contentContainerStyle={styles.container}
         keyboardShouldPersistTaps="handled"
@@ -120,7 +124,8 @@ export default function LoginScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
@@ -132,7 +137,7 @@ const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
     paddingHorizontal: spacing.lg,
-    paddingTop: 80,
+    paddingTop: spacing.xxl,
     paddingBottom: spacing.xl,
   },
   header: {

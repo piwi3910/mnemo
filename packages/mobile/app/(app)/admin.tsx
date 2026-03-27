@@ -11,6 +11,7 @@ import {
   Modal,
   SafeAreaView,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { api } from "../../src/lib/api";
 import { useAuth } from "../../src/hooks/useAuth";
@@ -82,7 +83,7 @@ export default function AdminScreen() {
           text: "Confirm",
           onPress: async () => {
             try {
-              await fetch; // placeholder — actual endpoint depends on server API
+              // TODO: call role update API endpoint when available
               setUsers((prev) =>
                 prev.map((u) =>
                   u.id === targetUser.id ? { ...u, role: newRole } : u
@@ -156,8 +157,12 @@ export default function AdminScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <Text style={styles.backText}>← Back</Text>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={styles.backButton}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Ionicons name="chevron-back" size={24} color={colors.primary} />
           </TouchableOpacity>
           <Text style={styles.title}>Admin</Text>
         </View>
@@ -175,8 +180,12 @@ export default function AdminScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <Text style={styles.backText}>← Back</Text>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={styles.backButton}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Ionicons name="chevron-back" size={24} color={colors.primary} />
           </TouchableOpacity>
           <Text style={styles.title}>Admin</Text>
         </View>
@@ -365,10 +374,6 @@ const styles = StyleSheet.create({
   backButton: {
     paddingVertical: spacing.xs,
   },
-  backText: {
-    color: colors.primary,
-    fontSize: fontSize.md,
-  },
   title: {
     color: colors.text,
     fontSize: fontSize.xl,
@@ -490,11 +495,12 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     flex: 1,
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.md,
     alignItems: "center",
     borderRadius: borderRadius.sm,
     borderWidth: 1,
     borderColor: colors.border,
+    minHeight: 44,
   },
   actionText: {
     color: colors.textSecondary,

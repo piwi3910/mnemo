@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet } from "react-native";
 import { useNetworkStatus } from "../hooks/useNetworkStatus";
-import { spacing, fontSize } from "../lib/theme";
+import { colors, spacing, fontSize } from "../lib/theme";
 
 export function OfflineBanner() {
   const { isOnline } = useNetworkStatus();
@@ -18,13 +18,13 @@ export function OfflineBanner() {
 
 const styles = StyleSheet.create({
   banner: {
-    backgroundColor: "#92400e",
+    backgroundColor: colors.warning + "33",
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
     alignItems: "center",
   },
   text: {
-    color: "#fef3c7",
+    color: colors.warning,
     fontSize: fontSize.sm,
     fontWeight: "500",
   },

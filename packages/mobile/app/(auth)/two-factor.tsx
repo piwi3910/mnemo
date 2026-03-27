@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
 } from "react-native";
 import { useAuth } from "../../src/hooks/useAuth";
 import { colors, spacing, fontSize, borderRadius } from "../../src/lib/theme";
@@ -60,7 +61,10 @@ export default function TwoFactorScreen() {
       style={styles.flex}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
-      <View style={styles.container}>
+      <ScrollView
+        contentContainerStyle={styles.container}
+        keyboardShouldPersistTaps="handled"
+      >
         <View style={styles.header}>
           <Text style={styles.title}>Two-Factor Authentication</Text>
           <Text style={styles.subtitle}>
@@ -116,7 +120,7 @@ export default function TwoFactorScreen() {
             </Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
@@ -127,9 +131,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   container: {
-    flex: 1,
+    flexGrow: 1,
     paddingHorizontal: spacing.lg,
     paddingTop: 100,
+    paddingBottom: spacing.xl,
   },
   header: {
     marginBottom: spacing.xxl,

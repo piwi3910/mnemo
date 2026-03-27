@@ -15,6 +15,8 @@ export default function Breadcrumbs({ path }: BreadcrumbsProps) {
     <View style={styles.container}>
       {segments.map((segment, index) => {
         const isLast = index === segments.length - 1;
+        // Build accumulated path up to this segment (excluding the final file segment)
+        const partialPath = segments.slice(0, index + 1).join("/");
         return (
           <React.Fragment key={index}>
             {index > 0 && (
@@ -26,7 +28,11 @@ export default function Breadcrumbs({ path }: BreadcrumbsProps) {
               </Text>
             ) : (
               <TouchableOpacity
-                onPress={() => router.push("/(app)/(tabs)/notes" as never)}
+                onPress={() =>
+                  router.push(
+                    `/(app)/(tabs)/notes?folder=${encodeURIComponent(partialPath)}` as never
+                  )
+                }
               >
                 <Text style={styles.segment} numberOfLines={1}>
                   {segment}

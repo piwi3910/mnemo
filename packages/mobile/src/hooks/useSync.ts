@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { syncWithServer } from "../db/sync";
 
 export interface SyncState {
@@ -17,9 +17,12 @@ export function useSync(): UseSyncReturn {
   const [syncing, setSyncing] = useState(false);
   const [lastSyncAt, setLastSyncAt] = useState<Date | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Use a ref for the guard so the `sync` callback reference stays stable
+  const syncingRef = useRef(false);
 
   const sync = useCallback(async () => {
-    if (syncing) return;
+    if (syncingRef.current) return;
+    syncingRef.current = true;
     setSyncing(true);
     setError(null);
     try {
@@ -29,9 +32,10 @@ export function useSync(): UseSyncReturn {
       const message = err instanceof Error ? err.message : "Sync failed";
       setError(message);
     } finally {
+      syncingRef.current = false;
       setSyncing(false);
     }
-  }, [syncing]);
+  }, []);
 
   // Auto-sync on mount
   useEffect(() => {

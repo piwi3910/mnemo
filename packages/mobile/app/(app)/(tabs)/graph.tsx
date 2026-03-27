@@ -1,6 +1,7 @@
-import React, { useState, useCallback } from "react";
-import { View, Text, StyleSheet, ActivityIndicator } from "react-native";
+import React, { useState, useCallback, useRef } from "react";
+import { View, Text, StyleSheet } from "react-native";
 import WebView, { WebViewMessageEvent } from "react-native-webview";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useEffect } from "react";
 import { database } from "../../../src/db";
@@ -59,9 +60,7 @@ function buildGraph(notes: Note[]): GraphData {
   return { nodes: Array.from(nodeMap.values()), edges };
 }
 
-function buildGraphHTML(graph: GraphData): string {
-  const graphJson = JSON.stringify(graph);
-
+function buildGraphHTML(): string {
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -94,7 +93,7 @@ function buildGraphHTML(graph: GraphData): string {
 <div id="tooltip"></div>
 <script>
 (function() {
-  var graph = ${graphJson};
+  var graph = { nodes: [], edges: [] };
   var canvas = document.getElementById('c');
   var ctx = canvas.getContext('2d');
   var tooltip = document.getElementById('tooltip');
@@ -287,30 +286,94 @@ function buildGraphHTML(graph: GraphData): string {
   }, { passive: false });
 
   requestAnimationFrame(tick);
+
+  // Listen for graph data updates from React Native
+  function initGraph(newGraph) {
+    graph = newGraph;
+    nodes = graph.nodes.map(function(n) {
+      return {
+        id: n.id,
+        label: n.label,
+        x: W / 2 + (Math.random() - 0.5) * W * 0.6,
+        y: H / 2 + (Math.random() - 0.5) * H * 0.6,
+        vx: 0, vy: 0,
+        radius: 6
+      };
+    });
+    edges = graph.edges.map(function(e) {
+      return {
+        source: nodes.find(function(n) { return n.id === e.source; }),
+        target: nodes.find(function(n) { return n.id === e.target; })
+      };
+    }).filter(function(e) { return e.source && e.target; });
+    nodeIndex = {};
+    nodes.forEach(function(n) { nodeIndex[n.id] = n; });
+    alpha = 1;
+  }
+
+  function handleMessage(event) {
+    try {
+      var msg = JSON.parse(event.data);
+      if (msg.type === 'updateGraph') {
+        initGraph(msg.graph);
+      }
+    } catch(e) {}
+  }
+
+  document.addEventListener('message', handleMessage);
+  window.addEventListener('message', handleMessage);
+
+  // Signal ready to React Native
+  if (window.ReactNativeWebView) {
+    window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'ready' }));
+  }
 })();
 </script>
 </body>
 </html>`;
 }
 
+const GRAPH_HTML = buildGraphHTML();
+
 export default function GraphScreen() {
   const router = useRouter();
-  const [graphHTML, setGraphHTML] = useState<string | null>(null);
+  const insets = useSafeAreaInsets();
+  const webViewRef = useRef<WebView>(null);
+  const isReadyRef = useRef(false);
+  const pendingGraphRef = useRef<GraphData | null>(null);
+  const [graph, setGraph] = useState<GraphData | null>(null);
 
   useEffect(() => {
     const col = database.get<Note>("notes");
     const subscription = col.query().observe().subscribe((notes) => {
-      const graph = buildGraph(notes);
-      setGraphHTML(buildGraphHTML(graph));
+      const g = buildGraph(notes);
+      setGraph(g);
+      if (isReadyRef.current) {
+        webViewRef.current?.postMessage(JSON.stringify({ type: "updateGraph", graph: g }));
+      } else {
+        pendingGraphRef.current = g;
+      }
     });
     return () => subscription.unsubscribe();
+  }, []);
+
+  const handleWebViewReady = useCallback(() => {
+    isReadyRef.current = true;
+    if (pendingGraphRef.current) {
+      webViewRef.current?.postMessage(
+        JSON.stringify({ type: "updateGraph", graph: pendingGraphRef.current })
+      );
+      pendingGraphRef.current = null;
+    }
   }, []);
 
   const handleMessage = useCallback(
     (event: WebViewMessageEvent) => {
       try {
         const data = JSON.parse(event.nativeEvent.data);
-        if (data.type === "nodePress" && data.id) {
+        if (data.type === "ready") {
+          handleWebViewReady();
+        } else if (data.type === "nodePress" && data.id) {
           const encoded = encodeURIComponent(data.id);
           router.push(`/(app)/note/${encoded}` as never);
         }
@@ -318,23 +381,27 @@ export default function GraphScreen() {
         // ignore
       }
     },
-    [router]
+    [router, handleWebViewReady]
   );
 
+  const isEmpty = graph !== null && graph.nodes.length === 0;
+
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Graph</Text>
       </View>
 
-      {graphHTML === null ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Building graph…</Text>
+      {isEmpty ? (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>
+            Create notes with [[wiki-links]] to see your knowledge graph
+          </Text>
         </View>
       ) : (
         <WebView
-          source={{ html: graphHTML }}
+          ref={webViewRef}
+          source={{ html: GRAPH_HTML }}
           style={styles.webview}
           onMessage={handleMessage}
           javaScriptEnabled={true}
@@ -351,7 +418,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
-    paddingTop: spacing.xl + spacing.md,
   },
   header: {
     paddingHorizontal: spacing.lg,
@@ -368,14 +434,16 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
-  loadingContainer: {
+  emptyContainer: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    gap: spacing.md,
+    padding: spacing.xl,
   },
-  loadingText: {
+  emptyText: {
     fontSize: fontSize.md,
     color: colors.textSecondary,
+    textAlign: "center",
+    lineHeight: 22,
   },
 });

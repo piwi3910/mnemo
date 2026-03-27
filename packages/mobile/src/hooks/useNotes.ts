@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { getDatabase, NoteRow } from "../db";
 
 export interface NoteRecord {
@@ -142,7 +142,7 @@ export function useNotes(): UseNotesReturn {
     refresh();
   }, [refresh]);
 
-  const tree = buildTree(notes);
+  const tree = useMemo(() => buildTree(notes), [notes]);
 
   return { notes, tree, isLoading, createNote, deleteNote, updateNote };
 }
