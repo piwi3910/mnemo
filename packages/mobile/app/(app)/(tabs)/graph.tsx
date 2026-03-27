@@ -10,6 +10,8 @@ import { colors, fontSize, spacing } from "../../../src/lib/theme";
 interface GraphNode {
   id: string;
   label: string;
+  starred?: boolean;
+  shared?: boolean;
 }
 
 interface GraphEdge {
@@ -31,6 +33,25 @@ function parseWikiLinks(content: string): string[] {
 }
 
 function buildGraph(notes: NoteRow[]): GraphData {
+  const db = getDatabase();
+
+  // Get starred paths
+  const starredRow = db.getAllSync<{ value: string }>(
+    "SELECT value FROM settings WHERE key = 'starred' AND _status != 'deleted'"
+  );
+  let starredPaths = new Set<string>();
+  if (starredRow.length > 0) {
+    try {
+      starredPaths = new Set(JSON.parse(starredRow[0].value));
+    } catch {}
+  }
+
+  // Get shared note paths
+  const sharedRows = db.getAllSync<{ path: string }>(
+    "SELECT path FROM note_shares WHERE _status != 'deleted'"
+  );
+  const sharedPaths = new Set(sharedRows.map((r) => r.path));
+
   const nodeMap = new Map<string, GraphNode>();
 
   // Add all notes as nodes (use path as id)
@@ -38,6 +59,8 @@ function buildGraph(notes: NoteRow[]): GraphData {
     nodeMap.set(note.path, {
       id: note.path,
       label: note.title ?? note.path.split("/").pop() ?? note.path,
+      starred: starredPaths.has(note.path),
+      shared: sharedPaths.has(note.path),
     });
   }
 
@@ -105,27 +128,9 @@ function buildGraphHTML(): string {
   resize();
   window.addEventListener('resize', function() { resize(); draw(); });
 
-  var nodes = graph.nodes.map(function(n) {
-    return {
-      id: n.id,
-      label: n.label,
-      x: W / 2 + (Math.random() - 0.5) * W * 0.6,
-      y: H / 2 + (Math.random() - 0.5) * H * 0.6,
-      vx: 0, vy: 0,
-      radius: 6
-    };
-  });
-
-  var edges = graph.edges.map(function(e) {
-    return {
-      source: nodes.find(function(n) { return n.id === e.source; }),
-      target: nodes.find(function(n) { return n.id === e.target; })
-    };
-  }).filter(function(e) { return e.source && e.target; });
-
+  var nodes = [];
+  var edges = [];
   var nodeIndex = {};
-  nodes.forEach(function(n) { nodeIndex[n.id] = n; });
-
   var activeNode = null;
   var dragging = null;
   var dragOffX = 0, dragOffY = 0;
@@ -186,12 +191,27 @@ function buildGraphHTML(): string {
     requestAnimationFrame(tick);
   }
 
+  function drawStar(ctx, cx, cy, spikes, outerR, innerR) {
+    var rot = Math.PI / 2 * 3;
+    var step = Math.PI / spikes;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - outerR);
+    for (var i = 0; i < spikes; i++) {
+      ctx.lineTo(cx + Math.cos(rot) * outerR, cy + Math.sin(rot) * outerR);
+      rot += step;
+      ctx.lineTo(cx + Math.cos(rot) * innerR, cy + Math.sin(rot) * innerR);
+      rot += step;
+    }
+    ctx.lineTo(cx, cy - outerR);
+    ctx.closePath();
+  }
+
   function draw() {
     ctx.clearRect(0, 0, W, H);
 
     // Edges
-    ctx.strokeStyle = '#374151';
-    ctx.lineWidth = 1.2;
+    ctx.strokeStyle = 'rgba(100, 116, 139, 0.3)';
+    ctx.lineWidth = 1;
     edges.forEach(function(e) {
       ctx.beginPath();
       ctx.moveTo(e.source.x, e.source.y);
@@ -201,26 +221,44 @@ function buildGraphHTML(): string {
 
     // Nodes
     nodes.forEach(function(n) {
-      var isActive = n === activeNode;
-      ctx.beginPath();
-      ctx.arc(n.x, n.y, n.radius + (isActive ? 2 : 0), 0, Math.PI * 2);
-      ctx.fillStyle = isActive ? '#7c3aed' : '#4b5563';
-      ctx.fill();
-      if (isActive) {
-        ctx.strokeStyle = 'rgba(124,58,237,0.4)';
-        ctx.lineWidth = 3;
+      var r = n.radius || 6;
+
+      if (n.starred) {
+        drawStar(ctx, n.x, n.y, 5, r + 1, (r + 1) * 0.4);
+        ctx.fillStyle = '#eab308';
+        ctx.fill();
+        ctx.strokeStyle = '#ca8a04';
+        ctx.lineWidth = 1;
         ctx.stroke();
+      } else {
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, r, 0, Math.PI * 2);
+        if (n.isActive) {
+          ctx.fillStyle = '#25D366';
+          ctx.fill();
+          ctx.strokeStyle = '#128C7E';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        } else if (n.shared) {
+          ctx.fillStyle = '#f97316';
+          ctx.fill();
+          ctx.strokeStyle = '#ea580c';
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+        } else {
+          ctx.fillStyle = '#a78bfa';
+          ctx.fill();
+        }
       }
     });
 
-    // Labels (only show for active or if few nodes)
-    var showLabels = nodes.length <= 30;
+    // Labels — always shown, truncated to 20 chars
     nodes.forEach(function(n) {
-      if (!showLabels && n !== activeNode) return;
-      ctx.fillStyle = n === activeNode ? '#e2e8f0' : '#94a3b8';
+      var lbl = n.label.length > 20 ? n.label.slice(0, 18) + '...' : n.label;
+      ctx.fillStyle = '#e2e8f0';
       ctx.font = (n === activeNode ? 'bold ' : '') + '11px -apple-system, sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText(n.label, n.x, n.y + n.radius + 13);
+      ctx.fillText(lbl, n.x, n.y + n.radius + 13);
     });
   }
 
@@ -249,7 +287,10 @@ function buildGraphHTML(): string {
       dragging = n;
       dragOffX = x - n.x;
       dragOffY = y - n.y;
+      if (activeNode) { activeNode.isActive = false; activeNode.radius = activeNode.starred ? 7 : 6; }
       activeNode = n;
+      n.isActive = true;
+      n.radius = 10;
     }
   }, { passive: false });
 
@@ -267,8 +308,6 @@ function buildGraphHTML(): string {
     e.preventDefault();
     var elapsed = Date.now() - touchStartTime;
     if (elapsed < 300 && dragging && activeNode) {
-      var dx = e.changedTouches[0].clientX - (canvas.getBoundingClientRect().left + touchStartX - (canvas.getBoundingClientRect().left));
-      // Simple tap detection: if dragging didn't move much
       var mdx = dragging.x - (touchStartX - dragOffX);
       var mdy = dragging.y - (touchStartY - dragOffY);
       if (Math.abs(mdx) < 10 && Math.abs(mdy) < 10) {
@@ -293,10 +332,13 @@ function buildGraphHTML(): string {
       return {
         id: n.id,
         label: n.label,
+        starred: n.starred || false,
+        shared: n.shared || false,
+        isActive: false,
         x: W / 2 + (Math.random() - 0.5) * W * 0.6,
         y: H / 2 + (Math.random() - 0.5) * H * 0.6,
         vx: 0, vy: 0,
-        radius: 6
+        radius: n.starred ? 7 : 6
       };
     });
     edges = graph.edges.map(function(e) {
@@ -307,6 +349,7 @@ function buildGraphHTML(): string {
     }).filter(function(e) { return e.source && e.target; });
     nodeIndex = {};
     nodes.forEach(function(n) { nodeIndex[n.id] = n; });
+    activeNode = null;
     alpha = 1;
   }
 
