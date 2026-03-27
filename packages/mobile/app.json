@@ -34,6 +34,7 @@
       "expo-router",
       "expo-secure-store",
       "expo-web-browser",
+      "@morrowdigital/watermelondb-expo-plugin",
       [
         "expo-build-properties",
         {
@@ -41,7 +42,11 @@
             "deploymentTarget": "15.1"
           },
           "android": {
-            "minSdkVersion": 23
+            "minSdkVersion": 24,
+            "kotlinVersion": "1.9.25",
+            "packagingOptions": {
+              "pickFirst": ["**/libc++_shared.so", "**/libfbjni.so"]
+            }
           }
         }
       ]
