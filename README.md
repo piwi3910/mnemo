@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <strong>A self-hosted, multi-user knowledge base with wiki-style linking and graph visualization.</strong>
+  <strong>A self-hosted, multi-user knowledge base with wiki-style linking, graph visualization, and mobile sync.</strong>
 </p>
 
 <p align="center">
@@ -12,64 +12,77 @@
   <a href="https://github.com/piwi3910/mnemo/blob/master/LICENSE"><img src="https://img.shields.io/badge/license-Apache%202.0-blue" alt="License"></a>
 </p>
 
+<p align="center">
+  <img src="docs/screenshots/hero.png" alt="Mnemo Screenshot" width="800" />
+</p>
+
 ---
 
 ## Features
 
 ### Editor & Notes
-- **Markdown Editor** with CodeMirror 6, syntax highlighting, and formatting toolbar
-- **Live Preview** with rendered markdown, wiki-links, and embeds
-- **Vim Mode** with toggle switch — full Vim keybindings with command bar (`:search`, `:%s/replace`), starts in insert mode for beginners
+- **Markdown Editor** — CodeMirror 6 with syntax highlighting, formatting toolbar, and Vim mode
+- **Live Preview** — rendered markdown with wiki-links, frontmatter display, and code fences
+- **Auto-save** — 2-second debounce saves automatically while editing
 - **Wiki-style Linking** — `[[double brackets]]` with autocomplete and broken link detection
-- **Full-text Search** across all notes with instant results
-- **Templates** and **Daily Notes** for quick note creation
+- **Full-text Search** — instant results across all notes
+- **Version History** — browse and restore previous versions of any note
+- **Image Upload** — drag into editor or use toolbar button
+- **Frontmatter** — YAML metadata parsing with styled display
+- **Templates** and **Daily Notes** for quick creation
+- **Trash** — soft delete with restore capability (auto-purge after 30 days)
 - **PDF Export** for any note
-- **Save/Cancel editing** — explicit save, no auto-save, with undo/redo buttons
+- **Breadcrumb Navigation** — clickable path segments above notes
 
 ### Knowledge Graph
 - **Interactive D3.js graph** with zoom, pan, and drag
-- **Local/Full view** toggle — see direct connections or the entire graph
-- **Active note** centered (green), **starred notes** as yellow stars, **shared notes** as orange nodes
-- **Crosshair button** to recenter the view
+- **Local/Full view** toggle
+- **Color-coded nodes** — active (green), starred (yellow stars), shared (orange), default (purple)
+- **Mobile graph overlay** — mini expandable graph on phone screens
 
-### Multi-User
-- **Authentication** — email/password + OAuth (Google, GitHub)
-- **Per-user file isolation** — each user has their own `notes/{userId}/` directory
-- **Admin panel** — manage users, invite codes, registration mode (open/invite-only)
-- **First user becomes admin** automatically
+<p align="center">
+  <img src="docs/screenshots/graph-view.png" alt="Graph View" width="700" />
+</p>
 
-### Note Sharing
-- **Share notes or folders** with specific users (read or read-write permissions)
-- **Shared notes** appear in sidebar "Shared" section, search results (with share icon), and graph (orange nodes)
-- **Access requests** — click an inaccessible link to request access, owners approve/deny
-- **Graph link filtering** — only shows links to notes you have access to
-- **Context menu sharing** — right-click any file/folder to share
+### Mobile App (React Native)
+- **Offline-first** — expo-sqlite local database with bidirectional sync
+- **Full feature parity** — notes, search, graph, tags, settings, daily notes, templates, trash, history, sharing, admin
+- **WebView editor** — same CodeMirror experience on mobile
+- **Android APK** available via EAS Build
+- **Auto-sync** on foreground, pull-to-refresh, manual sync button
+
+### Multi-User & Security
+- **Authentication** — email/password, OAuth (Google, GitHub), passkeys (WebAuthn)
+- **Two-Factor Authentication** — TOTP with QR code setup and backup codes
+- **Per-user isolation** — each user has their own notes directory
+- **Note Sharing** — share notes/folders with read or read-write permissions
+- **Access Requests** — request access to notes via wiki-links
+- **API Keys** — scoped bearer tokens for programmatic access
+- **Admin Panel** — manage users, invite codes, registration mode
 
 ### UI & Layout
-- **Preview-first layout** — notes show in preview by default, click Edit for split editor+preview
-- **Inline knowledge graph** panel (not a modal) with outline pane below
-- **Resizable panels** — drag borders between sidebar, content, graph, and outline
-- **Collapsible sidebar** with thin bar when closed
-- **Dark/Light theme** with always-dark header
-- **Custom Mnemo logo** and branding
+- **Three-panel layout** — sidebar, content, graph+outline (all resizable)
+- **Dark/Light theme** with system preference detection
+- **Favorites sidebar** — quick access to starred notes
+- **Drag-and-drop file tree** — move files and folders by dragging
+- **Toast notifications** — global info/success/error feedback
+- **Responsive mobile layout** — optimized for phone screens
+- **Full WCAG accessibility** — ARIA roles, keyboard navigation, focus management
 
-### Security
-- **Session-based auth** via better-auth with httpOnly cookies (7-day expiry, 5-min cache)
-- **Passkey / WebAuthn** support for passwordless login
-- **API keys** with SHA-256 hashed storage, scoped access, optional expiration
-- **Path traversal prevention** on all file routes
-- **Rate limiting** — per-IP for browser sessions, per-key for API access
-- **Password management** — change password, admin reset, forgot password via email (optional SMTP)
+<p align="center">
+  <img src="docs/screenshots/editor.png" alt="Split Editor" width="700" />
+</p>
 
 ### API & AI Agent Access
-- **Swagger/OpenAPI docs** at `/api/docs` — auto-generated from JSDoc annotations
-- **30+ REST endpoints** covering notes, search, graph, settings, sharing, auth, admin
-- **API Keys** — create scoped keys (read-only / read-write) for programmatic access
-- **Built-in MCP server** at `/api/mcp` — [Model Context Protocol](https://modelcontextprotocol.io/) for AI agents (Claude Code, Cursor, etc.)
-- **Dynamic tool discovery** — plugin routes with OpenAPI annotations are automatically exposed as MCP tools
+- **Swagger/OpenAPI docs** at `/api/docs`
+- **30+ REST endpoints** — notes, search, graph, settings, sharing, auth, admin, sync
+- **MCP Server** at `/api/mcp` — Model Context Protocol for AI agents (Claude Code, Cursor, etc.)
+- **Sync API** — pull/push endpoints for mobile synchronization
 
-### Account Settings
-- **Unified settings page** — manage password, passkeys, and API keys in one place
+### Plugin Ecosystem
+12 plugins available via [mnemo-plugins](https://github.com/piwi3910/mnemo-plugins):
+
+Slash Commands, Pomodoro Timer, Reading List, Writing Metrics, Excalidraw, Kanban Board, Mass Upload, Publish/Export, Flashcards, Presentation Mode, Calendar Journal, RSS Reader
 
 ---
 
@@ -79,146 +92,21 @@
 |-----------|------------|
 | Frontend | React 19, Vite 8, TypeScript 5.9, Tailwind CSS 4 |
 | Backend | Express 5, Prisma 7, TypeScript 5.9 |
-| Database | PostgreSQL 16 |
+| Database | SQLite (via better-sqlite3) |
+| Mobile | Expo SDK 55, React Native, expo-sqlite |
 | Editor | CodeMirror 6 with Vim mode |
 | Graph | D3.js force-directed |
-| Auth | better-auth (sessions, OAuth, passkeys) |
+| Auth | better-auth (sessions, OAuth, passkeys, 2FA) |
 | Runtime | Node.js 24 |
 
 ---
 
-
-## Environment Variables
-
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `DATABASE_URL` | ✅ | PostgreSQL connection string |
-| `BETTER_AUTH_SECRET` | ✅ | Secret key for auth (min 32 chars). Generate with: `openssl rand -hex 32` |
-| `APP_URL` | Optional | Public app URL (default: `http://localhost:5173`) |
-| `BETTER_AUTH_URL` | Optional | Auth service URL (default: `http://localhost:3001`) |
-| `PORT` | Optional | Server port (default: `3001`) |
-| `NOTES_DIR` | Optional | Path to notes directory (default: `../../notes`) |
-| `WEBAUTHN_RP_ID` | Optional | Relying party ID for passkeys (default: `localhost`) |
-| `SMTP_HOST` | Optional | SMTP server for email notifications |
-| `SMTP_PORT` | Optional | SMTP port |
-| `SMTP_USER` | Optional | SMTP username |
-| `SMTP_PASS` | Optional | SMTP password |
-| `SMTP_FROM` | Optional | From address for emails |
-| `GOOGLE_CLIENT_ID` | Optional | Google OAuth client ID |
-| `GOOGLE_CLIENT_SECRET` | Optional | Google OAuth client secret |
-| `GITHUB_CLIENT_ID` | Optional | GitHub OAuth client ID |
-| `GITHUB_CLIENT_SECRET` | Optional | GitHub OAuth client secret |
-
 ## Quick Start
 
-### Prerequisites
-
-- Node.js 24+
-- PostgreSQL 16+ (or Docker)
-
-### 1. Clone and install
-
-```bash
-git clone https://github.com/piwi3910/mnemo.git
-cd mnemo
-npm install
-```
-
-### 2. Set up the database
-
-```bash
-# Using Docker (recommended)
-docker compose up db -d
-
-# Or use an existing PostgreSQL instance
-# Create a database named "mnemo"
-```
-
-### 3. Configure environment
-
-```bash
-cp .env.example .env
-# Edit .env with your settings (see Configuration section below)
-```
-
-### 4. Start development servers
-
-```bash
-npm run dev
-```
-
-- Frontend: http://localhost:5173
-- Backend: http://localhost:3001
-- API Docs: http://localhost:5173/api/docs
-
-### 5. Register
-
-Open http://localhost:5173 — the first user to register becomes admin.
-
----
-
-## Configuration
-
-### Required
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `DATABASE_URL` | PostgreSQL connection string | `postgresql://postgres:postgres@localhost:5432/mnemo` |
-| `JWT_SECRET` | Secret for signing JWTs (use a random 64-char string) | `dev-secret-change-me` |
-
-### Optional: OAuth (Google)
-
-To enable "Sign in with Google":
-
-1. Go to [Google Cloud Console](https://console.cloud.google.com/) → APIs & Services → Credentials
-2. Create OAuth 2.0 Client ID (Web application)
-3. Add authorized redirect URI: `http://localhost:5173/api/auth/google/callback` (or your production URL)
-
-```env
-GOOGLE_CLIENT_ID=your-client-id
-GOOGLE_CLIENT_SECRET=your-client-secret
-APP_URL=http://localhost:5173
-```
-
-### Optional: OAuth (GitHub)
-
-To enable "Sign in with GitHub":
-
-1. Go to [GitHub Developer Settings](https://github.com/settings/developers) → New OAuth App
-2. Set callback URL: `http://localhost:5173/api/auth/github/callback`
-
-```env
-GITHUB_CLIENT_ID=your-client-id
-GITHUB_CLIENT_SECRET=your-client-secret
-APP_URL=http://localhost:5173
-```
-
-> **Note:** If OAuth credentials are not set, the OAuth buttons are automatically hidden from the login page.
-
-### Optional: SMTP (Password Reset Emails)
-
-To enable "Forgot Password" with email reset links:
-
-```env
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_SECURE=false
-SMTP_USER=you@gmail.com
-SMTP_PASS=your-app-password
-SMTP_FROM="Mnemo <noreply@yourdomain.com>"
-```
-
-> **Note:** If SMTP is not configured, the "Forgot password?" link shows "Contact your admin" instead. Admins can always reset passwords from the Admin Panel.
-
-For Gmail: use an [App Password](https://support.google.com/accounts/answer/185833), not your regular password.
-
----
-
-## Docker Deployment
-
-### Docker Compose (recommended)
+### Docker (recommended)
 
 ```yaml
+# docker-compose.yml
 services:
   mnemo:
     image: ghcr.io/piwi3910/mnemo/mnemo:latest
@@ -226,39 +114,74 @@ services:
       - "3100:3000"
     volumes:
       - ./notes:/notes
+      - mnemo-data:/data
     environment:
-      - DATABASE_URL=postgresql://postgres:postgres@db:5432/mnemo
-      - NOTES_DIR=/notes
-      - JWT_SECRET=change-me-to-a-random-64-char-string
+      - DATABASE_URL=file:/data/mnemo.db
+      - BETTER_AUTH_SECRET=change-me-use-openssl-rand-hex-32
       - APP_URL=http://localhost:3100
-    depends_on:
-      db:
-        condition: service_healthy
-    restart: unless-stopped
-
-  db:
-    image: postgres:16-alpine
-    environment:
-      - POSTGRES_DB=mnemo
-      - POSTGRES_PASSWORD=postgres
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d mnemo"]
-      interval: 2s
-      timeout: 5s
-      retries: 10
-    restart: unless-stopped
 
 volumes:
-  pgdata:
+  mnemo-data:
 ```
 
 ```bash
 docker compose up -d
 ```
 
-Access at http://localhost:3100
+Open http://localhost:3100 — the first user to register becomes admin.
+
+### From Source
+
+```bash
+git clone https://github.com/piwi3910/mnemo.git
+cd mnemo
+npm install
+npm run dev
+```
+
+- Frontend: http://localhost:5173
+- Backend: http://localhost:3001
+- API Docs: http://localhost:5173/api/docs
+
+---
+
+## Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `DATABASE_URL` | Yes | SQLite path: `file:/data/mnemo.db` |
+| `BETTER_AUTH_SECRET` | Yes | Auth secret (min 32 chars). Generate: `openssl rand -hex 32` |
+| `APP_URL` | No | Public URL (default: `http://localhost:5173`) |
+| `PORT` | No | Server port (default: `3001`) |
+| `NOTES_DIR` | No | Notes directory path |
+| `WEBAUTHN_RP_ID` | No | Passkey relying party ID (default: `localhost`) |
+| `GOOGLE_CLIENT_ID` | No | Google OAuth — auto-hidden if not set |
+| `GOOGLE_CLIENT_SECRET` | No | Google OAuth secret |
+| `GITHUB_CLIENT_ID` | No | GitHub OAuth — auto-hidden if not set |
+| `GITHUB_CLIENT_SECRET` | No | GitHub OAuth secret |
+| `SMTP_HOST` | No | SMTP server for password reset emails |
+| `SMTP_PORT` | No | SMTP port (default: `587`) |
+| `SMTP_USER` | No | SMTP username |
+| `SMTP_PASS` | No | SMTP password |
+| `SMTP_FROM` | No | From address for emails |
+
+---
+
+## Mobile App
+
+The React Native mobile app lives in `packages/mobile/` and syncs with the server via the `/api/sync` endpoints.
+
+### Install on Android
+
+Download the latest APK from [EAS Build](https://expo.dev/accounts/piwi3910/projects/mnemo/builds).
+
+### Build from Source
+
+```bash
+cd packages/mobile
+npx expo install
+npx eas build --platform android --profile preview
+```
 
 ---
 
@@ -273,87 +196,85 @@ Access at http://localhost:3100
 | `Ctrl+K` | Focus search |
 | `Ctrl+Shift+S` | Toggle star |
 | `F2` | Rename note |
-| `Ctrl+Z` | Undo (in editor) |
-| `Ctrl+Shift+Z` | Redo (in editor) |
-| `Escape` | Exit insert mode (Vim) |
 
 ---
 
 ## Architecture
 
 ```
-┌────────────────────────────────────────────────────────────┐
-│  Browser (React 19 + Vite 8 + Tailwind CSS 4)             │
-│  ┌─────────┬──────────────┬────────────┐                   │
-│  │ Sidebar │  Preview/    │ Graph +    │                   │
-│  │ (files, │  Editor      │ Outline    │                   │
-│  │  tags,  │  (CodeMirror │ (D3.js)    │                   │
-│  │  shared)│   + Vim)     │            │                   │
-│  └─────────┴──────────────┴────────────┘                   │
-└──────────────────────┬─────────────────────────────────────┘
-                       │ REST API
-┌──────────────────────┴─────────────────────────────────────┐
-│  Express 5 Server (TypeScript)                              │
-│  ├── Auth (better-auth sessions + OAuth + passkeys)         │
-│  ├── Notes, Folders, Search, Graph, Tags                    │
-│  ├── Sharing & Access Requests                              │
-│  ├── Admin (users, invites, settings)                       │
-│  ├── API Keys (bearer auth, scoped access)                  │
-│  ├── MCP Server (AI agent access via Streamable HTTP)       │
-│  ├── Plugin system (server + client extensions)             │
-│  ├── WebSocket for real-time plugin communication           │
-│  └── Swagger API Docs                                       │
-├─────────────────┬──────────────────────────────────────────┤
-│  PostgreSQL 16  │  File System                              │
-│  (search index, │  notes/{userId}/                          │
-│   graph edges,  │  ├── Welcome.md                           │
-│   settings,     │  ├── Projects/                            │
-│   users, shares)│  └── Daily/                               │
-└─────────────────┴──────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│  Browser (React 19 + Vite 8 + Tailwind CSS 4)               │
+│  ┌─────────┬──────────────┬────────────┐                     │
+│  │ Sidebar │  Preview/    │ Graph +    │                     │
+│  │ (files, │  Editor      │ Outline    │                     │
+│  │  tags,  │  (CodeMirror │ (D3.js)    │                     │
+│  │  trash, │   + Vim)     │            │                     │
+│  │  favs)  │              │            │                     │
+│  └─────────┴──────────────┴────────────┘                     │
+└──────────────────────┬───────────────────────────────────────┘
+                       │ REST API + Sync API
+┌──────────────────────┴───────────────────────────────────────┐
+│  Express 5 Server                                             │
+│  ├── Auth (better-auth + OAuth + passkeys + 2FA)              │
+│  ├── Notes, Search, Graph, Tags, Trash, History               │
+│  ├── Sharing & Access Requests                                │
+│  ├── Sync (pull/push for mobile)                              │
+│  ├── Plugin system (server + client)                          │
+│  ├── MCP Server (AI agent access)                             │
+│  └── Swagger API Docs                                         │
+├─────────────────┬────────────────────────────────────────────┤
+│  SQLite         │  File System                                │
+│  (search index, │  notes/{userId}/                            │
+│   graph edges,  │  ├── Welcome.md                             │
+│   settings,     │  ├── .trash/                                │
+│   users, shares,│  ├── .history/                              │
+│   sync tracking)│  └── attachments/                           │
+└─────────────────┴────────────────────────────────────────────┘
+         ▲
+         │ Sync API (pull/push)
+┌────────┴─────────────────────────────────────────────────────┐
+│  React Native Mobile App (Expo SDK 55)                        │
+│  ├── expo-sqlite (offline-first local database)               │
+│  ├── WebView CodeMirror editor                                │
+│  ├── D3 graph visualization                                   │
+│  └── 5-tab navigation: Notes, Search, Graph, Tags, Settings  │
+└──────────────────────────────────────────────────────────────┘
 ```
+
+---
+
+## Database Migrations
+
+Mnemo uses Prisma Migrate for safe schema updates. Migrations run automatically on container startup with automatic backup.
+
+For developers:
+```bash
+# After changing prisma/schema.prisma:
+DATABASE_URL="file:./data/mnemo.db" npx prisma migrate dev --name describe_change
+```
+
+See [MIGRATIONS.md](packages/server/MIGRATIONS.md) for details.
 
 ---
 
 ## Development
 
 ```bash
-# Install dependencies
-npm install
-
-# Start dev servers (frontend :5173, backend :3001)
-npm run dev
-
-# Type check
-npm run typecheck
-
-# Lint
-npm run lint
-
-# Build for production
-npm run build
-```
-
-### Running Tests
-
-```bash
-npm run test                              # All tests
-npm run test --workspace=packages/server  # Server only
-npm run test --workspace=packages/client  # Client only
+npm install          # Install dependencies
+npm run dev          # Start dev servers (frontend :5173, backend :3001)
+npm run typecheck    # Type check
+npm run lint         # Lint
+npm run build        # Build for production
+npm test             # Run all tests
 ```
 
 ---
 
-## Contributing
+## Documentation
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for setup instructions, code style, and PR process.
-
-## API Keys & AI Agent Access
-
-See [docs/API-ACCESS.md](docs/API-ACCESS.md) for how to create API keys, connect AI agents via MCP, and use the REST API programmatically.
-
-## Plugin Development
-
-See [docs/PLUGINS.md](docs/PLUGINS.md) for the plugin API reference and development guide.
+- [API Keys & MCP](docs/API-ACCESS.md) — programmatic access and AI agent setup
+- [Plugin Development](docs/PLUGINS.md) — plugin API reference
+- [Migrations](packages/server/MIGRATIONS.md) — database migration guide
 
 ## License
 
