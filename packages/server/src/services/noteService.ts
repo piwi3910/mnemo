@@ -5,6 +5,8 @@ import { updateGraphCache, removeFromGraph, renameInGraph } from "./graphService
 import { moveToTrash } from "../routes/trash.js";
 import { saveHistorySnapshot } from "../routes/history.js";
 import type { PluginWebSocket } from "../plugins/PluginWebSocket.js";
+import { prisma } from "../prisma.js";
+import { createLogger } from "../lib/logger.js";
 
 // Optional WebSocket instance for broadcasting graph updates
 let pluginWs: PluginWebSocket | null = null;
@@ -16,8 +18,6 @@ let pluginWs: PluginWebSocket | null = null;
 export function setGraphWebSocket(ws: PluginWebSocket): void {
   pluginWs = ws;
 }
-import { prisma } from "../prisma.js";
-import { createLogger } from "../lib/logger.js";
 
 const log = createLogger("note-service");
 
