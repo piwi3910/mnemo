@@ -35,12 +35,25 @@ When viewing a single note's neighborhood, use a radial ring layout:
 
 When switching between global and local mode (or when the active note changes), the simulation reheats with alpha ~0.5 so nodes animate smoothly to their new positions. No instant teleporting.
 
+### Full-Screen Graph Overlay
+
+A small expand button (top-right corner of the graph panel header) opens the graph as a full-screen overlay on top of the entire app. This allows exploring the full graph without being constrained to the side panel.
+
+- **Expand button** — small icon (e.g. `Maximize2` from lucide) in the graph panel header, top-right
+- **Overlay** — renders the graph at full viewport size with a semi-transparent dark backdrop, using the same `GraphView` component
+- **Uses global mode** — the overlay always shows the full graph (tuned force-directed layout) regardless of what mode the side panel was in
+- **Clicking a note** — navigates to that note (calls `onNoteSelect`) and automatically closes the overlay
+- **Shrink button** — same position (top-right), icon changes to `Minimize2`, closes the overlay back to normal panel view
+- **Escape key** — also closes the overlay
+- **Works on both web and mobile** — on mobile the overlay replaces the current mini-overlay behavior
+
 ## Changes
 
 | File | Change |
 |------|--------|
 | `packages/client/src/components/Graph/graphConfig.ts` | New force parameters for both modes, ring radius ratios |
 | `packages/client/src/components/Graph/useD3Graph.ts` | Add `forceRadial` for local mode rings and global soft centering, remove `fx/fy` pinning in global mode, expand local mode to 2-hop neighborhood, smooth mode transitions |
+| `packages/client/src/components/Graph/GraphPanel.tsx` | Add expand button, full-screen overlay state and rendering |
 
 ### Mobile Parity
 
