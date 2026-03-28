@@ -17,11 +17,12 @@ export const GRAPH_CONFIG = {
       radialStrength: 0.6,
     },
     // Shared physics tuning
-    alphaDecay: 0.008,     // much slower cooldown (default 0.0228) — smooth settling
-    velocityDecay: 0.4,    // more damping (default 0.4) — less jittery
-    dragAlphaTarget: 0.1,  // gentler drag reheat
+    alphaDecay: 0.008,     // slower cooldown (default 0.0228) — smooth settling
+    alphaDecayLargeGraph: 0.02, // faster for 300+ nodes to reduce CPU
+    largeGraphThreshold: 300,
+    velocityDecay: 0.4,    // default damping
+    dragAlphaTarget: 0.1,
     resizeAlpha: 0.2,
-    transitionAlpha: 0.4,
   },
   zoom: {
     scaleMin: 0.2,

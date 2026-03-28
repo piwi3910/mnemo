@@ -26,14 +26,26 @@ interface UseD3GraphOptions {
 }
 
 /**
- * Compute hop distances from a source node using BFS.
- * Returns a Map of nodeId -> hop distance.
+ * Compute hop distances from a source node using BFS with adjacency map.
+ * O(V+E) — builds adjacency list once, then BFS traversal.
  */
 function computeHopDistances(
   sourceId: string,
   edges: { fromNoteId: string; toNoteId: string }[],
   maxHops: number
 ): Map<string, number> {
+  // Build adjacency map once
+  const adjacency = new Map<string, string[]>();
+  for (const edge of edges) {
+    let neighbors = adjacency.get(edge.fromNoteId);
+    if (!neighbors) { neighbors = []; adjacency.set(edge.fromNoteId, neighbors); }
+    neighbors.push(edge.toNoteId);
+
+    neighbors = adjacency.get(edge.toNoteId);
+    if (!neighbors) { neighbors = []; adjacency.set(edge.toNoteId, neighbors); }
+    neighbors.push(edge.fromNoteId);
+  }
+
   const distances = new Map<string, number>();
   distances.set(sourceId, 0);
   const queue = [sourceId];
@@ -44,11 +56,8 @@ function computeHopDistances(
     const currentDist = distances.get(current)!;
     if (currentDist >= maxHops) continue;
 
-    for (const edge of edges) {
-      let neighbor: string | null = null;
-      if (edge.fromNoteId === current) neighbor = edge.toNoteId;
-      else if (edge.toNoteId === current) neighbor = edge.fromNoteId;
-      if (neighbor && !distances.has(neighbor)) {
+    for (const neighbor of adjacency.get(current) ?? []) {
+      if (!distances.has(neighbor)) {
         distances.set(neighbor, currentDist + 1);
         queue.push(neighbor);
       }
@@ -145,20 +154,25 @@ export function useD3Graph(
     const cy = currentHeight / 2;
     const minDim = Math.min(currentWidth, currentHeight);
 
-    // Build simulation based on mode — slow alpha decay for smooth settling
+    // Adaptive alpha decay — slower for small graphs (smooth), faster for large (CPU)
+    const effectiveAlphaDecay = nodes.length > cfg.simulation.largeGraphThreshold
+      ? cfg.simulation.alphaDecayLargeGraph
+      : cfg.simulation.alphaDecay;
+
     const simulation = d3.forceSimulation(nodes)
-      .alphaDecay(cfg.simulation.alphaDecay)
+      .alphaDecay(effectiveAlphaDecay)
       .velocityDecay(cfg.simulation.velocityDecay);
 
-    if (mode === 'local' && activeNotePath) {
+    // Determine effective layout mode — fall back to global if active node not found in local
+    const activeNode = activeNotePath ? nodes.find(n => n.path === activeNotePath) : null;
+    const useLocalLayout = mode === 'local' && activeNode !== null && activeNode !== undefined;
+
+    if (useLocalLayout) {
       const localCfg = cfg.simulation.local;
-      const activeNode = nodes.find(n => n.path === activeNotePath);
 
       // Pin active node at center
-      if (activeNode) {
-        activeNode.fx = cx;
-        activeNode.fy = cy;
-      }
+      activeNode.fx = cx;
+      activeNode.fy = cy;
 
       simulation
         .force('link', d3.forceLink<SimNode, SimLink>(links).id(d => d.id).distance(localCfg.linkDistance))
@@ -176,7 +190,6 @@ export function useD3Graph(
     } else {
       // Global (full) mode
       const globalCfg = cfg.simulation.global;
-      const activeNode = activeNotePath ? nodes.find(n => n.path === activeNotePath) : null;
 
       simulation
         .force('link', d3.forceLink<SimNode, SimLink>(links).id(d => d.id).distance(globalCfg.linkDistance))
@@ -363,7 +376,7 @@ export function useD3Graph(
     const handleMouseUp = () => {
       if (dragNode) {
         // Don't unpin active node in local mode
-        if (!(mode === 'local' && dragNode.path === activeNotePath)) {
+        if (!(useLocalLayout && dragNode.path === activeNotePath)) {
           dragNode.fx = null;
           dragNode.fy = null;
         }
@@ -385,8 +398,7 @@ export function useD3Graph(
       const newCy = currentHeight / 2;
       const newMinDim = Math.min(currentWidth, currentHeight);
 
-      if (mode === 'local' && activeNotePath) {
-        const activeNode = nodes.find(n => n.path === activeNotePath);
+      if (useLocalLayout) {
         if (activeNode) {
           activeNode.fx = newCx;
           activeNode.fy = newCy;
@@ -402,6 +414,12 @@ export function useD3Graph(
         ).strength(cfg.simulation.local.radialStrength));
       } else {
         simulation.force('center', d3.forceCenter(newCx, newCy));
+        // Update activeRadial center if it exists
+        if (activeNode) {
+          simulation.force('activeRadial', d3.forceRadial<SimNode>(
+            0, newCx, newCy
+          ).strength((d) => d.path === activeNotePath ? cfg.simulation.global.activeRadialStrength : 0));
+        }
       }
       simulation.alpha(cfg.simulation.resizeAlpha).restart();
     });

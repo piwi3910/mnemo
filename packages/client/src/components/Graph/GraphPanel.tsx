@@ -83,29 +83,36 @@ export function GraphPanel({ graphData, loading, activeNotePath, onNoteSelect, s
             </button>
           </div>
         </div>
-        <GraphView
-          graphData={graphData}
-          loading={loading}
-          activeNotePath={activeNotePath}
-          mode={effectiveMode}
-          onNoteSelect={onNoteSelect}
-          recenterRef={recenterRef}
-          starredPaths={starredPaths}
-        />
+        {!expanded && (
+          <GraphView
+            graphData={graphData}
+            loading={loading}
+            activeNotePath={activeNotePath}
+            mode={effectiveMode}
+            onNoteSelect={onNoteSelect}
+            recenterRef={recenterRef}
+            starredPaths={starredPaths}
+          />
+        )}
       </div>
 
       {/* Full-screen overlay */}
       {expanded && createPortal(
         <div
-          className="fixed inset-0 flex items-center justify-center p-6"
-          style={{ zIndex: 99998, backgroundColor: 'rgba(0, 0, 0, 0.7)' }}
+          className="fixed inset-0 flex items-center justify-center p-6 backdrop-blur-sm"
+          style={{ zIndex: 100000, backgroundColor: 'rgba(0, 0, 0, 0.7)' }}
           onClick={(e) => { if (e.target === e.currentTarget) setExpanded(false); }}
         >
-          <div className="w-full h-full max-w-[1400px] max-h-[900px] flex flex-col rounded-xl border border-gray-700/50 bg-surface-950 shadow-2xl overflow-hidden">
+          <div
+            className="w-full h-full max-w-[1400px] max-h-[900px] flex flex-col rounded-xl border border-gray-700/50 bg-surface-950 shadow-2xl overflow-hidden"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="graph-overlay-title"
+          >
             <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700/50 bg-surface-900 rounded-t-xl">
               <div className="flex items-center gap-2">
                 <Network size={16} className="text-violet-400" />
-                <span className="text-sm font-semibold text-gray-200">Knowledge Graph</span>
+                <span id="graph-overlay-title" className="text-sm font-semibold text-gray-200">Knowledge Graph</span>
               </div>
               <div className="flex items-center gap-2">
                 <button
