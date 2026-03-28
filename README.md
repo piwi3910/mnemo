@@ -1,9 +1,17 @@
 <p align="center">
-  <img src="logos/mnemo_banner_dark.png" alt="Mnemo" width="600" style="border-radius: 12px;" />
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="logos/mnemo_banner_dark.png" />
+    <source media="(prefers-color-scheme: light)" srcset="logos/mnemo_banner_dark.png" />
+    <img src="logos/mnemo_banner_dark.png" alt="Mnemo" width="600" style="border-radius: 12px; background-color: #0d1117; padding: 20px;" />
+  </picture>
 </p>
 
 <p align="center">
   <strong>A shared brain for people and AI. Self-hosted knowledge base with built-in MCP server, wiki-linking, graph visualization, and mobile sync.</strong>
+</p>
+
+<p align="center">
+  <em>For everyone who wished Obsidian was a server app.</em>
 </p>
 
 <p align="center">

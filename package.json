@@ -6,7 +6,8 @@
     "packages/*"
   ],
   "overrides": {
-    "react": "19.2.0",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
     "lucide-react": {
       "react": "$react"
     }
@@ -17,11 +18,11 @@
     "lint": "npm run lint --workspace=packages/server && npm run lint --workspace=packages/client",
     "lint:fix": "npm run lint:fix --workspace=packages/server && npm run lint:fix --workspace=packages/client",
     "typecheck": "npm run typecheck --workspace=packages/server && npm run typecheck --workspace=packages/client",
-    "test": "npm run test --workspaces",
+    "test": "npm run test --workspace=packages/server --workspace=packages/client",
     "test:server": "npm run test --workspace=packages/server",
     "test:client": "npm run test --workspace=packages/client"
   },
   "dependencies": {
-    "react": "19.2.0"
+    "react": "19.2.4"
   }
 }
