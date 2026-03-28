@@ -7,6 +7,7 @@ import React, {
 } from "react";
 import { storage } from "../lib/storage";
 import { api, AuthUser } from "../lib/api";
+import { checkVersionCompatibility } from "../lib/versionCheck";
 
 export interface AuthContextValue {
   isAuthenticated: boolean;
@@ -15,6 +16,7 @@ export interface AuthContextValue {
   serverUrl: string | null;
   twoFactorRequired: boolean;
   error: string | null;
+  versionError: string | null;
   login: (email: string, password: string) => Promise<void>;
   register: (
     name: string,
@@ -41,6 +43,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [serverUrl, setServerUrlState] = useState<string | null>(null);
   const [twoFactorRequired, setTwoFactorRequired] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [versionError, setVersionError] = useState<string | null>(null);
 
   // Check stored credentials on mount
   useEffect(() => {
@@ -53,6 +56,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setServerUrlState(storedServerUrl);
         if (storedApiKey && storedServerUrl) {
           setIsAuthenticated(true);
+
+          // Check version compatibility on app launch
+          checkVersionCompatibility().then((result) => {
+            if (!result.compatible) {
+              setVersionError(result.message ?? "Incompatible server version");
+            }
+          });
         }
       } catch {
         // Ignore SecureStore errors on first run
@@ -105,6 +115,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await storage.setApiKey(result.token);
         setUser(result.user);
         setIsAuthenticated(true);
+
+        // Check version compatibility after login
+        const versionResult = await checkVersionCompatibility();
+        if (!versionResult.compatible) {
+          setVersionError(versionResult.message ?? "Incompatible server version");
+        }
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : "Login failed";
@@ -152,6 +168,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setTwoFactorRequired(false);
     pendingTwoFactorCredentials = null;
     setError(null);
+    setVersionError(null);
   }, []);
 
   const clearError = useCallback(() => {
@@ -165,6 +182,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     serverUrl,
     twoFactorRequired,
     error,
+    versionError,
     login,
     register,
     logout,
