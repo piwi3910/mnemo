@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <strong>A self-hosted, multi-user knowledge base with wiki-style linking, graph visualization, and mobile sync.</strong>
+  <strong>A shared brain for people and AI. Self-hosted knowledge base with built-in MCP server, wiki-linking, graph visualization, and mobile sync.</strong>
 </p>
 
 <p align="center">
@@ -15,6 +15,98 @@
 <p align="center">
   <img src="docs/screenshots/hero.png" alt="Mnemo Screenshot" width="800" />
 </p>
+
+---
+
+## Why Mnemo?
+
+Your notes shouldn't live in a silo. Mnemo is a knowledge base that both humans and AI agents can read, write, and reason over — through the same API, the same notes, the same graph.
+
+**For humans:** A full-featured note-taking app with wiki-links, graph view, markdown editor, mobile app, and multi-user sharing.
+
+**For AI agents:** A built-in [MCP server](https://modelcontextprotocol.io) gives Claude Code, Cursor, Windsurf, and any MCP-compatible agent direct access to your knowledge base — search notes, read context, create documents, traverse the knowledge graph, and use templates. Your AI assistant becomes a collaborator that remembers everything you've written.
+
+**Together:** Humans write notes, AI reads them for context. AI generates documentation, humans review and refine it. Both contribute to a shared, interconnected knowledge graph.
+
+---
+
+## Built-in MCP Server
+
+Mnemo ships with a production-ready MCP server at `/api/mcp`. No sidecar, no proxy, no extra setup — it's part of the app.
+
+### What AI Agents Can Do
+
+| Tool | Description |
+|------|-------------|
+| `list_notes` | Browse all notes with paths and titles |
+| `read_note` | Read any note's markdown content |
+| `create_note` | Create new notes |
+| `update_note` | Edit existing notes |
+| `delete_note` | Remove notes |
+| `search` | Full-text search across the entire knowledge base |
+| `get_backlinks` | Find all notes linking to a given note |
+| `get_graph` | Traverse the full wiki-link graph (nodes + edges) |
+| `list_tags` | Browse tags with counts |
+| `list_folders` | Navigate folder structure |
+| `get_daily_note` | Access today's daily note |
+| `list_templates` / `create_note_from_template` | Use templates |
+| + **Plugin tools** | Plugins that register API routes are automatically exposed as MCP tools |
+
+### Connect Your AI Agent
+
+**1. Create an API key** in Mnemo: Account Settings > API Keys > Create (read-write scope)
+
+**2. Configure your agent:**
+
+<details>
+<summary><strong>Claude Code / Claude Desktop</strong></summary>
+
+Add to your MCP settings (`~/.claude.json` or project `.mcp.json`):
+
+```json
+{
+  "mcpServers": {
+    "mnemo": {
+      "type": "streamable-http",
+      "url": "https://your-mnemo-instance/api/mcp",
+      "headers": {
+        "Authorization": "Bearer mnemo_your_key_here"
+      }
+    }
+  }
+}
+```
+</details>
+
+<details>
+<summary><strong>Cursor / Windsurf / Any MCP Client</strong></summary>
+
+```json
+{
+  "mcpServers": {
+    "mnemo": {
+      "type": "streamable-http",
+      "url": "https://your-mnemo-instance/api/mcp",
+      "headers": {
+        "Authorization": "Bearer mnemo_your_key_here"
+      }
+    }
+  }
+}
+```
+</details>
+
+**3. Start using it:** Ask your AI to "search my notes for...", "create a note about...", "what notes link to X?", or "read my project roadmap and suggest next steps."
+
+### Security
+
+- **Scoped API keys** — read-only or read-write, with optional expiration
+- **Per-user isolation** — each key accesses only that user's notes
+- **256-bit entropy** — keys use `mnemo_` prefix for secret scanning detection
+- **Rate limited** — 300 requests / 15 minutes per key
+- **No admin access** — API keys cannot access admin functions
+
+See [API Keys & MCP docs](docs/API-ACCESS.md) for the full reference.
 
 ---
 
@@ -50,6 +142,7 @@
 - **WebView editor** — same CodeMirror experience on mobile
 - **Android APK** available via EAS Build
 - **Auto-sync** on foreground, pull-to-refresh, manual sync button
+- **Version compatibility** — enforces major-version match with server
 
 ### Multi-User & Security
 - **Authentication** — email/password, OAuth (Google, GitHub), passkeys (WebAuthn)
@@ -57,8 +150,14 @@
 - **Per-user isolation** — each user has their own notes directory
 - **Note Sharing** — share notes/folders with read or read-write permissions
 - **Access Requests** — request access to notes via wiki-links
-- **API Keys** — scoped bearer tokens for programmatic access
+- **API Keys** — scoped bearer tokens for programmatic and AI agent access
 - **Admin Panel** — manage users, invite codes, registration mode
+
+### REST API
+- **Swagger/OpenAPI docs** at `/api/docs` — interactive API explorer
+- **30+ REST endpoints** — notes, search, graph, settings, sharing, auth, admin, sync
+- **Sync API** — pull/push endpoints for mobile synchronization
+- **Version endpoint** — `GET /api/version` for compatibility checks
 
 ### UI & Layout
 - **Three-panel layout** — sidebar, content, graph+outline (all resizable)
@@ -73,16 +172,12 @@
   <img src="docs/screenshots/editor.png" alt="Split Editor" width="700" />
 </p>
 
-### API & AI Agent Access
-- **Swagger/OpenAPI docs** at `/api/docs`
-- **30+ REST endpoints** — notes, search, graph, settings, sharing, auth, admin, sync
-- **MCP Server** at `/api/mcp` — Model Context Protocol for AI agents (Claude Code, Cursor, etc.)
-- **Sync API** — pull/push endpoints for mobile synchronization
-
 ### Plugin Ecosystem
 12 plugins available via [mnemo-plugins](https://github.com/piwi3910/mnemo-plugins):
 
 Slash Commands, Pomodoro Timer, Reading List, Writing Metrics, Excalidraw, Kanban Board, Mass Upload, Publish/Export, Flashcards, Presentation Mode, Calendar Journal, RSS Reader
+
+Plugin APIs are automatically exposed as MCP tools — install a plugin and your AI agent can use it immediately.
 
 ---
 
@@ -97,6 +192,7 @@ Slash Commands, Pomodoro Timer, Reading List, Writing Metrics, Excalidraw, Kanba
 | Editor | CodeMirror 6 with Vim mode |
 | Graph | D3.js force-directed |
 | Auth | better-auth (sessions, OAuth, passkeys, 2FA) |
+| AI Integration | MCP SDK (Model Context Protocol) |
 | Runtime | Node.js 24 |
 
 ---
@@ -219,8 +315,8 @@ npx eas build --platform android --profile preview
 │  ├── Notes, Search, Graph, Tags, Trash, History               │
 │  ├── Sharing & Access Requests                                │
 │  ├── Sync (pull/push for mobile)                              │
+│  ├── MCP Server (AI agent access — 14 tools + plugin tools)   │
 │  ├── Plugin system (server + client)                          │
-│  ├── MCP Server (AI agent access)                             │
 │  └── Swagger API Docs                                         │
 ├─────────────────┬────────────────────────────────────────────┤
 │  SQLite         │  File System                                │
@@ -230,15 +326,16 @@ npx eas build --platform android --profile preview
 │   users, shares,│  ├── .history/                              │
 │   sync tracking)│  └── attachments/                           │
 └─────────────────┴────────────────────────────────────────────┘
-         ▲
-         │ Sync API (pull/push)
-┌────────┴─────────────────────────────────────────────────────┐
-│  React Native Mobile App (Expo SDK 55)                        │
-│  ├── expo-sqlite (offline-first local database)               │
-│  ├── WebView CodeMirror editor                                │
-│  ├── D3 graph visualization                                   │
-│  └── 5-tab navigation: Notes, Search, Graph, Tags, Settings  │
-└──────────────────────────────────────────────────────────────┘
+         ▲                           ▲
+         │ Sync API (pull/push)      │ MCP Protocol (streamable HTTP)
+┌────────┴────────────────┐  ┌───────┴──────────────────────────┐
+│  React Native Mobile    │  │  AI Agents                        │
+│  (Expo SDK 55)          │  │  ├── Claude Code / Claude Desktop │
+│  ├── expo-sqlite        │  │  ├── Cursor / Windsurf            │
+│  ├── WebView editor     │  │  ├── Custom MCP clients           │
+│  ├── D3 graph           │  │  └── Any MCP-compatible tool      │
+│  └── 5-tab navigation   │  └──────────────────────────────────┘
+└─────────────────────────┘
 ```
 
 ---
@@ -272,7 +369,7 @@ npm test             # Run all tests
 
 ## Documentation
 
-- [API Keys & MCP](docs/API-ACCESS.md) — programmatic access and AI agent setup
+- [API Keys & MCP](docs/API-ACCESS.md) — API key setup, MCP configuration, full tool reference
 - [Plugin Development](docs/PLUGINS.md) — plugin API reference
 - [Migrations](packages/server/MIGRATIONS.md) — database migration guide
 
