@@ -117,6 +117,12 @@ async function request<T>(
 
 // ---- API ----
 
+export interface ServerVersionInfo {
+  version: string;
+  commit: string;
+  majorVersion: number;
+}
+
 export const api = {
   // Auth — uses better-auth endpoints at /api/auth/*
   login: (email: string, password: string) =>
@@ -233,4 +239,16 @@ export const api = {
   // Access Requests
   listAccessRequests: () =>
     request<AccessRequestData[]>("/access-requests"),
+
+  // Version
+  getServerVersion: async (): Promise<ServerVersionInfo> => {
+    const baseUrl = await getBaseUrl();
+    const res = await fetch(`${baseUrl}/api/version`, {
+      headers: { Accept: "application/json" },
+    });
+    if (!res.ok) {
+      throw new Error("Failed to fetch server version");
+    }
+    return res.json();
+  },
 };
