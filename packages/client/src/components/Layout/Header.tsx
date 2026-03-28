@@ -47,10 +47,10 @@ export function Header({
           target="_blank"
           rel="noopener noreferrer"
           className="btn-ghost px-2 py-1 text-xs font-medium hidden md:inline-flex"
-          title="API Docs"
+          title="API Documentation"
           aria-label="API Documentation (opens in new tab)"
         >
-          API
+          API-DOCS
         </a>
         <ThemeToggle theme={theme} setTheme={setTheme} />
         <UserMenu onAdminClick={onAdminClick} onAccessRequestsClick={onAccessRequestsClick} />
