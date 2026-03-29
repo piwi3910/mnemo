@@ -1,4 +1,5 @@
 FROM node:24-alpine AS builder
+RUN apk add --no-cache git
 WORKDIR /app
 COPY package*.json ./
 COPY packages/client/package*.json packages/client/
