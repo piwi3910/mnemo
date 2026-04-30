@@ -8,7 +8,27 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./adapters/better-sqlite3": {
+      "types": "./dist/adapters/better-sqlite3.d.ts",
+      "import": "./dist/adapters/better-sqlite3.js"
+    },
+    "./adapters/in-memory": {
+      "types": "./dist/adapters/in-memory.d.ts",
+      "import": "./dist/adapters/in-memory.js"
+    },
+    "./adapters/expo-sqlite": {
+      "types": "./dist/adapters/expo-sqlite.d.ts",
+      "import": "./dist/adapters/expo-sqlite.js"
     }
+  },
+  "peerDependencies": {
+    "better-sqlite3": "^11.0.0",
+    "expo-sqlite": "^14.0.0 || ^15.0.0"
+  },
+  "peerDependenciesMeta": {
+    "better-sqlite3": { "optional": true },
+    "expo-sqlite": { "optional": true }
   },
   "files": [
     "dist",
@@ -16,9 +36,12 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsc -b",
+    "build": "npm run generate && tsc -b",
     "clean": "rm -rf dist",
-    "test": "echo 'no tests yet' && exit 0",
+    "generate": "tsx scripts/generate-schema.ts",
+    "verify-generated": "tsx scripts/verify-generated.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "typecheck": "tsc --noEmit"
   },
   "repository": {
@@ -30,8 +53,17 @@
     "registry": "https://npm.pkg.github.com",
     "access": "restricted"
   },
+  "dependencies": {
+    "yjs": "^13.6.0",
+    "y-protocols": "^1.0.6"
+  },
   "devDependencies": {
-    "typescript": "^5.6.0"
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^22.19.17",
+    "better-sqlite3": "^11.10.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0",
+    "vitest": "^1.6.1"
   },
   "license": "see LICENSE"
 }

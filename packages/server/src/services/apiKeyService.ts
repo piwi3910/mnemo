@@ -15,8 +15,8 @@ export function hashApiKey(key: string): string {
 }
 
 export function buildKeyPrefix(key: string): string {
-  // "kryton_" (6 chars) + first 8 hex chars
-  return key.substring(0, 6 + 8);
+  // "kryton_" (7 chars) + first 8 hex chars
+  return key.substring(0, 7 + 8);
 }
 
 export async function createApiKey(
