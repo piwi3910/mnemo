@@ -16,13 +16,19 @@
     "./adapters/in-memory": {
       "types": "./dist/adapters/in-memory.d.ts",
       "import": "./dist/adapters/in-memory.js"
+    },
+    "./adapters/expo-sqlite": {
+      "types": "./dist/adapters/expo-sqlite.d.ts",
+      "import": "./dist/adapters/expo-sqlite.js"
     }
   },
   "peerDependencies": {
-    "better-sqlite3": "^11.0.0"
+    "better-sqlite3": "^11.0.0",
+    "expo-sqlite": "^14.0.0 || ^15.0.0"
   },
   "peerDependenciesMeta": {
-    "better-sqlite3": { "optional": true }
+    "better-sqlite3": { "optional": true },
+    "expo-sqlite": { "optional": true }
   },
   "files": [
     "dist",
