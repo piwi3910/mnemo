@@ -1,6 +1,6 @@
 {
   "name": "@azrtydxb/core",
-  "version": "4.4.0-pre.2",
+  "version": "4.4.0-pre.3",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -31,8 +31,12 @@
     "expo-sqlite": "^14.0.0 || ^15.0.0"
   },
   "peerDependenciesMeta": {
-    "better-sqlite3": { "optional": true },
-    "expo-sqlite": { "optional": true }
+    "better-sqlite3": {
+      "optional": true
+    },
+    "expo-sqlite": {
+      "optional": true
+    }
   },
   "files": [
     "dist",
