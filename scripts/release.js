@@ -43,8 +43,27 @@ for (const file of packageFiles) {
   console.log(`bumped ${file} → ${newVersion}`);
 }
 
+const sourceConstantUpdates = [
+  { file: "packages/core/src/index.ts", name: "KRYTON_CORE_VERSION" },
+  { file: "packages/core-react/src/index.ts", name: "KRYTON_CORE_REACT_VERSION" },
+];
+const sourceFiles = [];
+for (const { file, name } of sourceConstantUpdates) {
+  const path = resolve(file);
+  const src = readFileSync(path, "utf8");
+  const updated = src.replace(
+    new RegExp(`export const ${name} = "[^"]+";`),
+    `export const ${name} = "${newVersion}";`,
+  );
+  if (updated !== src) {
+    writeFileSync(path, updated);
+    sourceFiles.push(file);
+    console.log(`updated ${file} ${name} → ${newVersion}`);
+  }
+}
+
 exec("npm install");
-exec(`git add ${packageFiles.join(" ")} package-lock.json`);
+exec(`git add ${packageFiles.join(" ")} ${sourceFiles.join(" ")} package-lock.json`);
 exec(`git commit -m "chore(release): v${newVersion}"`);
 exec(`git tag v${newVersion}`);
 
