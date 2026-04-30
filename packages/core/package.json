@@ -1,6 +1,6 @@
 {
   "name": "@azrtydxb/core",
-  "version": "4.4.0-pre.0",
+  "version": "4.4.0-pre.1",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -10,7 +10,11 @@
       "import": "./dist/index.js"
     }
   },
-  "files": ["dist", "README.md", "LICENSE"],
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "tsc -b",
     "clean": "rm -rf dist",
