@@ -22,10 +22,11 @@ function fieldType(f: FieldDef): string {
 }
 
 export function emitInterface(model: ModelDef): string {
+  const hasVersion = model.fields.some(f => f.name === "version");
   const lines = [
     `export interface ${model.name} {`,
     ...model.fields.map(f => `  ${f.name}: ${fieldType(f)};`),
-    `  version: number;`,
+    ...(hasVersion ? [] : [`  version: number;`]),
     `}`,
   ];
   return lines.join("\n");

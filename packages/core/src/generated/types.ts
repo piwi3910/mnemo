@@ -5,7 +5,6 @@ export interface Settings {
   updatedAt: number;
   version: number;
   cursor: number;
-  version: number;
 }
 
 export interface GraphEdge {
@@ -17,7 +16,6 @@ export interface GraphEdge {
   userId: string;
   version: number;
   cursor: number;
-  version: number;
 }
 
 export interface NoteShare {
@@ -31,7 +29,6 @@ export interface NoteShare {
   updatedAt: number;
   version: number;
   cursor: number;
-  version: number;
 }
 
 export interface AccessRequest {
@@ -68,7 +65,6 @@ export interface InstalledPlugin {
   updatedAt: number;
   schemaVersion: number;
   cursor: number;
-  version: number;
 }
 
 export interface TrashItem {
@@ -78,7 +74,6 @@ export interface TrashItem {
   trashedAt: number;
   version: number;
   cursor: number;
-  version: number;
 }
 
 export interface Folder {
@@ -89,7 +84,6 @@ export interface Folder {
   version: number;
   cursor: number;
   updatedAt: number;
-  version: number;
 }
 
 export interface Tag {
@@ -100,7 +94,6 @@ export interface Tag {
   version: number;
   cursor: number;
   updatedAt: number;
-  version: number;
 }
 
 export interface NoteTag {
@@ -110,7 +103,6 @@ export interface NoteTag {
   version: number;
   cursor: number;
   updatedAt: number;
-  version: number;
 }
 
 export interface NoteRevision {

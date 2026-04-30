@@ -6,8 +6,7 @@ CREATE TABLE IF NOT EXISTS settings (
   version INTEGER NOT NULL,
   cursor INTEGER NOT NULL,
   _local_status TEXT NOT NULL DEFAULT 'synced',
-  _local_seq INTEGER NOT NULL DEFAULT 0,
-  version INTEGER NOT NULL DEFAULT 0
+  _local_seq INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS graph_edge (
@@ -20,8 +19,7 @@ CREATE TABLE IF NOT EXISTS graph_edge (
   version INTEGER NOT NULL,
   cursor INTEGER NOT NULL,
   _local_status TEXT NOT NULL DEFAULT 'synced',
-  _local_seq INTEGER NOT NULL DEFAULT 0,
-  version INTEGER NOT NULL DEFAULT 0
+  _local_seq INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS note_share (
@@ -36,8 +34,7 @@ CREATE TABLE IF NOT EXISTS note_share (
   version INTEGER NOT NULL,
   cursor INTEGER NOT NULL,
   _local_status TEXT NOT NULL DEFAULT 'synced',
-  _local_seq INTEGER NOT NULL DEFAULT 0,
-  version INTEGER NOT NULL DEFAULT 0
+  _local_seq INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS access_request (
@@ -79,8 +76,7 @@ CREATE TABLE IF NOT EXISTS installed_plugin (
   schemaVersion INTEGER NOT NULL,
   cursor INTEGER NOT NULL,
   _local_status TEXT NOT NULL DEFAULT 'synced',
-  _local_seq INTEGER NOT NULL DEFAULT 0,
-  version INTEGER NOT NULL DEFAULT 0
+  _local_seq INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS trash_item (
@@ -91,8 +87,7 @@ CREATE TABLE IF NOT EXISTS trash_item (
   version INTEGER NOT NULL,
   cursor INTEGER NOT NULL,
   _local_status TEXT NOT NULL DEFAULT 'synced',
-  _local_seq INTEGER NOT NULL DEFAULT 0,
-  version INTEGER NOT NULL DEFAULT 0
+  _local_seq INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS folder (
@@ -104,8 +99,7 @@ CREATE TABLE IF NOT EXISTS folder (
   cursor INTEGER NOT NULL,
   updatedAt INTEGER NOT NULL,
   _local_status TEXT NOT NULL DEFAULT 'synced',
-  _local_seq INTEGER NOT NULL DEFAULT 0,
-  version INTEGER NOT NULL DEFAULT 0
+  _local_seq INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS tag (
@@ -117,8 +111,7 @@ CREATE TABLE IF NOT EXISTS tag (
   cursor INTEGER NOT NULL,
   updatedAt INTEGER NOT NULL,
   _local_status TEXT NOT NULL DEFAULT 'synced',
-  _local_seq INTEGER NOT NULL DEFAULT 0,
-  version INTEGER NOT NULL DEFAULT 0
+  _local_seq INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS note_tag (
@@ -129,8 +122,7 @@ CREATE TABLE IF NOT EXISTS note_tag (
   cursor INTEGER NOT NULL,
   updatedAt INTEGER NOT NULL,
   _local_status TEXT NOT NULL DEFAULT 'synced',
-  _local_seq INTEGER NOT NULL DEFAULT 0,
-  version INTEGER NOT NULL DEFAULT 0
+  _local_seq INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS note_revision (

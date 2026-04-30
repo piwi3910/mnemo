@@ -29,11 +29,13 @@ function fieldDDL(f: FieldDef): string {
 
 export function emitTableDDL(model: ModelDef): string {
   const tableName = snakeCase(model.name);
+  const hasVersion = model.fields.some(f => f.name === "version");
   const fieldLines = model.fields.map(fieldDDL).join(",\n");
-  const meta =
-    `  _local_status TEXT NOT NULL DEFAULT 'synced',\n` +
-    `  _local_seq INTEGER NOT NULL DEFAULT 0,\n` +
-    `  version INTEGER NOT NULL DEFAULT 0`;
+  const meta = [
+    `  _local_status TEXT NOT NULL DEFAULT 'synced'`,
+    `  _local_seq INTEGER NOT NULL DEFAULT 0`,
+    ...(hasVersion ? [] : [`  version INTEGER NOT NULL DEFAULT 0`]),
+  ].join(",\n");
   return `CREATE TABLE IF NOT EXISTS ${tableName} (\n${fieldLines},\n${meta}\n);`;
 }
 
