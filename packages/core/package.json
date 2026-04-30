@@ -8,7 +8,17 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./adapters/better-sqlite3": {
+      "types": "./dist/adapters/better-sqlite3.d.ts",
+      "import": "./dist/adapters/better-sqlite3.js"
     }
+  },
+  "peerDependencies": {
+    "better-sqlite3": "^11.0.0"
+  },
+  "peerDependenciesMeta": {
+    "better-sqlite3": { "optional": true }
   },
   "files": [
     "dist",
@@ -31,7 +41,11 @@
     "access": "restricted"
   },
   "devDependencies": {
-    "typescript": "^5.6.0"
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^22.19.17",
+    "better-sqlite3": "^11.10.0",
+    "typescript": "^5.6.0",
+    "vitest": "^1.6.1"
   },
   "license": "see LICENSE"
 }
