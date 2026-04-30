@@ -273,19 +273,11 @@ npm run dev
 
 ## Mobile App
 
-The React Native mobile app lives in `packages/mobile/` and syncs with the server via the `/api/sync` endpoints.
+The React Native mobile app lives in its own repository: [azrtydxb/kryton-mobile](https://github.com/azrtydxb/kryton-mobile). It syncs with the server via the `/api/sync` endpoints.
 
 ### Install on Android
 
 Download the latest APK from [EAS Build](https://expo.dev/accounts/piwi3910/projects/kryton/builds).
-
-### Build from Source
-
-```bash
-cd packages/mobile
-npx expo install
-npx eas build --platform android --profile preview
-```
 
 ---
 
