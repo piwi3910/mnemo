@@ -12,6 +12,10 @@
     "./adapters/better-sqlite3": {
       "types": "./dist/adapters/better-sqlite3.d.ts",
       "import": "./dist/adapters/better-sqlite3.js"
+    },
+    "./adapters/in-memory": {
+      "types": "./dist/adapters/in-memory.d.ts",
+      "import": "./dist/adapters/in-memory.js"
     }
   },
   "peerDependencies": {
