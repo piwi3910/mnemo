@@ -2,11 +2,11 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: `superpowers:subagent-driven-development` (recommended) or `superpowers:executing-plans`. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Replace `kryton-mobile`'s bespoke `expo-sqlite` data layer and hand-rolled sync with `@kryton/core` + `@kryton/core-react`. Migrate all UI screens to read via hooks; rewrite the WebView CodeMirror editor to source from `core.notes.openDocument` (Yjs).
+**Goal:** Replace `kryton-mobile`'s bespoke `expo-sqlite` data layer and hand-rolled sync with `@azrtydxb/core` + `@azrtydxb/core-react`. Migrate all UI screens to read via hooks; rewrite the WebView CodeMirror editor to source from `core.notes.openDocument` (Yjs).
 
-**Architecture:** No new architecture; consume the published `@kryton/core` package. First-launch flow detects the legacy DB, deletes it, runs `core.sync.full()`, sets a "migrated" sentinel.
+**Architecture:** No new architecture; consume the published `@azrtydxb/core` package. First-launch flow detects the legacy DB, deletes it, runs `core.sync.full()`, sets a "migrated" sentinel.
 
-**Tech Stack:** Expo SDK 55, React Native 0.83, expo-router, react-native-webview, `@kryton/core`, `@kryton/core-react`, `yjs`, `y-codemirror.next` (inside the WebView bundle).
+**Tech Stack:** Expo SDK 55, React Native 0.83, expo-router, react-native-webview, `@azrtydxb/core`, `@azrtydxb/core-react`, `yjs`, `y-codemirror.next` (inside the WebView bundle).
 
 **Spec:** [`docs/superpowers/specs/2026-04-30-mobile-core-migration-design.md`](../specs/2026-04-30-mobile-core-migration-design.md)
 
@@ -55,8 +55,8 @@ Edit `kryton-mobile/package.json`:
 ```json
 "dependencies": {
   ...,
-  "@kryton/core": "4.4.0-pre.1",
-  "@kryton/core-react": "4.4.0-pre.1",
+  "@azrtydxb/core": "4.4.0-pre.1",
+  "@azrtydxb/core-react": "4.4.0-pre.1",
   "yjs": "^13.6.0"
 }
 ```
@@ -72,7 +72,7 @@ Expected: installs.
 
 ```bash
 git add package.json package-lock.json
-git commit -m "chore: add @kryton/core, @kryton/core-react, yjs dependencies"
+git commit -m "chore: add @azrtydxb/core, @azrtydxb/core-react, yjs dependencies"
 ```
 
 ---
@@ -96,10 +96,10 @@ vi.mock("expo-file-system", () => ({
   documentDirectory: "/tmp/test-",
   deleteAsync: vi.fn(async () => {}),
 }));
-vi.mock("@kryton/core/adapters/expo-sqlite", () => ({
+vi.mock("@azrtydxb/core/adapters/expo-sqlite", () => ({
   ExpoSqliteAdapter: vi.fn().mockImplementation(() => ({})),
 }));
-vi.mock("@kryton/core", () => ({
+vi.mock("@azrtydxb/core", () => ({
   Kryton: { init: vi.fn(async () => ({ sync: { full: vi.fn(), startAuto: vi.fn() } })) },
 }));
 
@@ -129,8 +129,8 @@ describe("initCore", () => {
 
 ```ts
 // src/core.ts
-import { Kryton } from "@kryton/core";
-import { ExpoSqliteAdapter } from "@kryton/core/adapters/expo-sqlite";
+import { Kryton } from "@azrtydxb/core";
+import { ExpoSqliteAdapter } from "@azrtydxb/core/adapters/expo-sqlite";
 import * as FileSystem from "expo-file-system";
 import * as SecureStore from "expo-secure-store";
 import { storage } from "./lib/storage";
@@ -189,8 +189,8 @@ Run: `cat app/_layout.tsx`
 ```tsx
 // app/_layout.tsx (top-level)
 import { useEffect, useState } from "react";
-import { KrytonProvider } from "@kryton/core-react";
-import type { Kryton } from "@kryton/core";
+import { KrytonProvider } from "@azrtydxb/core-react";
+import type { Kryton } from "@azrtydxb/core";
 import { initCore } from "@/core";
 import { useServerUrl } from "@/hooks/useServerUrl";
 
@@ -302,7 +302,7 @@ Expected: clean. If errors, fix them.
 
 ```bash
 git add -A
-git commit -m "refactor: delete src/db and versionCheck (replaced by @kryton/core)"
+git commit -m "refactor: delete src/db and versionCheck (replaced by @azrtydxb/core)"
 ```
 
 ---
@@ -350,7 +350,7 @@ git commit -m "feat: logout closes core and clears migration sentinel"
 - [ ] **Step 1: Replace existing sync status code with hook**
 
 ```tsx
-import { useSyncStatus } from "@kryton/core-react";
+import { useSyncStatus } from "@azrtydxb/core-react";
 
 function SyncBanner() {
   const status = useSyncStatus();
@@ -408,7 +408,7 @@ useEffect(() => {
 
 After:
 ```tsx
-import { useNotes, useKryton } from "@kryton/core-react";
+import { useNotes, useKryton } from "@azrtydxb/core-react";
 const notes = useNotes(); // or core.notes.listByFolder(folder) if filter not in hook
 const core = useKryton();
 const filtered = useMemo(() => core.notes.listByFolder(folder), [core, folder, /*re-run on change*/notes]);
@@ -443,7 +443,7 @@ Run app, navigate to Notes tab; list should populate.
 
 ```bash
 git add app/(app)/(tabs)/notes.tsx
-git commit -m "refactor(notes-tab): migrate to @kryton/core-react hooks"
+git commit -m "refactor(notes-tab): migrate to @azrtydxb/core-react hooks"
 ```
 
 ---
@@ -470,7 +470,7 @@ Per file:
 - [ ] **Step 1:** `grep -n "db\.\|getDatabase()" <file>`
 - [ ] **Step 2:** Replace each call with the appropriate hook or `core.*` invocation. Use `useNotes`, `useFolders`, `useTags`, `useSettings` for reads; use `core.notes.update` etc. for writes.
 - [ ] **Step 3:** Manual smoke (navigate to screen).
-- [ ] **Step 4:** Commit one file per task: `git add <file> && git commit -m "refactor(<area>): migrate to @kryton/core-react hooks"`
+- [ ] **Step 4:** Commit one file per task: `git add <file> && git commit -m "refactor(<area>): migrate to @azrtydxb/core-react hooks"`
 
 After all files migrated:
 
@@ -579,7 +579,7 @@ git commit -m "feat(webview): y-codemirror.next binding inside the bundle"
 Strip code that reads `note.content` and writes it back. Replace with:
 
 ```tsx
-import { useYjsDoc } from "@kryton/core-react";
+import { useYjsDoc } from "@azrtydxb/core-react";
 import * as Y from "yjs";
 
 function EditorBridge({ noteId }: { noteId: string }) {
@@ -688,7 +688,7 @@ Add a helper hook in the mobile project (since it's mobile-specific UI):
 ```ts
 // src/hooks/useEditorAwareness.ts
 import { useEffect, useState } from "react";
-import { useKryton } from "@kryton/core-react";
+import { useKryton } from "@azrtydxb/core-react";
 import * as Y from "yjs";
 
 export function useEditorAwareness(noteId: string) {

@@ -1,8 +1,8 @@
-# @kryton/core
+# @azrtydxb/core
 
 Offline-first data layer for Kryton clients. Schema generation from Prisma, sync, Yjs, and SQLite adapter abstractions.
 
-This package is published to GitHub Packages under the `@kryton` scope. See `docs/superpowers/specs/2026-04-30-kryton-core-design.md` for design.
+This package is published to GitHub Packages under the `@azrtydxb` scope. See `docs/superpowers/specs/2026-04-30-kryton-core-design.md` for design.
 
 ## Status
 

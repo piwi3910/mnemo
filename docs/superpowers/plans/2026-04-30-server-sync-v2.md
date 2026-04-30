@@ -6,7 +6,7 @@
 
 **Architecture:** Express 5 + Prisma additions; cursor-based per-user delta sync; Yjs persistence in main DB; Cedar policies via `@cedar-policy/cedar-wasm`. Existing legacy `/api/sync` retained until mobile migrates.
 
-**Tech Stack:** Express 5, Prisma 6, PostgreSQL, Zod, Vitest, ws (Node WebSocket server), `y-protocols`, `@cedar-policy/cedar-wasm`, `@kryton/core` (consumes protocol types via workspace link during dev).
+**Tech Stack:** Express 5, Prisma 6, PostgreSQL, Zod, Vitest, ws (Node WebSocket server), `y-protocols`, `@cedar-policy/cedar-wasm`, `@azrtydxb/core` (consumes protocol types via workspace link during dev).
 
 **Spec:** [`docs/superpowers/specs/2026-04-30-server-sync-v2-design.md`](../specs/2026-04-30-server-sync-v2-design.md)
 
@@ -1832,7 +1832,7 @@ git commit -m "feat(server): Yjs websocket server with broadcast + persistence"
 Run: `npm test --workspace=packages/server`
 Expected: all pass.
 
-- [ ] **Step 2: Smoke test against a `@kryton/core` instance**
+- [ ] **Step 2: Smoke test against a `@azrtydxb/core` instance**
 
 Build core, instantiate it pointed at a running test server, run pull/push, observe expected behavior.
 
@@ -2296,7 +2296,7 @@ Stream 2D complete.
 - [ ] Every step has actual code or actual command.
 - [ ] All Prisma model relations are bidirectional where required.
 - [ ] Cursor service is used by every write path (folder, tag, sync push handlers, yjs).
-- [ ] Wire protocol from `@kryton/core/sync/protocol` is honored exactly.
+- [ ] Wire protocol from `@azrtydxb/core/sync/protocol` is honored exactly.
 - [ ] Tag-merge semantics implemented in note push handler.
 - [ ] Yjs persistence: snapshot + update log, compacting on snapshot.
 - [ ] Cedar evaluator wraps wasm; auth middleware applies it; routes opt in via `requirePermission`.

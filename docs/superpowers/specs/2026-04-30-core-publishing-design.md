@@ -1,4 +1,4 @@
-# `@kryton/core` Publishing Infrastructure — Design Spec
+# `@azrtydxb/core` Publishing Infrastructure — Design Spec
 
 **Status:** Approved for implementation planning.
 **Sub-project:** 5 of 5.
@@ -6,12 +6,12 @@
 
 ## Purpose
 
-Establish the npm scope, registry, CI workflows, versioning policy, and developer ergonomics for distributing `@kryton/core` and `@kryton/core-react` from the kryton monorepo to external consumers (`kryton-mobile`, future `kryton-desktop`).
+Establish the npm scope, registry, CI workflows, versioning policy, and developer ergonomics for distributing `@azrtydxb/core` and `@azrtydxb/core-react` from the kryton monorepo to external consumers (`kryton-mobile`, future `kryton-desktop`).
 
 ## Scope
 
 This spec covers:
-- Registration of the `@kryton` npm scope on GitHub Packages.
+- Registration of the `@azrtydxb` npm scope on GitHub Packages.
 - Versioning policy across the monorepo and consumers.
 - CI workflows for publishing on tag.
 - Local-development override mechanism (path linking).
@@ -24,7 +24,7 @@ This spec does **not** cover:
 
 ## Registry: GitHub Packages
 
-Packages publish to `npm.pkg.github.com` under the `@kryton` scope, hosted in the `azrtydxb` GitHub account/org. Private by default — only members with read access to the `kryton` repository can install.
+Packages publish to `npm.pkg.github.com` under the `@azrtydxb` scope, hosted in the `azrtydxb` GitHub account/org. Private by default — only members with read access to the `kryton` repository can install.
 
 Rationale: free for private packages on GitHub-hosted repos, no separate billing, and ties access to the same GitHub permissions already used for source code. Migration to npm.org's private registry later is straightforward (change `.npmrc` and re-publish under the same scope name).
 
@@ -32,7 +32,7 @@ Rationale: free for private packages on GitHub-hosted repos, no separate billing
 
 One-time setup:
 
-1. Repository owner publishes the first version manually to claim `@kryton/core` on `npm.pkg.github.com`. Subsequent publishes are automated.
+1. Repository owner publishes the first version manually to claim `@azrtydxb/core` on `npm.pkg.github.com`. Subsequent publishes are automated.
 2. Org-level setting: ensure GitHub Packages is enabled for `azrtydxb`.
 3. Repository setting on `azrtydxb/kryton`: under "Packages", confirm Actions has `packages: write` permission.
 
@@ -40,7 +40,7 @@ One-time setup:
 
 ### Single source of truth
 
-The kryton monorepo's root `package.json` `version` field is authoritative. Currently `4.3.2`. This becomes the version of every published `@kryton/*` package.
+The kryton monorepo's root `package.json` `version` field is authoritative. Currently `4.3.2`. This becomes the version of every published `@azrtydxb/*` package.
 
 Rationale: `core` and `core-react` are tightly coupled (same monorepo, same release cycle). Independent semver across them invites mismatched-version pain across consumers. A monorepo-wide version is honest about what they actually are: views of the same release.
 
@@ -52,7 +52,7 @@ Rationale: `core` and `core-react` are tightly coupled (same monorepo, same rele
 
 ### Compatibility matrix
 
-`@kryton/core@<version>` declares compatible server versions in its README and at runtime via `core.compatibleServerVersions`. On `Kryton.init()`, core probes `GET /api/version` and refuses to start if the server is incompatible (with a clear error pointing to the migration guide).
+`@azrtydxb/core@<version>` declares compatible server versions in its README and at runtime via `core.compatibleServerVersions`. On `Kryton.init()`, core probes `GET /api/version` and refuses to start if the server is incompatible (with a clear error pointing to the migration guide).
 
 ## Workspaces and `package.json`
 
@@ -72,7 +72,7 @@ Monorepo root `package.json`:
 
 ```json
 {
-  "name": "@kryton/core",
+  "name": "@azrtydxb/core",
   "version": "4.3.2",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -106,7 +106,7 @@ Monorepo root `package.json`:
 
 ```json
 {
-  "name": "@kryton/core-react",
+  "name": "@azrtydxb/core-react",
   "version": "4.3.2",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -116,13 +116,13 @@ Monorepo root `package.json`:
     "access": "restricted"
   },
   "peerDependencies": {
-    "@kryton/core": "4.3.2",
+    "@azrtydxb/core": "4.3.2",
     "react": ">=18"
   }
 }
 ```
 
-`@kryton/core-react`'s peer dep on `@kryton/core` is pinned to the exact monorepo version: they're released together, never mixed.
+`@azrtydxb/core-react`'s peer dep on `@azrtydxb/core` is pinned to the exact monorepo version: they're released together, never mixed.
 
 ## Build pipeline
 
@@ -144,7 +144,7 @@ Each package has a standard `tsc --build` against `tsconfig.json` extending a ro
 2. Verify current branch is `master`.
 3. Run `npm run build:core`.
 4. Run `npm run test --workspace=packages/core --workspace=packages/core-react`.
-5. Verify all `@kryton/*` `package.json` versions match root `package.json` version.
+5. Verify all `@azrtydxb/*` `package.json` versions match root `package.json` version.
 6. Run `npm publish --workspace=packages/core --workspace=packages/core-react`.
 
 This script is invoked by CI after a release tag is pushed; it can also be run manually for emergency releases.
@@ -154,7 +154,7 @@ This script is invoked by CI after a release tag is pushed; it can also be run m
 `kryton/.github/workflows/publish-core.yml`:
 
 ```yaml
-name: Publish @kryton packages
+name: Publish @azrtydxb packages
 
 on:
   push:
@@ -172,7 +172,7 @@ jobs:
         with:
           node-version: "24"
           registry-url: "https://npm.pkg.github.com"
-          scope: "@kryton"
+          scope: "@azrtydxb"
       - run: npm ci
       - run: npm run typecheck --workspace=packages/core --workspace=packages/core-react
       - run: npm run test --workspace=packages/core --workspace=packages/core-react
@@ -184,7 +184,7 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-The `GITHUB_TOKEN` provided to GitHub Actions has `packages: write` permission for the same repository — sufficient to publish under `@kryton`.
+The `GITHUB_TOKEN` provided to GitHub Actions has `packages: write` permission for the same repository — sufficient to publish under `@azrtydxb`.
 
 ### Release tagging
 
@@ -197,7 +197,7 @@ A small helper script `scripts/release.js` automates: bump root `package.json` v
 ### `.npmrc` in the consumer repo
 
 ```
-@kryton:registry=https://npm.pkg.github.com
+@azrtydxb:registry=https://npm.pkg.github.com
 //npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}
 ```
 
@@ -208,8 +208,8 @@ The `${GITHUB_TOKEN}` env var is read at install time. CI sets it from secrets; 
 ```json
 {
   "dependencies": {
-    "@kryton/core": "4.3.2",
-    "@kryton/core-react": "4.3.2"
+    "@azrtydxb/core": "4.3.2",
+    "@azrtydxb/core-react": "4.3.2"
   }
 }
 ```
@@ -223,11 +223,11 @@ A `kryton-mobile/CONTRIBUTING.md` (and same for desktop later) documents:
 1. Generate a GitHub PAT with `read:packages` scope.
 2. Add to shell: `export GITHUB_TOKEN=ghp_...`.
 3. `npm install`.
-4. (Optional) `npm run dev:link` if working on `@kryton/core` itself.
+4. (Optional) `npm run dev:link` if working on `@azrtydxb/core` itself.
 
 ## Local development: path override
 
-Day-to-day, library authors edit `@kryton/core` and want changes to flow into their consumer (mobile, desktop) without a publish cycle.
+Day-to-day, library authors edit `@azrtydxb/core` and want changes to flow into their consumer (mobile, desktop) without a publish cycle.
 
 ### `dev:link` mechanism
 
@@ -238,8 +238,8 @@ Day-to-day, library authors edit `@kryton/core` and want changes to flow into th
 function link() {
   const corePath = process.env.KRYTON_LOCAL_PATH ?? "../kryton/packages/core";
   const reactPath = process.env.KRYTON_LOCAL_PATH ?? "../kryton/packages/core-react";
-  npmPkgSet(`dependencies.@kryton/core`, `file:${corePath}`);
-  npmPkgSet(`dependencies.@kryton/core-react`, `file:${reactPath}`);
+  npmPkgSet(`dependencies.@azrtydxb/core`, `file:${corePath}`);
+  npmPkgSet(`dependencies.@azrtydxb/core-react`, `file:${reactPath}`);
   exec("npm install");
   console.log("Linked. Run `npm run dev:unlink` to restore published versions.");
 }
@@ -247,10 +247,10 @@ function link() {
 function unlink() {
   // Read versions from git history of package.json (last committed value)
   const lastCommittedPkg = exec("git show HEAD:package.json");
-  const coreVer = JSON.parse(lastCommittedPkg).dependencies["@kryton/core"];
-  const reactVer = JSON.parse(lastCommittedPkg).dependencies["@kryton/core-react"];
-  npmPkgSet(`dependencies.@kryton/core`, coreVer);
-  npmPkgSet(`dependencies.@kryton/core-react`, reactVer);
+  const coreVer = JSON.parse(lastCommittedPkg).dependencies["@azrtydxb/core"];
+  const reactVer = JSON.parse(lastCommittedPkg).dependencies["@azrtydxb/core-react"];
+  npmPkgSet(`dependencies.@azrtydxb/core`, coreVer);
+  npmPkgSet(`dependencies.@azrtydxb/core-react`, reactVer);
   exec("npm install");
 }
 ```
@@ -261,7 +261,7 @@ A `.gitignore` rule warns developers not to commit linked `package.json`:
 # Hooks check that package.json doesn't contain "file:" entries before allowing commit
 ```
 
-A husky pre-commit hook in each consumer repo runs `node scripts/dev-link.js verify` and fails the commit if `package.json` contains `file:` references to `@kryton/*`.
+A husky pre-commit hook in each consumer repo runs `node scripts/dev-link.js verify` and fails the commit if `package.json` contains `file:` references to `@azrtydxb/*`.
 
 ### Why not `npm link`?
 
@@ -276,31 +276,31 @@ Considered and rejected. The split was deliberate (separate release cadences, in
 | Token | Holder | Scope | Lifecycle |
 |---|---|---|---|
 | `GITHUB_TOKEN` (Actions) | CI in `azrtydxb/kryton` | `packages: write` for that repo | Per-job, ephemeral |
-| Developer PAT | Local dev environments | `read:packages` for `@kryton` scope | Personal, rotated annually |
+| Developer PAT | Local dev environments | `read:packages` for `@azrtydxb` scope | Personal, rotated annually |
 | Consumer CI tokens | `kryton-mobile`, `kryton-desktop` CI | `read:packages` | Stored as repo-level secret `GITHUB_TOKEN` |
 
 Tokens are never embedded in source. `.npmrc` uses `${VAR}` interpolation (npm 8+).
 
 ## Migration from current state
 
-There is no existing `@kryton/core` package today. The first publish is the v1 release, post-implementation. Until then, mobile (and any pre-release desktop work) uses path links exclusively.
+There is no existing `@azrtydxb/core` package today. The first publish is the v1 release, post-implementation. Until then, mobile (and any pre-release desktop work) uses path links exclusively.
 
 The first publish:
 
 1. Bump root `package.json` to a fresh minor (e.g., `4.4.0`) signaling the architectural change.
 2. Tag `v4.4.0`, push.
-3. CI publishes `@kryton/core@4.4.0` and `@kryton/core-react@4.4.0`.
+3. CI publishes `@azrtydxb/core@4.4.0` and `@azrtydxb/core-react@4.4.0`.
 4. Consumer repos remove path-link dev state, pin to `4.4.0`.
 
 ## Testing strategy
 
 - **Pre-publish dry run:** `scripts/publish-core.js --dry-run` runs all steps except actual publish.
-- **Smoke install:** after publish, an integration job in `azrtydxb/kryton` creates a temp directory, sets up `.npmrc` with a freshly minted token, runs `npm install @kryton/core@<latest>`, requires it, verifies the export shape.
+- **Smoke install:** after publish, an integration job in `azrtydxb/kryton` creates a temp directory, sets up `.npmrc` with a freshly minted token, runs `npm install @azrtydxb/core@<latest>`, requires it, verifies the export shape.
 - **Versioning consistency:** `scripts/verify-versions.js` runs in CI on every PR, fails if any workspace's version drifts from root.
 
 ## Out of scope for v1
 
-- Independent semver per `@kryton/*` package — all packages share monorepo version.
+- Independent semver per `@azrtydxb/*` package — all packages share monorepo version.
 - Public npm registry. GitHub Packages only. Public release is a future decision.
 - npm provenance signing — useful for public packages, less so for private.
 - Breaking-change detection tooling (e.g., api-extractor). Will reconsider if/when consumer count grows.
@@ -314,5 +314,5 @@ The first publish:
 ## Open implementation questions
 
 1. Should the version-bump-and-tag flow be a manual step or triggered from a `release-please`-style automation? Manual for v1; revisit after a few releases.
-2. Should `@kryton/core` ship CommonJS + ESM, or ESM-only? ESM-only matches modern toolchains (Expo SDK 55, Vite, Tauri) and avoids the dual-package hazard. Decision: ESM-only with `"type": "module"`.
-3. Where do shared TypeScript types live for *server-only* models (User, Session, etc.) — does a separate `@kryton/server-types` package make sense? Probably not for v1; the server's API surface is Express + Zod schemas, types stay internal.
+2. Should `@azrtydxb/core` ship CommonJS + ESM, or ESM-only? ESM-only matches modern toolchains (Expo SDK 55, Vite, Tauri) and avoids the dual-package hazard. Decision: ESM-only with `"type": "module"`.
+3. Where do shared TypeScript types live for *server-only* models (User, Session, etc.) — does a separate `@azrtydxb/server-types` package make sense? Probably not for v1; the server's API surface is Express + Zod schemas, types stay internal.

@@ -1,5 +1,5 @@
 {
-  "name": "@kryton/core-react",
+  "name": "@azrtydxb/core-react",
   "version": "4.4.0-pre.0",
   "type": "module",
   "main": "./dist/index.js",
@@ -22,7 +22,7 @@
     "access": "restricted"
   },
   "peerDependencies": {
-    "@kryton/core": "4.4.0-pre.0",
+    "@azrtydxb/core": "4.4.0-pre.0",
     "react": ">=18"
   },
   "devDependencies": {

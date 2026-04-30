@@ -1,4 +1,4 @@
-# `@kryton/core` and `@kryton/core-react` — Design Spec
+# `@azrtydxb/core` and `@azrtydxb/core-react` — Design Spec
 
 **Status:** Approved for implementation planning.
 **Sub-project:** 1 of 5 in the multi-app architecture.
@@ -24,20 +24,20 @@ Two npm packages published from the kryton monorepo:
 
 | Package | Path in monorepo | Depends on |
 |---|---|---|
-| `@kryton/core` | `packages/core/` | yjs, y-protocols, ws (peer) |
-| `@kryton/core-react` | `packages/core-react/` | `@kryton/core`, react (peer) |
+| `@azrtydxb/core` | `packages/core/` | yjs, y-protocols, ws (peer) |
+| `@azrtydxb/core-react` | `packages/core-react/` | `@azrtydxb/core`, react (peer) |
 
 Adapter sub-modules ship as deep imports so consumers only pull what they need:
-- `@kryton/core/adapters/expo-sqlite` (depends on `expo-sqlite` peer)
-- `@kryton/core/adapters/better-sqlite3` (depends on `better-sqlite3` peer)
+- `@azrtydxb/core/adapters/expo-sqlite` (depends on `expo-sqlite` peer)
+- `@azrtydxb/core/adapters/better-sqlite3` (depends on `better-sqlite3` peer)
 
-## `@kryton/core` — Public API
+## `@azrtydxb/core` — Public API
 
 ### Initialization
 
 ```ts
-import { Kryton } from "@kryton/core";
-import { ExpoSqliteAdapter } from "@kryton/core/adapters/expo-sqlite";
+import { Kryton } from "@azrtydxb/core";
+import { ExpoSqliteAdapter } from "@azrtydxb/core/adapters/expo-sqlite";
 
 const core = await Kryton.init({
   adapter: new ExpoSqliteAdapter("kryton.db"),
@@ -113,7 +113,7 @@ core.on("sync:start" | "sync:complete" | "sync:error", handler);
 core.on("yjs:connect" | "yjs:disconnect", handler);
 ```
 
-Used internally by `@kryton/core-react`; consumers can also subscribe directly.
+Used internally by `@azrtydxb/core-react`; consumers can also subscribe directly.
 
 ### Sync orchestration
 
@@ -288,7 +288,7 @@ Sync-only by design (see Q&A in `2026-04-30-architecture-decisions.md`). Async e
 
 Consumers can implement custom adapters (e.g., for a Tauri SQL plugin worker) by satisfying the interface.
 
-## `@kryton/core-react` — Public API
+## `@azrtydxb/core-react` — Public API
 
 ```tsx
 <KrytonProvider core={core}>
@@ -333,7 +333,7 @@ Sync errors with `retryable: true` are retried internally with exponential backo
 
 ## Versioning
 
-`@kryton/core` and `@kryton/core-react` versions track kryton monorepo's root version (currently `4.3.2`). Bumped together with kryton releases. Breaking schema changes require a major bump and a server-side compatibility window (server accepts both N and N-1 protocols for one minor cycle).
+`@azrtydxb/core` and `@azrtydxb/core-react` versions track kryton monorepo's root version (currently `4.3.2`). Bumped together with kryton releases. Breaking schema changes require a major bump and a server-side compatibility window (server accepts both N and N-1 protocols for one minor cycle).
 
 ## Out of scope for v1
 

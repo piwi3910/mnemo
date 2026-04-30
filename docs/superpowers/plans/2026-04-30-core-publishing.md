@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: `superpowers:subagent-driven-development` (recommended) or `superpowers:executing-plans`. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Establish the `@kryton` npm scope on GitHub Packages with automated publish-on-tag, version-consistency enforcement, and developer ergonomics for path-based local development.
+**Goal:** Establish the `@azrtydxb` npm scope on GitHub Packages with automated publish-on-tag, version-consistency enforcement, and developer ergonomics for path-based local development.
 
 **Architecture:** Two empty-but-real npm packages (`packages/core/` and `packages/core-react/`) wired into the kryton monorepo's workspaces. A `publish-core` GitHub Actions workflow triggered on `v*` tags. A `dev-link.js` script that swaps consumer `package.json` between published and `file:` paths, gated by a husky pre-commit hook.
 
@@ -95,7 +95,7 @@ git commit -m "chore: add tsconfig.base for shared compiler options"
 
 ```json
 {
-  "name": "@kryton/core",
+  "name": "@azrtydxb/core",
   "version": "4.4.0-pre.0",
   "type": "module",
   "main": "./dist/index.js",
@@ -147,11 +147,11 @@ export const KRYTON_CORE_VERSION = "4.4.0-pre.0";
 - [ ] **Step 4: Write `packages/core/README.md`**
 
 ```markdown
-# @kryton/core
+# @azrtydxb/core
 
 Offline-first data layer for Kryton clients. Schema generation from Prisma, sync, Yjs, and SQLite adapter abstractions.
 
-This package is published to GitHub Packages under the `@kryton` scope. See `docs/superpowers/specs/2026-04-30-kryton-core-design.md` for design.
+This package is published to GitHub Packages under the `@azrtydxb` scope. See `docs/superpowers/specs/2026-04-30-kryton-core-design.md` for design.
 
 ## Status
 
@@ -176,7 +176,7 @@ Expected: produces `packages/core/dist/index.js` and `packages/core/dist/index.d
 
 ```bash
 git add packages/core/ tsconfig.base.json
-git commit -m "feat(core): initial @kryton/core package with version constant"
+git commit -m "feat(core): initial @azrtydxb/core package with version constant"
 ```
 
 ---
@@ -194,7 +194,7 @@ git commit -m "feat(core): initial @kryton/core package with version constant"
 
 ```json
 {
-  "name": "@kryton/core-react",
+  "name": "@azrtydxb/core-react",
   "version": "4.4.0-pre.0",
   "type": "module",
   "main": "./dist/index.js",
@@ -216,7 +216,7 @@ git commit -m "feat(core): initial @kryton/core package with version constant"
     "access": "restricted"
   },
   "peerDependencies": {
-    "@kryton/core": "4.4.0-pre.0",
+    "@azrtydxb/core": "4.4.0-pre.0",
     "react": ">=18"
   },
   "devDependencies": {
@@ -248,9 +248,9 @@ export const KRYTON_CORE_REACT_VERSION = "4.4.0-pre.0";
 - [ ] **Step 4: Write README and copy LICENSE**
 
 ```markdown
-# @kryton/core-react
+# @azrtydxb/core-react
 
-React hooks for `@kryton/core`. See the spec doc in the kryton monorepo.
+React hooks for `@azrtydxb/core`. See the spec doc in the kryton monorepo.
 
 ## Status
 
@@ -268,7 +268,7 @@ Expected: produces `packages/core-react/dist/index.js`. No errors.
 
 ```bash
 git add packages/core-react/
-git commit -m "feat(core-react): initial @kryton/core-react package"
+git commit -m "feat(core-react): initial @azrtydxb/core-react package"
 ```
 
 ---
@@ -317,7 +317,7 @@ The full updated `scripts` block should now read:
 - [ ] **Step 3: Verify**
 
 Run: `npm run build:core`
-Expected: builds both `@kryton/core` and `@kryton/core-react`.
+Expected: builds both `@azrtydxb/core` and `@azrtydxb/core-react`.
 
 - [ ] **Step 4: Commit**
 
@@ -394,7 +394,7 @@ Expected: prints `All workspace versions match root: 4.4.0-pre.0`. Exit 0.
 Edit `packages/core/package.json` `"version"` to `"9.9.9"`.
 
 Run: `node scripts/verify-versions.js`
-Expected: prints `Version mismatch: root is 4.4.0-pre.0. ... @kryton/core ... is 9.9.9`. Exit 1.
+Expected: prints `Version mismatch: root is 4.4.0-pre.0. ... @azrtydxb/core ... is 9.9.9`. Exit 1.
 
 Restore `packages/core/package.json` to `"4.4.0-pre.0"`.
 
@@ -455,9 +455,9 @@ for (const file of packageFiles) {
   const path = resolve(file);
   const pkg = JSON.parse(readFileSync(path, "utf8"));
   pkg.version = newVersion;
-  // Update peer dep on @kryton/core inside core-react
-  if (pkg.peerDependencies?.["@kryton/core"]) {
-    pkg.peerDependencies["@kryton/core"] = newVersion;
+  // Update peer dep on @azrtydxb/core inside core-react
+  if (pkg.peerDependencies?.["@azrtydxb/core"]) {
+    pkg.peerDependencies["@azrtydxb/core"] = newVersion;
   }
   writeFileSync(path, JSON.stringify(pkg, null, 2) + "\n");
   console.log(`bumped ${file} → ${newVersion}`);
@@ -562,7 +562,7 @@ git commit -m "chore: add publish-core.js script and typecheck targets"
 - [ ] **Step 1: Write the workflow file**
 
 ```yaml
-name: Publish @kryton packages
+name: Publish @azrtydxb packages
 
 on:
   push:
@@ -581,7 +581,7 @@ jobs:
         with:
           node-version: "24"
           registry-url: "https://npm.pkg.github.com"
-          scope: "@kryton"
+          scope: "@azrtydxb"
       - name: Install dependencies
         run: npm ci
       - name: Verify versions match
@@ -614,7 +614,7 @@ git commit -m "ci: publish-core workflow triggered on v* tags"
 
 ---
 
-## Task PUB-9: First real publish (manual claim of @kryton scope)
+## Task PUB-9: First real publish (manual claim of @azrtydxb scope)
 
 This task is partially manual — the first publish establishes the scope on GitHub Packages and cannot be automated by CI before it exists.
 
@@ -632,7 +632,7 @@ Expected: prints first 4 chars of token. Confirms it's set.
 Run:
 ```bash
 cat > ~/.npmrc.kryton-publish <<EOF
-@kryton:registry=https://npm.pkg.github.com
+@azrtydxb:registry=https://npm.pkg.github.com
 //npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}
 EOF
 ```
@@ -642,11 +642,11 @@ This is a temporary file used only for this manual publish; the CI uses a differ
 - [ ] **Step 3: Run publish via the script with explicit npmrc**
 
 Run: `npm_config_userconfig=~/.npmrc.kryton-publish node scripts/publish-core.js`
-Expected: publishes both packages to `npm.pkg.github.com` under `@kryton` scope. URLs printed: `https://github.com/azrtydxb/kryton/packages`.
+Expected: publishes both packages to `npm.pkg.github.com` under `@azrtydxb` scope. URLs printed: `https://github.com/azrtydxb/kryton/packages`.
 
 - [ ] **Step 4: Verify on GitHub**
 
-Open `https://github.com/azrtydxb?tab=packages` (or wherever GitHub displays packages for the org/account). Confirm `@kryton/core@4.4.0-pre.0` and `@kryton/core-react@4.4.0-pre.0` are listed.
+Open `https://github.com/azrtydxb?tab=packages` (or wherever GitHub displays packages for the org/account). Confirm `@azrtydxb/core@4.4.0-pre.0` and `@azrtydxb/core-react@4.4.0-pre.0` are listed.
 
 - [ ] **Step 5: Clean up**
 
@@ -671,7 +671,7 @@ Expected: `/Users/pascal/Development/Kryton/kryton-mobile`.
 - [ ] **Step 2: Write `.npmrc`**
 
 ```
-@kryton:registry=https://npm.pkg.github.com
+@azrtydxb:registry=https://npm.pkg.github.com
 //npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}
 ```
 
@@ -703,24 +703,24 @@ const pkg = JSON.parse(readFileSync(pkgFile, "utf8"));
 function deps() { return pkg.dependencies ?? (pkg.dependencies = {}); }
 
 function isLinked() {
-  const c = deps()["@kryton/core"];
-  const r = deps()["@kryton/core-react"];
+  const c = deps()["@azrtydxb/core"];
+  const r = deps()["@azrtydxb/core-react"];
   return (c && c.startsWith("file:")) || (r && r.startsWith("file:"));
 }
 
 if (action === "verify") {
   if (isLinked()) {
-    console.error("ERROR: package.json contains file: deps for @kryton/*");
+    console.error("ERROR: package.json contains file: deps for @azrtydxb/*");
     console.error("Run `npm run dev:unlink` before committing.");
     process.exit(1);
   }
-  console.log("OK: no file: deps for @kryton/*");
+  console.log("OK: no file: deps for @azrtydxb/*");
   process.exit(0);
 }
 
 if (action === "link") {
-  deps()["@kryton/core"] = `file:${corePath}`;
-  deps()["@kryton/core-react"] = `file:${reactPath}`;
+  deps()["@azrtydxb/core"] = `file:${corePath}`;
+  deps()["@azrtydxb/core-react"] = `file:${reactPath}`;
   writeFileSync(pkgFile, JSON.stringify(pkg, null, 2) + "\n");
   execSync("npm install", { stdio: "inherit" });
   console.log(`Linked. core=${corePath} core-react=${reactPath}`);
@@ -731,14 +731,14 @@ if (action === "link") {
 if (action === "unlink") {
   // Read pristine versions from HEAD
   const headPkg = JSON.parse(execSync("git show HEAD:package.json", { encoding: "utf8" }));
-  const coreVer = headPkg.dependencies?.["@kryton/core"];
-  const reactVer = headPkg.dependencies?.["@kryton/core-react"];
+  const coreVer = headPkg.dependencies?.["@azrtydxb/core"];
+  const reactVer = headPkg.dependencies?.["@azrtydxb/core-react"];
   if (!coreVer || !reactVer) {
-    console.error("Cannot find @kryton/* deps in HEAD package.json");
+    console.error("Cannot find @azrtydxb/* deps in HEAD package.json");
     process.exit(1);
   }
-  deps()["@kryton/core"] = coreVer;
-  deps()["@kryton/core-react"] = reactVer;
+  deps()["@azrtydxb/core"] = coreVer;
+  deps()["@azrtydxb/core-react"] = reactVer;
   writeFileSync(pkgFile, JSON.stringify(pkg, null, 2) + "\n");
   execSync("npm install", { stdio: "inherit" });
   console.log(`Unlinked. core=${coreVer} core-react=${reactVer}`);
@@ -762,19 +762,19 @@ Edit `kryton-mobile/package.json`, add to `scripts`:
 Add to `dependencies`:
 
 ```json
-"@kryton/core": "4.4.0-pre.0",
-"@kryton/core-react": "4.4.0-pre.0"
+"@azrtydxb/core": "4.4.0-pre.0",
+"@azrtydxb/core-react": "4.4.0-pre.0"
 ```
 
 - [ ] **Step 6: Test verify mode (should pass)**
 
 Run: `node scripts/dev-link.js verify`
-Expected: prints `OK: no file: deps for @kryton/*`. Exit 0.
+Expected: prints `OK: no file: deps for @azrtydxb/*`. Exit 0.
 
 - [ ] **Step 7: Test install with the published packages**
 
 Run: `GITHUB_TOKEN=$GITHUB_TOKEN npm install`
-Expected: installs `@kryton/core@4.4.0-pre.0` and `@kryton/core-react@4.4.0-pre.0` from GitHub Packages.
+Expected: installs `@azrtydxb/core@4.4.0-pre.0` and `@azrtydxb/core-react@4.4.0-pre.0` from GitHub Packages.
 
 If this fails with 401: confirm `GITHUB_TOKEN` is set with `read:packages` scope.
 
@@ -786,7 +786,7 @@ Expected: rewrites package.json with `file:../kryton/packages/core` deps, runs `
 - [ ] **Step 9: Verify mode now fails**
 
 Run: `npm run dev:verify`
-Expected: prints `ERROR: package.json contains file: deps for @kryton/*`. Exit 1.
+Expected: prints `ERROR: package.json contains file: deps for @azrtydxb/*`. Exit 1.
 
 - [ ] **Step 10: Test unlink mode**
 
@@ -803,7 +803,7 @@ Expected: OK exit 0.
 ```bash
 cd /Users/pascal/Development/Kryton/kryton-mobile
 git add scripts/dev-link.js .npmrc package.json package-lock.json
-git commit -m "feat: dev-link.js for swapping @kryton/* between published and file: deps"
+git commit -m "feat: dev-link.js for swapping @azrtydxb/* between published and file: deps"
 git push origin master
 ```
 
@@ -844,7 +844,7 @@ npm run dev:link
 git add package.json package-lock.json
 git commit -m "test: should be blocked"
 ```
-Expected: pre-commit hook fails with "ERROR: package.json contains file: deps for @kryton/*". Commit aborted.
+Expected: pre-commit hook fails with "ERROR: package.json contains file: deps for @azrtydxb/*". Commit aborted.
 
 - [ ] **Step 5: Restore and verify normal commits work**
 
@@ -861,7 +861,7 @@ If package.json is now restored, no further changes; the previous test left a di
 
 ```bash
 git add .husky/pre-commit package.json
-git commit -m "chore: pre-commit hook blocks @kryton/* file: deps"
+git commit -m "chore: pre-commit hook blocks @azrtydxb/* file: deps"
 git push
 ```
 
@@ -885,41 +885,41 @@ Expected: bumps all package.json files, commits, tags `v4.4.0-pre.1`. (No push y
 Run: `git push origin master --tags`
 Expected: pushes commit and tag.
 
-Wait for the `Publish @kryton packages` workflow run to complete on GitHub Actions.
+Wait for the `Publish @azrtydxb packages` workflow run to complete on GitHub Actions.
 
 - [ ] **Step 3: Verify packages were published**
 
 Open: `https://github.com/azrtydxb?tab=packages`
-Expected: `@kryton/core@4.4.0-pre.1` and `@kryton/core-react@4.4.0-pre.1` listed.
+Expected: `@azrtydxb/core@4.4.0-pre.1` and `@azrtydxb/core-react@4.4.0-pre.1` listed.
 
 - [ ] **Step 4: From kryton-mobile, install the new version**
 
 Run:
 ```bash
 cd /Users/pascal/Development/Kryton/kryton-mobile
-npm pkg set 'dependencies.@kryton/core'='4.4.0-pre.1'
-npm pkg set 'dependencies.@kryton/core-react'='4.4.0-pre.1'
+npm pkg set 'dependencies.@azrtydxb/core'='4.4.0-pre.1'
+npm pkg set 'dependencies.@azrtydxb/core-react'='4.4.0-pre.1'
 GITHUB_TOKEN=$GITHUB_TOKEN npm install
 ```
 Expected: installs `4.4.0-pre.1` versions.
 
 - [ ] **Step 5: Verify package contents**
 
-Run: `cat node_modules/@kryton/core/dist/index.js`
+Run: `cat node_modules/@azrtydxb/core/dist/index.js`
 Expected: contains `export const KRYTON_CORE_VERSION = "4.4.0-pre.1";`.
 
 - [ ] **Step 6: Commit version bump in mobile**
 
 ```bash
 git add package.json package-lock.json
-git commit -m "chore: bump @kryton/core to 4.4.0-pre.1"
+git commit -m "chore: bump @azrtydxb/core to 4.4.0-pre.1"
 git push
 ```
 
 - [ ] **Step 7: Phase 0 gate satisfied**
 
 Confirm against the master phasing doc:
-- [x] `@kryton/core@4.4.0-pre.1` and `@kryton/core-react@4.4.0-pre.1` published.
+- [x] `@azrtydxb/core@4.4.0-pre.1` and `@azrtydxb/core-react@4.4.0-pre.1` published.
 - [x] Mobile installs them via `.npmrc`.
 - [x] `dev:link` swaps to local file paths.
 - [x] Pre-commit hook blocks `file:` deps.

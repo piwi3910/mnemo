@@ -36,8 +36,8 @@ for (const file of packageFiles) {
   const path = resolve(file);
   const pkg = JSON.parse(readFileSync(path, "utf8"));
   pkg.version = newVersion;
-  if (pkg.peerDependencies?.["@kryton/core"]) {
-    pkg.peerDependencies["@kryton/core"] = newVersion;
+  if (pkg.peerDependencies?.["@azrtydxb/core"]) {
+    pkg.peerDependencies["@azrtydxb/core"] = newVersion;
   }
   writeFileSync(path, JSON.stringify(pkg, null, 2) + "\n");
   console.log(`bumped ${file} → ${newVersion}`);

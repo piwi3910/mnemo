@@ -1,8 +1,8 @@
-# `@kryton/core` Implementation Plan
+# `@azrtydxb/core` Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: `superpowers:subagent-driven-development` (recommended) or `superpowers:executing-plans`. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build the offline-first data layer (`@kryton/core`) and its React companion (`@kryton/core-react`) per the design spec — schema generation from Prisma, sync-only SQLite adapters, versioned LWW sync client, Yjs document support, and a typed query API with an event bus.
+**Goal:** Build the offline-first data layer (`@azrtydxb/core`) and its React companion (`@azrtydxb/core-react`) per the design spec — schema generation from Prisma, sync-only SQLite adapters, versioned LWW sync client, Yjs document support, and a typed query API with an event bus.
 
 **Architecture:** TypeScript, ESM-only. Two packages in the kryton monorepo. Zero runtime dependencies in the core package other than `yjs` and `y-protocols`. Adapter sub-modules ship as deep imports for tree-shaking.
 
@@ -50,7 +50,7 @@ This plan splits across two streams in Phase 1 and two streams in Phase 2.
 
 ## Prerequisites (from Phase 0)
 
-- `@kryton/core@4.4.0-pre.N` and `@kryton/core-react@4.4.0-pre.N` exist as empty real packages.
+- `@azrtydxb/core@4.4.0-pre.N` and `@azrtydxb/core-react@4.4.0-pre.N` exist as empty real packages.
 - `tsconfig.base.json` exists at monorepo root.
 - `verify-versions.js` script in place.
 
@@ -963,7 +963,7 @@ Run: `cat .github/workflows/ci.yml`
 Insert after `- name: Generate Prisma client`:
 
 ```yaml
-      - name: Verify @kryton/core generated files are up to date
+      - name: Verify @azrtydxb/core generated files are up to date
         run: npm run verify-generated --workspace=packages/core
 ```
 
@@ -971,7 +971,7 @@ Insert after `- name: Generate Prisma client`:
 
 ```bash
 git add .github/workflows/ci.yml
-git commit -m "ci: add verify-generated step for @kryton/core"
+git commit -m "ci: add verify-generated step for @azrtydxb/core"
 ```
 
 ---
@@ -3760,7 +3760,7 @@ describe("KrytonProvider", () => {
 ```tsx
 // packages/core-react/src/provider.tsx
 import { createContext, useContext, type ReactNode } from "react";
-import type { Kryton } from "@kryton/core";
+import type { Kryton } from "@azrtydxb/core";
 
 const Ctx = createContext<Kryton | null>(null);
 
@@ -3803,7 +3803,7 @@ import { describe, it, expect } from "vitest";
 import { render, screen, act } from "@testing-library/react";
 import { KrytonProvider } from "../provider";
 import { useNote, useNotes } from "../hooks";
-import { EventBus } from "@kryton/core";
+import { EventBus } from "@azrtydxb/core";
 
 function makeFakeCore(initialNotes: any[]) {
   const bus = new EventBus<any>();
@@ -4350,7 +4350,7 @@ Run from a temp dir:
 cd /tmp && mkdir core-smoke && cd core-smoke
 npm init -y
 npm install --no-save /Users/pascal/Development/Kryton/kryton/packages/core /Users/pascal/Development/Kryton/kryton/packages/core-react
-node -e "import('@kryton/core').then(m => console.log(Object.keys(m)))"
+node -e "import('@azrtydxb/core').then(m => console.log(Object.keys(m)))"
 ```
 Expected: prints `Kryton`, `EventBus`, errors, etc.
 

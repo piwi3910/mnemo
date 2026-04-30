@@ -1,4 +1,4 @@
-# Mobile Migration to `@kryton/core` — Design Spec
+# Mobile Migration to `@azrtydxb/core` — Design Spec
 
 **Status:** Approved for implementation planning.
 **Sub-project:** 4 of 5.
@@ -7,7 +7,7 @@
 
 ## Purpose
 
-Replace mobile's bespoke `expo-sqlite` + sync code with `@kryton/core`. Mobile keeps its UI, navigation, auth flow, and Expo platform integrations; only the data layer changes.
+Replace mobile's bespoke `expo-sqlite` + sync code with `@azrtydxb/core`. Mobile keeps its UI, navigation, auth flow, and Expo platform integrations; only the data layer changes.
 
 ## Scope
 
@@ -51,11 +51,11 @@ kryton-mobile/
 │   │   ├── api.ts          # KEPT (auth-only HTTP, login/register/logout)
 │   │   ├── storage.ts      # KEPT (secure-store wrapper, simplified)
 │   │   └── ...
-│   ├── components/         # MIGRATED: use @kryton/core-react hooks
+│   ├── components/         # MIGRATED: use @azrtydxb/core-react hooks
 │   ├── hooks/              # REMOVED: replaced by core-react hooks
 │   ├── screens/            # MIGRATED
 │   └── webview/            # MIGRATED: editor sources content from Y.Doc, not column
-└── package.json            # adds @kryton/core, @kryton/core-react
+└── package.json            # adds @azrtydxb/core, @azrtydxb/core-react
 ```
 
 `src/db/`, `src/lib/sync.ts` (if exists), `src/lib/versionCheck.ts` are deleted.
@@ -87,8 +87,8 @@ This logic lives in `src/core.ts`. If the user is offline and the migration runs
 ### `src/core.ts` (new file)
 
 ```ts
-import { Kryton } from "@kryton/core";
-import { ExpoSqliteAdapter } from "@kryton/core/adapters/expo-sqlite";
+import { Kryton } from "@azrtydxb/core";
+import { ExpoSqliteAdapter } from "@azrtydxb/core/adapters/expo-sqlite";
 import * as FileSystem from "expo-file-system";
 import * as SecureStore from "expo-secure-store";
 import { storage } from "./lib/storage";
@@ -131,7 +131,7 @@ export async function initCore(serverUrl: string): Promise<Kryton> {
 Wrap the app in `KrytonProvider`:
 
 ```tsx
-import { KrytonProvider } from "@kryton/core-react";
+import { KrytonProvider } from "@azrtydxb/core-react";
 import { initCore } from "@/core";
 
 const [core, setCore] = useState<Kryton | null>(null);
@@ -152,7 +152,7 @@ useEffect(() => {
 }, [folder]);
 
 // After
-import { useNotes } from "@kryton/core-react";
+import { useNotes } from "@azrtydxb/core-react";
 const notes = useNotes({ folderPath: folder });
 ```
 
@@ -163,7 +163,7 @@ For mutations:
 db.runSync("UPDATE notes SET title=?, _status='updated' WHERE id=?", [newTitle, id]);
 
 // After
-import { useKryton } from "@kryton/core-react";
+import { useKryton } from "@azrtydxb/core-react";
 const core = useKryton();
 core.notes.update(id, { title: newTitle });
 ```
@@ -225,8 +225,8 @@ Mobile editor displays awareness state from other connected clients in a top bar
 ```json
 {
   "dependencies": {
-    "@kryton/core": "^4.4.0",
-    "@kryton/core-react": "^4.4.0",
+    "@azrtydxb/core": "^4.4.0",
+    "@azrtydxb/core-react": "^4.4.0",
     "yjs": "^13.6.0"
   },
   "scripts": {
@@ -236,12 +236,12 @@ Mobile editor displays awareness state from other connected clients in a top bar
 }
 ```
 
-`scripts/dev-link.js` swaps `@kryton/core` and `@kryton/core-react` between published versions and `file:../kryton/packages/core` paths. Defaults to `../kryton/` relative to the mobile repo (the standard sibling layout under `Kryton/`); overridable via `KRYTON_LOCAL_PATH=/some/abs/path`. Implementation uses `npm pkg set` and `npm install` under the hood.
+`scripts/dev-link.js` swaps `@azrtydxb/core` and `@azrtydxb/core-react` between published versions and `file:../kryton/packages/core` paths. Defaults to `../kryton/` relative to the mobile repo (the standard sibling layout under `Kryton/`); overridable via `KRYTON_LOCAL_PATH=/some/abs/path`. Implementation uses `npm pkg set` and `npm install` under the hood.
 
-A `.npmrc` in the mobile repo configures the GitHub Packages registry for `@kryton`:
+A `.npmrc` in the mobile repo configures the GitHub Packages registry for `@azrtydxb`:
 
 ```
-@kryton:registry=https://npm.pkg.github.com
+@azrtydxb:registry=https://npm.pkg.github.com
 //npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}
 ```
 
@@ -286,16 +286,16 @@ Existing Jest test infra is preserved; new tests added per migrated component.
 - Live cursor display in mobile editor.
 - Offline-first attachment downloads (attachments fetch on demand via core's tier 2 cache).
 - Replacing the auth flow (passkeys, 2FA) — those still use existing `api.ts` paths.
-- Adopting `@kryton/core` for non-data UI state (settings panel form state, navigation state, etc.) — those stay in local component state.
+- Adopting `@azrtydxb/core` for non-data UI state (settings panel form state, navigation state, etc.) — those stay in local component state.
 
 ## Risks
 
 1. **Yjs WebView integration is the biggest unknown.** The current editor is a CodeMirror bundle in a WebView with a custom bridge; replacing the content channel with Yjs binary updates is non-trivial. Mitigation: prototype in a branch before declaring this work "done."
 2. **`expo-sqlite` adapter performance** under heavy reactive subscription churn — many `useNotes()` calls all re-evaluating on every change event. Mitigation: profile at the end of implementation; if hot, add coarse-grained invalidation buckets in core.
-3. **Bundle size impact:** `@kryton/core` + Yjs + dependencies likely add 200-400 KB to the JS bundle. Within Expo's typical envelope but worth measuring.
+3. **Bundle size impact:** `@azrtydxb/core` + Yjs + dependencies likely add 200-400 KB to the JS bundle. Within Expo's typical envelope but worth measuring.
 
 ## Open implementation questions
 
-1. Should `dev:link` be in `kryton-mobile/scripts/` or in a shared dev tool that future kryton-desktop also uses? (Probably the latter — small CLI in `@kryton/dev-tools` package.)
+1. Should `dev:link` be in `kryton-mobile/scripts/` or in a shared dev tool that future kryton-desktop also uses? (Probably the latter — small CLI in `@azrtydxb/dev-tools` package.)
 2. Do we want a dedicated migration screen or fold the splash into the existing one?
 3. Should agent management UI (create agents, manage policies) live in mobile, or only in the web client? (Probably web only for v1; mobile read-only views agents.)

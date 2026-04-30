@@ -2,7 +2,7 @@
 
 > **For agentic workers:** This document orchestrates four sub-project plans. It does NOT contain TDD steps itself. For step-by-step implementation, follow the per-sub-project plans referenced below. REQUIRED SUB-SKILL for executing those plans: `superpowers:subagent-driven-development`.
 
-**Goal:** Coordinate the parallel implementation of `@kryton/core`, server sync v2, mobile rewrite, and publishing infrastructure across multiple agents and phases without merge conflicts or wasted work.
+**Goal:** Coordinate the parallel implementation of `@azrtydxb/core`, server sync v2, mobile rewrite, and publishing infrastructure across multiple agents and phases without merge conflicts or wasted work.
 
 **Architecture:** Four phases with explicit gates. Within each phase, named workstreams run in parallel under strict file-ownership boundaries. No phase begins until all gates from the prior phase are satisfied.
 
@@ -20,7 +20,7 @@ Sub-project 3 (kryton-desktop) is deferred per the brainstorming decision; desig
 
 ```
 Phase 0 — Publishing infrastructure (1 stream, ~1 day)
-   ↓ gate: @kryton scope claimed, CI workflow merged, dev:link tooling shipped
+   ↓ gate: @azrtydxb scope claimed, CI workflow merged, dev:link tooling shipped
 Phase 1 — Core foundations + server scaffolding in parallel (3 streams, ~5 days)
    ↓ gate: protocol contracts locked, schema generator working end-to-end
 Phase 2 — Core sync + Yjs + server sync + agent identity in parallel (4 streams, ~7 days)
@@ -45,7 +45,7 @@ Each parallel stream owns specific files. Streams within a phase NEVER write to 
 
 ## Phase 0 — Publishing infrastructure
 
-**Why first:** every other phase wants to either publish to or install from `@kryton`. Doing this last forces refactor of every CI workflow.
+**Why first:** every other phase wants to either publish to or install from `@azrtydxb`. Doing this last forces refactor of every CI workflow.
 
 **Single stream (no parallelism worthwhile):**
 - Driver: 1 agent
@@ -55,7 +55,7 @@ Each parallel stream owns specific files. Streams within a phase NEVER write to 
 **Out of scope this phase:** the actual `packages/core/` and `packages/core-react/` directories — those are created in Phase 1 with placeholder stubs that the publish workflow will be tested against. **Important:** the "stubs" here are NOT scaffolds — they are the real package.json files and minimal type-only entry points (`export {}`) that are immediately useful for the publish pipeline. No code stubs.
 
 **Gate to Phase 1:**
-- [ ] `@kryton/core@4.4.0-pre.0` and `@kryton/core-react@4.4.0-pre.0` published to GitHub Packages (empty packages, just package.json + LICENSE).
+- [ ] `@azrtydxb/core@4.4.0-pre.0` and `@azrtydxb/core-react@4.4.0-pre.0` published to GitHub Packages (empty packages, just package.json + LICENSE).
 - [ ] `kryton-mobile` can install them with `.npmrc` configured.
 - [ ] `dev:link` script verified to swap to local file paths.
 - [ ] Pre-commit hook in `kryton-mobile` blocks commits with `file:` deps in package.json.
@@ -169,12 +169,12 @@ Four streams in parallel.
   - `packages/server/src/__tests__/cedar.test.ts`
 
 **Coordination points within Phase 2:**
-- Streams 2A and 2C share the wire protocol contract (defined in spec). To prevent drift, the canonical TypeScript types for the protocol live in `packages/core/src/sync/protocol.ts` (Stream 2A's territory). Stream 2C imports those types from `@kryton/core/dist/sync/protocol` via the workspace link. Stream 2A must publish the protocol module to dist/ early in Phase 2 (task CORE-33 is the protocol type definitions, done first).
+- Streams 2A and 2C share the wire protocol contract (defined in spec). To prevent drift, the canonical TypeScript types for the protocol live in `packages/core/src/sync/protocol.ts` (Stream 2A's territory). Stream 2C imports those types from `@azrtydxb/core/dist/sync/protocol` via the workspace link. Stream 2A must publish the protocol module to dist/ early in Phase 2 (task CORE-33 is the protocol type definitions, done first).
 - Streams 2B and 2C share the Yjs websocket protocol; both follow the standard `y-protocols/sync` and `y-protocols/awareness` formats — no custom wire format on either side, so no coordination beyond the spec.
 
 **Phase 2 gate:**
 - [ ] All unit tests in all four streams pass.
-- [ ] Integration test: a `@kryton/core` instance pointed at a test server can pull, push, hit a conflict, resolve via LWW, push a tag-merge, open a Yjs doc, edit, close, reopen, and see the edits.
+- [ ] Integration test: a `@azrtydxb/core` instance pointed at a test server can pull, push, hit a conflict, resolve via LWW, push a tag-merge, open a Yjs doc, edit, close, reopen, and see the edits.
 - [ ] Integration test: an agent token created via `/api/agents/:id/tokens` can pull notes, gets policy-filtered results, gets denied on out-of-scope edits.
 - [ ] Server's existing `/api/sync` legacy endpoints still work (mobile hasn't migrated yet).
 
@@ -313,4 +313,4 @@ If using `agent-teams:team-feature` skill instead, the team-feature pattern maps
 - Web client offline support: explicitly out of scope.
 - Cedar policy authoring UX (admin UI): server endpoints only; UI deferred.
 - Multi-user shared Yjs editing: server protocol prepared but UX not implemented.
-- Public release of `@kryton/core` to npm.org: deferred.
+- Public release of `@azrtydxb/core` to npm.org: deferred.

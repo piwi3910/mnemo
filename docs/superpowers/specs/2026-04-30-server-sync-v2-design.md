@@ -444,7 +444,7 @@ Response: `{ "token": "...", "expiresAt": "...", "tokenId": "..." }`. Token is a
 ## Testing strategy
 
 - **Unit:** sync handler functions tested with Prisma test DB and synthetic users.
-- **Integration:** real Express server + real Postgres in CI; full pull/push/conflict scenarios driven from a `@kryton/core` test instance.
+- **Integration:** real Express server + real Postgres in CI; full pull/push/conflict scenarios driven from a `@azrtydxb/core` test instance.
 - **Yjs:** two simulated WS clients in-process, verify sync convergence + awareness propagation.
 - **Cedar:** policy evaluation tests for the standard set of agent permission patterns (allowlist/denylist, tag-based, folder-based, owner-only).
 

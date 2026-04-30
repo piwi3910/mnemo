@@ -1,6 +1,6 @@
-# @kryton/core-react
+# @azrtydxb/core-react
 
-React hooks for `@kryton/core`. See the spec doc in the kryton monorepo.
+React hooks for `@azrtydxb/core`. See the spec doc in the kryton monorepo.
 
 ## Status
 
