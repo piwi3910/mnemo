@@ -9,38 +9,51 @@ export class PluginWebSocket {
   private wss: WebSocketServer;
 
   constructor(server: http.Server) {
+    // noServer: true so we don't intercept upgrades for other paths (e.g. /ws/yjs/*).
+    // We handle the path-specific upgrade routing ourselves below.
     this.wss = new WebSocketServer({
-      server,
-      path: "/ws/plugins",
+      noServer: true,
       maxPayload: 64 * 1024, // 64KB limit
-      verifyClient: async (info, callback) => {
-        try {
-          const cookieHeader = info.req.headers.cookie;
+    });
+
+    server.on("upgrade", (req, socket, head) => {
+      try {
+        const url = new URL(req.url ?? "", `http://${req.headers.host ?? "localhost"}`);
+        if (url.pathname !== "/ws/plugins") return; // not ours; let other handlers take it
+
+        // Auth check (was previously verifyClient)
+        (async () => {
+          const cookieHeader = req.headers.cookie;
           if (!cookieHeader) {
-            callback(false, 401, "Unauthorized");
+            socket.write("HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n");
+            socket.destroy();
             return;
           }
-
-          const session = await auth.api.getSession({
-            headers: new Headers({ cookie: cookieHeader }),
-          });
-
+          let session;
+          try {
+            session = await auth.api.getSession({ headers: new Headers({ cookie: cookieHeader }) });
+          } catch {
+            socket.write("HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n");
+            socket.destroy();
+            return;
+          }
           if (!session) {
-            callback(false, 401, "Unauthorized");
+            socket.write("HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n");
+            socket.destroy();
             return;
           }
-
-          // Check if user account is disabled
           if ((session.user as Record<string, unknown>).disabled) {
-            callback(false, 403, "Account is disabled");
+            socket.write("HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n");
+            socket.destroy();
             return;
           }
-
-          callback(true);
-        } catch {
-          callback(false, 401, "Unauthorized");
-        }
-      },
+          this.wss.handleUpgrade(req, socket, head, (ws) => {
+            this.wss.emit("connection", ws, req);
+          });
+        })();
+      } catch {
+        socket.destroy();
+      }
     });
 
     this.wss.on("connection", (ws) => {
@@ -49,7 +62,7 @@ export class PluginWebSocket {
       });
     });
 
-    log.info("WebSocket server attached at /ws/plugins");
+    log.info("WebSocket server attached at /ws/plugins (noServer mode)");
   }
 
   broadcast(event: string, data: object): void {
