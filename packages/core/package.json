@@ -14,7 +14,8 @@
   "scripts": {
     "build": "tsc -b",
     "clean": "rm -rf dist",
-    "test": "echo 'no tests yet' && exit 0"
+    "test": "echo 'no tests yet' && exit 0",
+    "typecheck": "tsc --noEmit"
   },
   "publishConfig": {
     "registry": "https://npm.pkg.github.com",
