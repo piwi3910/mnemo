@@ -269,6 +269,19 @@ const HANDLERS: Record<string, Handler> = {
           update: { version: { increment: 1 }, cursor },
           create: { userId, notePath: f.path, version: 1, cursor },
         });
+
+        // Snapshot the post-write content into NoteRevision so /api/sync/v2/tier2/history works.
+        // Skip if no content changed (creates without content emit empty revisions which are noise).
+        if (f.content != null) {
+          await tx.noteRevision.create({
+            data: {
+              userId,
+              notePath: f.path,
+              content: String(f.content),
+            },
+          });
+        }
+
         accepted.push({ id: op.id, version: nv.version, merged_value: { tags: mergedTags } });
       } else if (op.op === "delete") {
         const filePath = pathModule.join(userDir, op.id);

@@ -14,8 +14,29 @@ const upload = multer({
 export function createAttachmentsRouter(storageRoot: string): Router {
   const router = Router();
 
+  // multer error handler (e.g., LIMIT_FILE_SIZE -> 413)
+  function multerErrorHandler(err: unknown, _req: Request, res: Response, next: (err?: unknown) => void): void {
+    if (err instanceof multer.MulterError) {
+      if (err.code === "LIMIT_FILE_SIZE") {
+        res.status(413).json({ error: "Attachment exceeds 50MB limit" });
+        return;
+      }
+      res.status(400).json({ error: err.message });
+      return;
+    }
+    next(err);
+  }
+
   // POST /api/attachments — upload
-  router.post("/", upload.single("file"), async (req: Request, res: Response) => {
+  router.post(
+    "/",
+    (req, res, next) => {
+      upload.single("file")(req, res, (err) => {
+        if (err) return multerErrorHandler(err, req, res, next);
+        next();
+      });
+    },
+    async (req: Request, res: Response) => {
     try {
       const user = requireUser(req);
       if (!req.file) {
