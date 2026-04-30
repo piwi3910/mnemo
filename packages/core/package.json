@@ -20,6 +20,10 @@
     "./adapters/expo-sqlite": {
       "types": "./dist/adapters/expo-sqlite.d.ts",
       "import": "./dist/adapters/expo-sqlite.js"
+    },
+    "./sync/protocol": {
+      "types": "./dist/sync/protocol.d.ts",
+      "import": "./dist/sync/protocol.js"
     }
   },
   "peerDependencies": {
@@ -55,7 +59,8 @@
   },
   "dependencies": {
     "yjs": "^13.6.0",
-    "y-protocols": "^1.0.6"
+    "y-protocols": "^1.0.6",
+    "lib0": "^0.2.0"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",

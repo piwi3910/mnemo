@@ -43,9 +43,15 @@ import { setGraphWebSocket } from "./services/noteService.js";
 import { createTrashRouter, createTrashEmptyRouter, purgeOldTrash } from "./routes/trash.js";
 import { createHistoryRouter, createHistoryTimestampRouter, createHistoryRestoreRouter } from "./routes/history.js";
 import { createSyncRouter } from "./routes/sync.js";
+import { createSyncV2Router } from "./routes/sync-v2.js";
+import { createAttachmentsRouter } from "./routes/attachments.js";
+import { createVersionRouter } from "./routes/version.js";
+import { createAgentsRouter } from "./routes/agents.js";
 import { APP_VERSION, APP_COMMIT, APP_MAJOR_VERSION } from "./lib/version.js";
 import { backfillFolders } from "./services/backfill/folders-backfill.js";
 import { backfillTags } from "./services/backfill/tags-backfill.js";
+import { WebSocketServer } from "ws";
+import { setupYjsWss } from "./services/yjs-server.js";
 
 const log = createLogger("server");
 const PORT = parseInt(process.env.PORT || "3001", 10);
@@ -250,6 +256,10 @@ async function main(): Promise<void> {
     message: { error: "Sync rate limit exceeded" },
   });
   app.use("/api/sync", authMiddleware, syncLimiter, createSyncRouter(NOTES_DIR));
+  app.use("/api/sync/v2", authMiddleware, syncLimiter, createSyncV2Router());
+  app.use("/api/attachments", authMiddleware, createAttachmentsRouter(NOTES_DIR));
+  app.use("/api/agents", authMiddleware, createAgentsRouter());
+  app.use("/api", createVersionRouter());
 
   app.use("/api/auth", authLimiter);
   app.use("/api", (req, res, next) => {
@@ -488,6 +498,30 @@ async function main(): Promise<void> {
   const pluginWebSocket = new PluginWebSocket(httpServer);
   setGraphWebSocket(pluginWebSocket);
   pluginManager.setPluginWebSocket(pluginWebSocket);
+
+  // Yjs WebSocket server — handles /ws/yjs/:docId upgrade requests
+  const yjsWss = new WebSocketServer({ noServer: true });
+  setupYjsWss(httpServer, yjsWss, {
+    authenticate: async (token) => {
+      // First try session auth (better-auth bearer/cookie)
+      try {
+        const headers = new Headers({ authorization: `Bearer ${token}`, cookie: `better-auth.session_token=${token}` });
+        const session = await auth.api.getSession({ headers });
+        if (session) return { userId: session.user.id, agentId: null };
+      } catch {
+        // fall through to agent token
+      }
+      // Fall back to agent token validation
+      try {
+        const { validateToken } = await import("./services/agent.js");
+        const result = await validateToken(token);
+        if (result) return { userId: result.ownerUserId, agentId: result.agentId };
+      } catch {
+        // ignore
+      }
+      return null;
+    },
+  });
 
   httpServer.listen(PORT, () => {
     log.info(`Kryton server listening on port ${PORT}`);
