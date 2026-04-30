@@ -3,7 +3,7 @@ import express, { Request, Response } from "express";
 import cors from "cors";
 import multer from "multer";
 import helmet from "helmet";
-import rateLimit from "express-rate-limit";
+import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import { validateEnv } from "./lib/env.js";
 import { createLogger } from "./lib/logger.js";
 import { GLOBAL_USER_ID, decodePathParam, validatePathWithinBase } from "./lib/pathUtils.js";
@@ -223,7 +223,7 @@ async function main(): Promise<void> {
     legacyHeaders: false,
     keyGenerator: (req) => {
       const email = req.body?.email || "";
-      return `auth:${req.ip}:${email}`;
+      return `auth:${ipKeyGenerator(req.ip ?? "")}:${email}`;
     },
     message: { error: "Too many authentication attempts — please wait a few minutes" },
   });
@@ -234,7 +234,7 @@ async function main(): Promise<void> {
     max: 1000, // normal UI use should never hit this
     standardHeaders: true,
     legacyHeaders: false,
-    keyGenerator: (req) => `session:${req.user?.id || req.ip}`,
+    keyGenerator: (req) => `session:${req.user?.id || ipKeyGenerator(req.ip ?? "")}`,
     message: { error: "Too many requests, please try again later" },
   });
 
@@ -244,7 +244,7 @@ async function main(): Promise<void> {
     max: 2000, // AI agents make many calls — this is per key
     standardHeaders: true,
     legacyHeaders: false,
-    keyGenerator: (req) => `apikey:${req.apiKey?.id || req.ip}`,
+    keyGenerator: (req) => `apikey:${req.apiKey?.id || ipKeyGenerator(req.ip ?? "")}`,
     message: { error: "API key rate limit exceeded — please try again later" },
   });
 
@@ -252,7 +252,7 @@ async function main(): Promise<void> {
   const syncLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 200,
-    keyGenerator: (req) => `sync:${req.apiKey?.id || req.user?.id || req.ip}`,
+    keyGenerator: (req) => `sync:${req.apiKey?.id || req.user?.id || ipKeyGenerator(req.ip ?? "")}`,
     message: { error: "Sync rate limit exceeded" },
   });
   app.use("/api/sync", authMiddleware, syncLimiter, createSyncRouter(NOTES_DIR));
