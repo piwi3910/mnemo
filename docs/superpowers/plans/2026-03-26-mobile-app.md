@@ -1,5 +1,13 @@
 # Kryton Mobile App Implementation Plan
 
+> **⚠️ SUPERSEDED — Historical record only.**
+> This plan describes the WatermelonDB-based approach that was implemented in March 2026 but later replaced.
+> The current mobile architecture is documented in:
+> - Spec: [`docs/superpowers/specs/2026-04-30-mobile-core-migration-design.md`](../specs/2026-04-30-mobile-core-migration-design.md)
+> - Plan: [`docs/superpowers/plans/2026-04-30-mobile-core-migration.md`](2026-04-30-mobile-core-migration.md)
+>
+> Mobile now consumes `@azrtydxb/core` + `@azrtydxb/core-react`, syncs via `/api/sync/v2`, and uses Yjs for note content. WatermelonDB has been removed.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Build a React Native mobile app with offline-first sync, full feature parity with the web app, using WatermelonDB and WebView for the editor/graph.
