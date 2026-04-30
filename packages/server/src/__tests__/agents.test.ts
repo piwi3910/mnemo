@@ -222,6 +222,7 @@ describe("POST /api/agents/tokens/:tokenId/revoke", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("revokes a token and returns 204", async () => {
+    // First query: find the token row
     mockFindToken.mockResolvedValue({
       id: "tid1",
       agentId: "ag1",
@@ -230,16 +231,17 @@ describe("POST /api/agents/tokens/:tokenId/revoke", () => {
       expiresAt: new Date("2027-01-01"),
       revokedAt: null,
       createdAt: new Date(),
-      agent: {
-        id: "ag1",
-        ownerUserId: "u-test",
-        name: "bot",
-        label: "Bot",
-        policyText: null,
-        createdAt: new Date(),
-        lastSeenAt: null,
-      },
     } as any);
+    // Second query: find the agent to verify ownership
+    mockFindAgent.mockResolvedValue({
+      id: "ag1",
+      ownerUserId: "u-test",
+      name: "bot",
+      label: "Bot",
+      policyText: null,
+      createdAt: new Date(),
+      lastSeenAt: null,
+    });
     mockRevokeToken.mockResolvedValue(undefined);
 
     const res = await request(buildApp()).post("/api/agents/tokens/tid1/revoke");

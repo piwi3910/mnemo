@@ -19,7 +19,7 @@ export function requirePermission(
   resourceFn: (req: Request) => CedarResource | Promise<CedarResource>,
 ) {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const auth = req.auth;
+    const auth = req.agentAuth;
 
     if (!auth) {
       res.status(401).end();

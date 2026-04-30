@@ -13,7 +13,7 @@ declare module "express-serve-static-core" {
     /** Set when the request was authenticated via an agent bearer token. */
     agentId?: string;
     /** Unified auth context set by authMiddleware; consumed by requirePermission. */
-    auth?: { userId: string; agentId: string | null };
+    agentAuth?: { userId: string; agentId: string | null };
   }
 }
 
@@ -53,7 +53,7 @@ export async function authMiddleware(
       req.user = { id: user.id, email: user.email, name: user.name, role: user.role };
       req.apiKey = { id: keyData.keyId, scope: keyData.scope };
       // Set auth for authz middleware (agent is null for API-key users)
-      req.auth = { userId: user.id, agentId: null };
+      req.agentAuth = { userId: user.id, agentId: null };
       next();
       return;
     }
@@ -77,7 +77,7 @@ export async function authMiddleware(
         }
         req.user = { id: owner.id, email: owner.email, name: owner.name, role: owner.role };
         req.agentId = agentValidation.agentId;
-        req.auth = { userId: owner.id, agentId: agentValidation.agentId };
+        req.agentAuth = { userId: owner.id, agentId: agentValidation.agentId };
         next();
         return;
       }
@@ -105,7 +105,7 @@ export async function authMiddleware(
       name: session.user.name,
       role: ((session.user as Record<string, unknown>).role as string) || "user",
     };
-    req.auth = { userId: session.user.id, agentId: null };
+    req.agentAuth = { userId: session.user.id, agentId: null };
 
     next();
   } catch {

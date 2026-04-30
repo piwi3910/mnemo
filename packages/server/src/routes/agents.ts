@@ -25,6 +25,12 @@ const mintTokenSchema = z.object({
   scope: z.string().optional(),
 });
 
+/** Extract a string param value — handles Express 5's `string | string[]` type. */
+function param(req: Request, name: string): string {
+  const v = req.params[name];
+  return Array.isArray(v) ? v[0] : (v ?? "");
+}
+
 /**
  * Agent management router.
  *
@@ -61,7 +67,7 @@ export function createAgentsRouter(): Router {
   router.delete("/:id", async (req: Request, res: Response, next: NextFunction) => {
     try {
       const user = requireUser(req);
-      const agent = await prisma.agent.findUnique({ where: { id: req.params.id } });
+      const agent = await prisma.agent.findUnique({ where: { id: param(req, "id") } });
       if (!agent || agent.ownerUserId !== user.id) {
         res.status(404).end();
         return;
@@ -79,7 +85,7 @@ export function createAgentsRouter(): Router {
     async (req: Request, res: Response, next: NextFunction) => {
       try {
         const user = requireUser(req);
-        const agent = await prisma.agent.findUnique({ where: { id: req.params.id } });
+        const agent = await prisma.agent.findUnique({ where: { id: param(req, "id") } });
         if (!agent || agent.ownerUserId !== user.id) {
           res.status(404).end();
           return;
@@ -99,7 +105,7 @@ export function createAgentsRouter(): Router {
     async (req: Request, res: Response, next: NextFunction) => {
       try {
         const user = requireUser(req);
-        const agent = await prisma.agent.findUnique({ where: { id: req.params.id } });
+        const agent = await prisma.agent.findUnique({ where: { id: param(req, "id") } });
         if (!agent || agent.ownerUserId !== user.id) {
           res.status(404).end();
           return;
@@ -119,15 +125,23 @@ export function createAgentsRouter(): Router {
     async (req: Request, res: Response, next: NextFunction) => {
       try {
         const user = requireUser(req);
-        const token = await prisma.agentToken.findUnique({
-          where: { id: req.params.tokenId },
-          include: { agent: true },
+        const tokenId = param(req, "tokenId");
+
+        // Fetch the token row with its parent agent to verify ownership
+        const tokenRow = await prisma.agentToken.findUnique({
+          where: { id: tokenId },
         });
-        if (!token || token.agent.ownerUserId !== user.id) {
+        if (!tokenRow) {
           res.status(404).end();
           return;
         }
-        await revokeToken(token.id);
+        const agent = await prisma.agent.findUnique({ where: { id: tokenRow.agentId } });
+        if (!agent || agent.ownerUserId !== user.id) {
+          res.status(404).end();
+          return;
+        }
+
+        await revokeToken(tokenRow.id);
         res.status(204).end();
       } catch (err) {
         next(err);

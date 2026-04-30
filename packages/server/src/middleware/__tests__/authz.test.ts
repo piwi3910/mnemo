@@ -21,8 +21,8 @@ import { evaluatePolicy } from "../../services/cedar.js";
 const mockPrismaAgent = vi.mocked(prisma.agent.findUnique);
 const mockEval = vi.mocked(evaluatePolicy);
 
-function makeReq(auth?: { userId: string; agentId: string | null }): Request {
-  return { auth } as unknown as Request;
+function makeReq(agentAuth?: { userId: string; agentId: string | null }): Request {
+  return { agentAuth } as unknown as Request;
 }
 
 function makeRes(): Response {
