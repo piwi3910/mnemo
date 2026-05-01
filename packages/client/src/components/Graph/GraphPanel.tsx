@@ -1,9 +1,9 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Network, Crosshair, Maximize2, Minimize2 } from 'lucide-react';
 import { createPortal } from 'react-dom';
-import { GraphView } from './GraphView';
+import { GraphView } from '@azrtydxb/ui';
 import { GraphData, api } from '../../lib/api';
-import type { HoveredNodeInfo } from './useD3Graph';
+import type { HoveredNodeInfo } from '@azrtydxb/ui';
 
 interface GraphPanelProps {
   graphData: GraphData | null;
