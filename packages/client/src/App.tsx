@@ -6,6 +6,8 @@ import { ClientPluginManager } from './plugins/PluginManager';
 import { PluginProvider, usePluginSlots } from './plugins/PluginContext';
 import { PluginSlot } from './components/PluginSlot/PluginSlot';
 import { useUIStore } from './stores/uiStore';
+import { HttpAdapter } from './data/HttpAdapter';
+import { HttpDataProvider } from './data/HttpDataProvider';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -17,6 +19,13 @@ const queryClient = new QueryClient({
 });
 const pluginRegistry = new PluginSlotRegistry();
 const pluginManager = new ClientPluginManager(pluginRegistry);
+
+// Singleton HttpAdapter — implements KrytonDataAdapter for the web client.
+// Wrap the app in HttpDataProvider so @azrtydxb/ui hooks (useUiNotes, etc.)
+// can access data via useKrytonData().
+const httpAdapter = new HttpAdapter({
+  baseUrl: (import.meta as unknown as { env: Record<string, string> }).env.VITE_API_BASE_URL ?? "",
+});
 import { useAppState } from './hooks/useAppState';
 import { useAppCallbacks } from './hooks/useAppCallbacks';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
@@ -36,13 +45,15 @@ import LoginPage from './pages/LoginPage';
 
 export default function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <PluginProvider registry={pluginRegistry}>
-          <AppContent />
-        </PluginProvider>
-      </AuthProvider>
-    </QueryClientProvider>
+    <HttpDataProvider adapter={httpAdapter}>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <PluginProvider registry={pluginRegistry}>
+            <AppContent />
+          </PluginProvider>
+        </AuthProvider>
+      </QueryClientProvider>
+    </HttpDataProvider>
   );
 }
 
