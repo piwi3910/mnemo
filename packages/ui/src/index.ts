@@ -35,3 +35,6 @@ export * from "./daily/index";
 
 // Templates components
 export * from "./templates/index";
+
+// Settings components
+export * from "./settings/index";
