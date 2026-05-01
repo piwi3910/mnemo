@@ -1,0 +1,4 @@
+# Un-ignore the notes/ source directory (root .gitignore has a blanket `notes/` pattern
+# that would otherwise swallow packages/ui/src/notes/).
+!src/notes/
+!src/notes/**
