@@ -8,7 +8,7 @@ import { EditorToolbar } from '../Editor/EditorToolbar';
 import { Preview } from '../Preview/Preview';
 import { OutgoingLinksPanel } from '../OutgoingLinks/OutgoingLinksPanel';
 import { BacklinksPanel } from '../Backlinks/BacklinksPanel';
-import { Breadcrumbs } from '../Layout/Breadcrumbs';
+import { Breadcrumbs } from '@azrtydxb/ui';
 import { BookOpen, Star, FileDown } from 'lucide-react';
 
 type SaveStatus = 'unchanged' | 'unsaved' | 'saving' | 'saved' | 'error';

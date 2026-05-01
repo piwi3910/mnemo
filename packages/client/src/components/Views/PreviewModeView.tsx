@@ -4,7 +4,7 @@ import { api, NoteVersion } from '../../lib/api';
 import { Preview } from '../Preview/Preview';
 import { OutgoingLinksPanel } from '../OutgoingLinks/OutgoingLinksPanel';
 import { BacklinksPanel } from '../Backlinks/BacklinksPanel';
-import { Breadcrumbs } from '../Layout/Breadcrumbs';
+import { Breadcrumbs } from '@azrtydxb/ui';
 import { BookOpen, Pencil, Share2, Star, FileDown, History, X, RotateCcw, Eye } from 'lucide-react';
 
 interface PreviewModeViewProps {

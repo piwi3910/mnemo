@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Network } from 'lucide-react';
-import { GraphView } from './GraphView';
+import { GraphView } from '@azrtydxb/ui';
 import { GraphData } from '../../lib/api';
 
 interface MobileGraphOverlayProps {
