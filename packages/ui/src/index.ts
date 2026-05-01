@@ -9,3 +9,11 @@ export * from "./theme/ThemeProvider";
 
 // Primitives (re-export barrel)
 export * from "./primitives/index";
+
+// Data types and context
+export * from "./data/types";
+export * from "./data/KrytonDataProvider";
+export * from "./data/hooks";
+
+// Notes business components
+export * from "./notes/index";
