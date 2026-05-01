@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { Resizer } from '@azrtydxb/ui';
 
 interface ResizeHandleProps {
   direction: 'horizontal' | 'vertical';
@@ -6,57 +6,16 @@ interface ResizeHandleProps {
   onResizeEnd?: () => void;
 }
 
-export function ResizeHandle({ direction, onResize, onResizeEnd }: ResizeHandleProps) {
-  const draggingRef = useRef(false);
-  const lastPosRef = useRef(0);
-
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    draggingRef.current = true;
-    lastPosRef.current = direction === 'horizontal' ? e.clientX : e.clientY;
-    document.body.style.cursor = direction === 'horizontal' ? 'col-resize' : 'row-resize';
-    document.body.style.userSelect = 'none';
-  }, [direction]);
-
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!draggingRef.current) return;
-      const pos = direction === 'horizontal' ? e.clientX : e.clientY;
-      const delta = pos - lastPosRef.current;
-      lastPosRef.current = pos;
-      onResize(delta);
-    };
-
-    const handleMouseUp = () => {
-      if (!draggingRef.current) return;
-      draggingRef.current = false;
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
-      onResizeEnd?.();
-    };
-
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [direction, onResize, onResizeEnd]);
-
-  const isHorizontal = direction === 'horizontal';
-
+/**
+ * Thin adapter around @azrtydxb/ui Resizer.
+ * Maps the client's `direction` prop vocabulary to ui's `orientation`.
+ * Kept here for backward compatibility with call-sites in SidebarLayout / RightPanel.
+ */
+export function ResizeHandle({ direction, onResize }: ResizeHandleProps) {
   return (
-    <div
-      role="separator"
-      aria-orientation={isHorizontal ? 'vertical' : 'horizontal'}
-      tabIndex={0}
-      onMouseDown={handleMouseDown}
-      className={`
-        ${isHorizontal
-          ? 'w-1.5 cursor-col-resize hover:bg-violet-500/30 active:bg-violet-500/50 border-x border-gray-700/50'
-          : 'h-1.5 cursor-row-resize hover:bg-violet-500/30 active:bg-violet-500/50 border-y border-gray-700/50'}
-        flex-shrink-0 transition-colors duration-100
-      `}
+    <Resizer
+      orientation={direction}
+      onResize={onResize}
     />
   );
 }
