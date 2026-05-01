@@ -71,13 +71,19 @@ function parseFrontmatter(content: string): {
     const kvMatch = line.match(/^([a-zA-Z0-9_-]+)\s*:\s*(.*)/);
 
     if (listItem && currentKey) {
-      listAccumulator.push(listItem[2].trim());
-      frontmatter[currentKey] = listAccumulator.join(", ");
+      const itemText = listItem[2];
+      if (itemText !== undefined) {
+        listAccumulator.push(itemText.trim());
+        frontmatter[currentKey] = listAccumulator.join(", ");
+      }
     } else if (kvMatch) {
       if (currentKey && listAccumulator.length) listAccumulator.length = 0;
-      currentKey = kvMatch[1];
-      const val = kvMatch[2].trim();
-      frontmatter[currentKey] = val;
+      const matchedKey = kvMatch[1];
+      const matchedVal = kvMatch[2];
+      if (matchedKey !== undefined && matchedVal !== undefined) {
+        currentKey = matchedKey;
+        frontmatter[currentKey] = matchedVal.trim();
+      }
     }
   }
 
@@ -264,6 +270,7 @@ export const NotePreviewReact = React.forwardRef<
     if (!onFetchNoteContent) return [];
     return Array.from(content.matchAll(/!\[\[([^\]]+)\]\]/g))
       .map((m) => m[1])
+      .filter((name): name is string => name !== undefined)
       .filter((name) => !IMAGE_EXTENSIONS.test(name))
       .filter(
         (name) =>

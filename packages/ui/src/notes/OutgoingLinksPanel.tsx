@@ -125,6 +125,7 @@ export function extractOutgoingLinks(content: string): string[] {
   let match;
   while ((match = regex.exec(content)) !== null) {
     const name = match[1];
+    if (name === undefined) continue;
     const lower = name.toLowerCase();
     if (!seen.has(lower)) {
       seen.add(lower);

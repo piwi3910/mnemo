@@ -73,8 +73,11 @@ export function NoteQuickSwitcher({
         setSelectedIndex((i) => Math.max(i - 1, 0));
       } else if (e.key === "Enter" && filtered.length > 0) {
         e.preventDefault();
-        onSelect(filtered[selectedIndex].path);
-        onClose();
+        const selected = filtered[selectedIndex];
+        if (selected) {
+          onSelect(selected.path);
+          onClose();
+        }
       } else if (e.key === "Escape") {
         onClose();
       }

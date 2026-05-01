@@ -22,13 +22,16 @@ export interface OutlinePaneProps {
 /** Extract ATX headings from markdown text. */
 export function extractHeadings(content: string): Heading[] {
   const headings: Heading[] = [];
-  const lines = content.split("\n");
+  // Split on actual newlines (\n, \r\n, \r) or the two-character literal sequence "\" + "n".
+  const lines = content.split(/\r\n|\r|\n|\\n/);
   for (let i = 0; i < lines.length; i++) {
-    const match = lines[i].match(/^(#{1,6})\s+(.+)$/);
+    const line = lines[i];
+    if (line === undefined) continue;
+    const match = line.match(/^(#{1,6})\s+(.+)$/);
     if (match) {
       headings.push({
-        level: match[1].length,
-        text: match[2].trim(),
+        level: match[1]!.length,
+        text: match[2]!.trim(),
         line: i + 1,
       });
     }
@@ -74,10 +77,12 @@ export function OutlinePane({
   // Only show headings not hidden by a collapsed ancestor.
   const visibleHeadings = headings.filter((heading, idx) => {
     for (let i = idx - 1; i >= 0; i--) {
-      if (headings[i].level < heading.level && collapsed.has(headings[i].line)) {
+      const ancestor = headings[i];
+      if (ancestor === undefined) break;
+      if (ancestor.level < heading.level && collapsed.has(ancestor.line)) {
         return false;
       }
-      if (headings[i].level < heading.level) break;
+      if (ancestor.level < heading.level) break;
     }
     return true;
   });
@@ -103,8 +108,10 @@ export function OutlinePane({
             const realIdx = realIdxMap.get(heading) ?? 0;
             const hasKids = (() => {
               for (let i = realIdx + 1; i < headings.length; i++) {
-                if (headings[i].level <= heading.level) break;
-                if (headings[i].level > heading.level) return true;
+                const h = headings[i];
+                if (h === undefined) break;
+                if (h.level <= heading.level) break;
+                if (h.level > heading.level) return true;
               }
               return false;
             })();

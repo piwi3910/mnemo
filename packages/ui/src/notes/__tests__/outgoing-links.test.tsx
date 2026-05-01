@@ -38,15 +38,15 @@ describe("resolveOutgoingLinks", () => {
   it("marks existing links as resolved", () => {
     const map = new Map([["alpha", "Alpha.md"]]);
     const result = resolveOutgoingLinks(["Alpha"], map);
-    expect(result[0].exists).toBe(true);
-    expect(result[0].path).toBe("Alpha.md");
+    expect(result[0]!.exists).toBe(true);
+    expect(result[0]!.path).toBe("Alpha.md");
   });
 
   it("marks missing links as broken", () => {
     const map = new Map<string, string>();
     const result = resolveOutgoingLinks(["Missing"], map);
-    expect(result[0].exists).toBe(false);
-    expect(result[0].path).toBeNull();
+    expect(result[0]!.exists).toBe(false);
+    expect(result[0]!.path).toBeNull();
   });
 });
 

@@ -18,7 +18,7 @@ describe("extractHeadings", () => {
 
   it("supports up to 6 heading levels", () => {
     const hs = extractHeadings("###### H6");
-    expect(hs[0].level).toBe(6);
+    expect(hs[0]!.level).toBe(6);
   });
 });
 
