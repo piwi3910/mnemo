@@ -14,7 +14,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@azrtydxb/ui": "4.4.0-pre.6",
+    "@azrtydxb/ui": "*",
     "@better-auth/passkey": "^1.5.6",
     "@codemirror/autocomplete": "^6.20.1",
     "@codemirror/commands": "^6.10.3",
