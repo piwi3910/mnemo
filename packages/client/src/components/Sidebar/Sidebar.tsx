@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { FileNode, TrashItem, api } from '../../lib/api';
-import { Calendar, LayoutTemplate, Plus, PanelLeft } from 'lucide-react';
+import { Calendar, LayoutTemplate, Plus } from 'lucide-react';
 import { FileTree, FavoritesSection, TrashList, Resizer } from '@azrtydxb/ui';
 import type { TrashItem as UiTrashItem } from '@azrtydxb/ui';
 import { TagPane } from '../Tags/TagPane';

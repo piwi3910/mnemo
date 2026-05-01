@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { useDebouncedCallback } from 'use-debounce';
 import { createPortal } from 'react-dom';
-import { SearchInput, SearchResults } from '@azrtydxb/ui';
+import { SearchInput, SearchResults, type SearchResultItem } from '@azrtydxb/ui';
 import { api, SearchResult } from '../../lib/api';
 
 interface SearchBarProps {
@@ -51,7 +51,7 @@ export function SearchBar({ onSelect, inputRef: externalRef }: SearchBarProps) {
     debouncedSearch(value);
   }, [debouncedSearch]);
 
-  const handleSelect = useCallback((result: SearchResult) => {
+  const handleSelect = useCallback((result: SearchResultItem) => {
     const path = result.isShared && result.ownerUserId
       ? `shared:${result.ownerUserId}:${result.path}`
       : result.path;
@@ -71,7 +71,8 @@ export function SearchBar({ onSelect, inputRef: externalRef }: SearchBarProps) {
       setSelectedIndex(i => Math.max(i - 1, 0));
     } else if (e.key === 'Enter') {
       e.preventDefault();
-      handleSelect(results[selectedIndex]);
+      const selected = results[selectedIndex];
+      if (selected) handleSelect(selected);
     } else if (e.key === 'Escape') {
       setOpen(false);
     }
