@@ -47,3 +47,6 @@ export * from "./editor/index";
 
 // Graph components
 export * from "./graph/index";
+
+// Plugin loader, runtime, and manager
+export * from "./plugins/index";
