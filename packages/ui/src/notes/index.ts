@@ -9,4 +9,7 @@ export * from "./NoteHeader";
 export * from "./NoteList";
 export * from "./NoteMetadata";
 export * from "./NoteMoveDialog";
+export * from "./NoteQuickSwitcher";
+export * from "./OutgoingLinksPanel";
+export * from "./OutlinePane";
 export * from "./RecentNotesPanel";
